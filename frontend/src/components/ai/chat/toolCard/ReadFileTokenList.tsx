@@ -69,7 +69,7 @@ export function ReadFileTokenList({ items, t }: ReadFileTokenListProps) {
             key={`${item.path}-${index}`}
             className="flex min-w-0 items-center justify-between gap-2.5 rounded-md border border-[rgba(var(--accent-rgb),0.75)] bg-canvas px-2.5 py-[7px] font-mono text-sm leading-[1.35] text-secondary">
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Tiptop text={item.displayPath} style={{ display: 'flex', minWidth: 0, flex: 1 }}>
+              <Tiptop text={item.displayPath} className="flex" style={{ minWidth: 0, flex: 1 }}>
                 <div className="min-w-0 flex-1 overflow-hidden">
                   <div className="flex w-max min-w-full animate-[ai-chat-read-file-path-marquee_4s_linear_infinite] items-center [will-change:transform]">
                     <span className="shrink-0 grow-0 basis-auto whitespace-nowrap pr-8">{item.displayPath}</span>
@@ -77,7 +77,7 @@ export function ReadFileTokenList({ items, t }: ReadFileTokenListProps) {
                   </div>
                 </div>
               </Tiptop>
-              <Tiptop text={copied ? t('已复制' as I18nKey) : t('复制绝对路径' as I18nKey)} style={{ display: 'inline-flex', flexShrink: 0 }}>
+              <Tiptop text={copied ? t('已复制' as I18nKey) : t('复制绝对路径' as I18nKey)} className="inline-flex shrink-0">
                 <button
                   type="button"
                   onClick={(event) => {

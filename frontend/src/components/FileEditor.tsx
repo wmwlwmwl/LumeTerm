@@ -109,7 +109,8 @@ export default function FileEditor(props: FileEditorProps) {
             theme={oneDark}
             extensions={extensions}
             onChange={handleChange}
-            style={{ fontSize: 14, height: '100%' }}
+            className="text-sm"
+            style={{ height: '100%' }}
             basicSetup={BASIC_SETUP}
           />
         )}

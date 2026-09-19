@@ -2,6 +2,7 @@ import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState,
 import type React from 'react';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { useTranslation } from '../../i18n.ts';
+import { warnDev } from '../../utils/devLog';
 import {
   extractQuickCommandParams,
   fillQuickCommandParams,
@@ -377,7 +378,7 @@ export function useQuickCommands(
     if (sendTarget === 'all' && connectedSessions.length > 0) {
       connectedSessions.forEach((s) => {
         AppGo.WriteTerminal(s.id, finalCmd).catch((err) => {
-          console.error('WriteTerminal failed:', err);
+          warnDev('WriteTerminal failed:', err);
         });
         window.dispatchEvent(new CustomEvent('ssh-command-history', {
           detail: { sessionId: s.id, command: filled, time: timestamp, source: 'input' },
@@ -386,7 +387,7 @@ export function useQuickCommands(
       if (addToast) addToast(`${t('已发送到 ')}${connectedSessions.length}${t(' 个会话')}`, 'info', 2000);
     } else {
       AppGo.WriteTerminal(sessionId, finalCmd).catch((err) => {
-        console.error('WriteTerminal failed:', err);
+        warnDev('WriteTerminal failed:', err);
       });
       window.dispatchEvent(new CustomEvent('ssh-command-history', {
         detail: { sessionId: historySessionId || sessionId, command: filled, time: timestamp, source: 'input' },
@@ -528,7 +529,7 @@ export function useQuickCommands(
     if (sendTarget === 'all' && connectedSessions.length > 0) {
       connectedSessions.forEach((s) => {
         AppGo.WriteTerminal(s.id, finalCmd).catch((err) => {
-          console.error('WriteTerminal failed:', err);
+          warnDev('WriteTerminal failed:', err);
         });
         window.dispatchEvent(new CustomEvent('ssh-command-history', {
           detail: { sessionId: s.id, command: text, time: timestamp, source: 'input' },
@@ -537,7 +538,7 @@ export function useQuickCommands(
       if (addToast) addToast(`${t('已发送到 ')}${connectedSessions.length}${t(' 个会话')}`, 'info', 2000);
     } else {
       AppGo.WriteTerminal(sessionId, finalCmd).catch((err) => {
-        console.error('WriteTerminal failed:', err);
+        warnDev('WriteTerminal failed:', err);
       });
       window.dispatchEvent(new CustomEvent('ssh-command-history', {
         detail: { sessionId: historySessionId || sessionId, command: text, time: timestamp, source: 'input' },

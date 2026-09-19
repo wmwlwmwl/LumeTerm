@@ -134,7 +134,8 @@ export function TerminalInputBar({
           </div>
         ) : undefined}
         placement="top"
-        style={{ flex: 1, display: 'flex', minWidth: 0 }}
+        className="flex"
+        style={{ flex: 1, minWidth: 0 }}
       >
         <textarea
           ref={cmdInputRef}

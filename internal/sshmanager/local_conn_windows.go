@@ -133,7 +133,7 @@ func (m *SSHManager) ConnectLocal(sessionId string, name string, shellPath strin
 	var err error
 
 	if conpty.IsConPtyAvailable() {
-		c, err := conpty.Start(commandLine, conpty.ConPtyDimensions(80, 24), conpty.ConPtyWorkDir(workDir), conpty.ConPtyEnv(cptyEnv))
+		c, err := conpty.Start(commandLine, conpty.ConPtyDimensions(defaultTermCols, defaultTermRows), conpty.ConPtyWorkDir(workDir), conpty.ConPtyEnv(cptyEnv))
 		if err == nil {
 			cptyHandle = c
 		}

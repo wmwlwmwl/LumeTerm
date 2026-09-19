@@ -2,9 +2,11 @@ package ai
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -801,25 +803,9 @@ func (c *configBridge) SaveAIConversation(snapshot AIConversationSnapshot) (AICo
 	if err := c.writeAIConversationSnapshot(normalized); err != nil {
 		return AIConversationSnapshot{}, err
 	}
-	_ = func() error {
-		db, err := c.getAIConversationSearchDB()
-		if err != nil {
-			return err
-		}
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
-		if err := c.ensureAIConversationSearchSchemaLocked(tx); err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-		if err := c.replaceAIConversationSearchRowsLocked(tx, normalized); err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-		return tx.Commit()
-	}()
+	c.withSearchDBTx("保存对话搜索索引", func(tx *sql.Tx) error {
+		return c.replaceAIConversationSearchRowsLocked(tx, normalized)
+	})
 	return normalized, nil
 }
 
@@ -842,26 +828,38 @@ func (c *configBridge) DeleteAIConversation(conversationID string) error {
 	if err := os.RemoveAll(c.aiConversationDir(conversationID)); err != nil {
 		return err
 	}
-	_ = func() error {
-		db, err := c.getAIConversationSearchDB()
-		if err != nil {
-			return err
-		}
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
-		if err := c.ensureAIConversationSearchSchemaLocked(tx); err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-		if err := c.deleteAIConversationSearchRowsLocked(tx, conversationID); err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-		return tx.Commit()
-	}()
+	c.withSearchDBTx("删除对话搜索索引", func(tx *sql.Tx) error {
+		return c.deleteAIConversationSearchRowsLocked(tx, conversationID)
+	})
 	return nil
+}
+
+// withSearchDBTx 在搜索数据库事务中执行操作，失败时记录日志不中断主流程
+func (c *configBridge) withSearchDBTx(operation string, fn func(*sql.Tx) error) {
+	db, err := c.getAIConversationSearchDB()
+	if err != nil {
+		slog.Error("搜索数据库不可用", "operation", operation, "error", err)
+		return
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		slog.Error("搜索数据库事务开始失败", "operation", operation, "error", err)
+		return
+	}
+	if err := c.ensureAIConversationSearchSchemaLocked(tx); err != nil {
+		_ = tx.Rollback()
+		slog.Error("搜索数据库 schema 检查失败", "operation", operation, "error", err)
+		return
+	}
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback()
+		slog.Error("搜索数据库事务执行失败", "operation", operation, "error", err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		slog.Error("搜索数据库事务提交失败", "operation", operation, "error", err)
+		return
+	}
 }
 
 func (a *Service) ListAIConversations() []AIConversationSummary {

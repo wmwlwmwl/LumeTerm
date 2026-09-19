@@ -13,6 +13,7 @@ import type { useFileManagerCore } from './useFileManagerCore.ts';
 import type { useFileManagerWorkspaceSync } from './useFileManagerWorkspaceSync.ts';
 import type { useFileManagerPaneView } from './useFileManagerPaneView.ts';
 import type { useFileManagerClipboard } from './useFileManagerClipboard.ts';
+import { warnDev } from '../../utils/devLog';
 import type { useFileManagerEditorState } from './useFileManagerEditorState.ts';
 import type { useFileManagerDirectoryLoader } from './useFileManagerDirectoryLoader.ts';
 import type { useFileManagerTransfers } from './useFileManagerTransfers.ts';
@@ -172,7 +173,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
       await AppGo.BatchDeleteItemShell(sessionId, selectedPaths);
       removedPaths = [...selectedPaths];
     } catch (err) {
-      console.error('batch delete failed:', err);
+      warnDev('batch delete failed:', err);
       addToast?.(`${t('删除失败')}: ${err instanceof Error ? err.message : String(err || '')}`, 'error');
     } finally {
       setOperationProgress(null);
@@ -550,7 +551,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
             };
           }
         } catch (error) {
-          console.warn('GetPathOwnership failed:', error);
+          warnDev('GetPathOwnership failed:', error);
         }
       }
       return resolvedTargetItem;
@@ -604,7 +605,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
         };
       });
     } catch (error) {
-      console.warn('ListOwnershipCandidates failed:', error);
+      warnDev('ListOwnershipCandidates failed:', error);
     }
   }, [sessionId]);
 
@@ -672,7 +673,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
       try {
         await AppGo.SaveChmodDialogSettings(normalizedMode, rememberedIncludeSubdirectories);
       } catch (saveErr) {
-        console.warn('SaveChmodDialogSettings failed:', saveErr);
+        warnDev('SaveChmodDialogSettings failed:', saveErr);
       }
 
       const appliedTargets: Array<{

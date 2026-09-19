@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -114,8 +113,8 @@ func (a *Service) searchAIProviderWeb(ctx context.Context, requestID string, pro
 	defer response.Body.Close()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		bodyBytes, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-		errorText := strings.TrimSpace(string(bodyBytes))
+		bodyStr := readErrorBody(response, 4096)
+		errorText := strings.TrimSpace(bodyStr)
 		if errorText == "" {
 			errorText = response.Status
 		}

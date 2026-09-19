@@ -28,6 +28,11 @@ import (
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
+const (
+	defaultTermRows = 24
+	defaultTermCols = 80
+)
+
 // ─── 类型别名：引用 config 包类型 ──────────────────────────
 type (
 	Connection             = config.Connection
@@ -192,7 +197,6 @@ func (s transferSink) Emit(event string, payload any) {
 			progress.UploadID,
 			progress.Phase,
 			progress.Progress,
-			progress.PhaseProgress,
 			progress.BytesDone,
 			progress.BytesTotal,
 			progress.Current,
@@ -373,6 +377,9 @@ func isTransientNetError(err error) bool {
 
 func (m *SSHManager) runPostAuthStep(ctx context.Context, cancel context.CancelFunc, sessionId string, client *ssh.Client, closeClientOnStop bool, fn func() error) error {
 	done := make(chan error, 1)
+	// ponytail: goroutine 无 context 感知，ctx 取消后仍在执行 fn()（可能阻塞 I/O）。
+	// 当前 fn() 通常为 session.Shell()/session.RequestPty() 等短期操作，超时后由 closeClientOnStop 关闭 client 间接释放。
+	// 若未来 fn 涉及长时网络 I/O，需重构为 context-aware。
 	go func() {
 		done <- fn()
 	}()
@@ -767,7 +774,7 @@ func (m *SSHManager) setupSession(ctx context.Context, client *ssh.Client, connK
 		ssh.TTY_OP_OSPEED: 115200,
 	}
 
-	if err := session.RequestPty("xterm-256color", 24, 80, modes); err != nil {
+	if err := session.RequestPty("xterm-256color", defaultTermRows, defaultTermCols, modes); err != nil {
 		session.Close()
 		return err
 	}
@@ -1329,6 +1336,8 @@ func (m *SSHManager) DisconnectAll() {
 		m.Disconnect(id)
 	}
 	m.transferService.Close()
+	// ponytail: 清理输出监听注册表，防止长期运行的桌面应用累积内存
+	sshOutputTapRegistry.Delete(m)
 }
 
 // OpenTerminal 为已有连接创建新的终端通道

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type * as React from 'react';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
+import { warnDev } from '../../utils/devLog';
 import type { QuickCommandsHandle } from '../QuickCommands.tsx';
 
 // 历史指令弹窗逻辑：列表加载/清空/删除、搜索过滤、键盘导航、
@@ -232,7 +233,7 @@ export function useTerminalHistory(deps: {
         detail: { sessionId: serverId, historyServerId, scope }
       }));
     } catch (error) {
-      console.error('[Terminal] 删除历史失败:', error);
+      warnDev('[Terminal] 删除历史失败:', error);
     }
   };
 

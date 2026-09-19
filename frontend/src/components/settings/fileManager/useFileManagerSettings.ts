@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as AppGo from '../../../../wailsjs/go/wailsapp/App.js';
 import { t as $t } from '../../../i18n.ts';
+import { warnDev } from '../../../utils/devLog';
 
 type AddToast = (message: string | Error, type?: string, duration?: number, actions?: unknown[]) => number;
 
@@ -260,7 +261,7 @@ export function useFileManagerSettings({ addToast }: { addToast: AddToast }) {
       setFileManagerPreferredExternalApp(cleaned);
       window.dispatchEvent(new CustomEvent('file-editor-preferred-app-changed', { detail: cleaned }));
     } catch (err) {
-      console.error(err);
+      warnDev(err);
     }
   };
   const handleClearFileManagerPreferredExternalApp = () => {

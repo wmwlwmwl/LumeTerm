@@ -283,7 +283,8 @@ func (a *Service) CountAIConversationContextTokens(sessionID string, snapshotJSO
 }
 
 func buildAISystemPromptRawTokens(conversationID string, sessionID string, profile AIProviderProfile) (int, error) {
-	return estimateAITextTokensForProfile(BuildChatSystemPromptWithProfile(context.TODO(), conversationID, sessionID, false, profile), profile), nil
+	// ponytail: Wails前端绑定调用链无原生context，context.Background()语义更准确
+	return estimateAITextTokensForProfile(BuildChatSystemPromptWithProfile(context.Background(), conversationID, sessionID, false, profile), profile), nil
 }
 
 func buildAIConversationAPIMessageTokenBlocks(message AIConversationAPIMessage, profile AIProviderProfile) []TokenCountBlock {

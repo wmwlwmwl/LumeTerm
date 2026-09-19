@@ -7,7 +7,7 @@
     "oxc"
   ],
   "categories": {
-    "correctness": "warn"
+    "correctness": "error"
   },
   "rules": {
     "no-var": "error",

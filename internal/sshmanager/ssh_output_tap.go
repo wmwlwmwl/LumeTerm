@@ -18,7 +18,13 @@ func getSSHOutputTapState(manager *SSHManager) *sshOutputTapState {
 	value, _ := sshOutputTapRegistry.LoadOrStore(manager, &sshOutputTapState{
 		listeners: make(map[string]map[string]chan []byte),
 	})
-	return value.(*sshOutputTapState)
+	state, ok := value.(*sshOutputTapState)
+	if !ok {
+		// ponytail: 类型断言失败极为罕见（LoadOrStore 始终存入正确类型），
+		// 若发生则说明存在并发内存损坏，panic 并提供诊断信息。
+		panic("sshOutputTapState: unexpected type in registry")
+	}
+	return state
 }
 
 func (m *SSHManager) registerSessionOutputTap(sessionID string) (string, <-chan []byte, func()) {

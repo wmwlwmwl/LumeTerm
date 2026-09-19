@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -168,9 +169,13 @@ func (l *aiDebugLogger) rotateLocked() {
 		if _, err := os.Stat(from); err != nil {
 			continue
 		}
-		_ = os.Rename(from, to)
+		if err := os.Rename(from, to); err != nil {
+			slog.Warn("AI调试日志轮转失败", "from", from, "to", to, "error", err)
+		}
 	}
-	_ = os.Rename(l.path, l.path+".1")
+	if err := os.Rename(l.path, l.path+".1"); err != nil {
+		slog.Warn("AI调试日志轮转主文件失败", "path", l.path, "error", err)
+	}
 	if err := l.reopen(); err != nil {
 		l.file = nil
 		l.writer = nil

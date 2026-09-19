@@ -7,6 +7,7 @@ import { SearchAddon } from '@xterm/addon-search';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { clampMenuPosition } from '../../utils/menuPosition.ts';
 import { getSolidTerminalBackground, type TerminalTheme } from '../../utils/theme.ts';
+import { warnDev } from '../../utils/devLog';
 import { getResolvedProgramFontPreferences } from '../../utils/programFonts.ts';
 import { highlightKeywords, createHighlightState } from '../../utils/terminalKeywordHighlight.ts';
 import type { I18nKey } from '../../i18n.ts';
@@ -507,7 +508,7 @@ export function useTerminalSession(deps: {
         smartWrite(newText);
       };
 
-      currentWs.onerror = (e) => console.error('[Terminal] WebSocket error', e);
+      currentWs.onerror = (e) => warnDev('[Terminal] WebSocket error', e);
       }).finally(() => {
         wsConnecting = false;
       });
@@ -817,7 +818,7 @@ export function useTerminalSession(deps: {
         } catch (_) {}
       });
     } catch (e) {
-      console.error('[Terminal] safeFit error:', e);
+      warnDev('[Terminal] safeFit error:', e);
     }
   }, [scheduleDebouncedPTYResize]);
 

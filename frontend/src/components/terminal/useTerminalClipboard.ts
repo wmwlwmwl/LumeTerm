@@ -4,6 +4,7 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 import type { IBufferRange } from '@xterm/xterm';
 import type { I18nKey } from '../../i18n.ts';
 import { normalizeTerminalPasteText, readClipboardText, textEncoder } from '../../utils/terminalHelpers.ts';
+import { warnDev } from '../../utils/devLog';
 
 type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
 
@@ -93,7 +94,7 @@ export function useTerminalClipboard(deps: {
     navigator.clipboard.writeText(text).then(() => {
       termRef.current?.focus();
     }).catch((err) => {
-      console.error('Failed to write clipboard:', err);
+      warnDev('Failed to write clipboard:', err);
       termRef.current?.focus();
     });
   }, []);
@@ -109,7 +110,7 @@ export function useTerminalClipboard(deps: {
       }
       termRef.current?.focus();
     }).catch((err) => {
-      console.error('Failed to read clipboard:', err);
+      warnDev('Failed to read clipboard:', err);
       termRef.current?.focus();
     });
   }, []);

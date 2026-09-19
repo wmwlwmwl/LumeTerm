@@ -1,8 +1,6 @@
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
-import { APP_GITHUB_REPO_URL } from '../../config.ts';
 
 const CONTRIBUTORS_CACHE_TTL = 10 * 60 * 1000;
-const CONTRIBUTORS_API_URL = 'https://lumin.callmy.vip/api/';
 
 /** 贡献者条目（normalizeContributors 归一化后） */
 export interface Contributor {
@@ -89,33 +87,12 @@ function normalizeContributors(payload: unknown): Contributor[] {
     .sort((left, right) => right.total - left.total);
 }
 
-async function fetchContributorsFromApi(): Promise<unknown> {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 10000);
-  try {
-    const response = await fetch(`${CONTRIBUTORS_API_URL}github/contributors?repoUrl=${encodeURIComponent(APP_GITHUB_REPO_URL)}`, {
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    return await response.json();
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-}
-
 export async function loadContributors(): Promise<Contributor[]> {
   const cached = getFreshContributorsCache();
   if (cached) {
     return cached;
   }
-  let payload: unknown = null;
-  try {
-    payload = await fetchContributorsFromApi();
-  } catch {
-    payload = await AppGo.GetGitHubContributors();
-  }
+  const payload: unknown = await AppGo.GetGitHubContributors();
   const data = normalizeContributors(payload);
   if (data.length > 0) {
     contributorsCache.data = data;

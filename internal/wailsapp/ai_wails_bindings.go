@@ -224,7 +224,7 @@ func (b *AIBindings) PreviewAIChatToolRestore(reviewID string, sessionID string)
 }
 
 func (b *AIBindings) PreviewAIChatToolDiff(reviewID string, sessionID string) (map[string]interface{}, error) {
-	return b.runtime().PreviewAIChatToolDiff(reviewID, sessionID)
+	return b.runtime().PreviewAIChatToolDiff(reviewID)
 }
 
 func (b *AIBindings) ReapplyAIChatTool(reviewID string, sessionID string) error {

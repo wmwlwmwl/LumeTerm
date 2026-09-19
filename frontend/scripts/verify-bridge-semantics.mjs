@@ -119,11 +119,7 @@ for (const file of files) {
 
   installWindowMock();
 
-  if (idx === 'providerSpecialHosts') {
-    for (const v of [undefined, null, '', 'newapi.callmy.vip', 'https://newapi2.callmy.vip', 'http://x.com', 'NEWAPI.CALLMY.VIP:8080', 'ftp://newapi.callmy.vip']) {
-      await compare(`isCallMyVip#${String(v)}`, (m) => m.isCallMyVipProviderHost(v));
-    }
-  } else if (idx === 'inputDragSelect') {
+  if (idx === 'inputDragSelect') {
     const listeners = {};
     global.window = { addEventListener: (k, f) => { listeners[k] = f; }, removeEventListener: (k) => { delete listeners[k]; } };
     const mkInput = (type = 'text') => ({ type, select: () => {}, style: { pointerEvents: '' } });

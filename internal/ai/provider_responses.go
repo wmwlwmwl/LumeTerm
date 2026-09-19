@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -269,8 +268,8 @@ func (a *Service) requestResponsesAIChatRound(ctx context.Context, requestID str
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		errorText := strings.TrimSpace(string(bodyBytes))
+		bodyStr := readErrorBody(resp, 4096)
+		errorText := strings.TrimSpace(bodyStr)
 		if errorText == "" {
 			errorText = resp.Status
 		}

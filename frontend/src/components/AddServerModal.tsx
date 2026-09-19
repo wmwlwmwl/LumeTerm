@@ -152,7 +152,7 @@ export default function AddServerModal({
     return (
       <div className="glass-card dashboard-server-editor">
         <div className="dashboard-server-editor-shell">
-          <div className="dashboard-server-editor-header" style={{ flexShrink: 0 }}>
+          <div className="dashboard-server-editor-header shrink-0">
             <div className="dashboard-server-editor-title">
               <span className="inline-flex items-center dashboard-server-editor-title-icon" data-editor-add-target={!isEditing ? 'true' : undefined}>
                 {isEditing ? <SquarePen size={16} /> : <Plus size={16} />}
@@ -160,11 +160,11 @@ export default function AddServerModal({
               {isEditing ? t('编辑配置') : t('添加')}
             </div>
           </div>
-          <form onSubmit={handleSubmit} className="dashboard-server-editor-form" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <form onSubmit={handleSubmit} className="dashboard-server-editor-form flex" style={{ flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <div className="dashboard-server-editor-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {sections}
             </div>
-            <div className="dashboard-server-editor-footer" style={{ flexShrink: 0 }}>
+            <div className="dashboard-server-editor-footer shrink-0">
               {footerButtons}
             </div>
           </form>

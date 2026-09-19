@@ -205,12 +205,11 @@ export default function AIProviderSelector({
                 onMouseLeave={closeTooltip}
                 onFocus={handleTriggerMouseEnter}
                 onBlur={closeTooltip}
-                className={`h-7 inline-flex items-center px-2.5 text-sm font-semibold transition-colors duration-[80ms] whitespace-nowrap border ${
+                className={`h-7 inline-flex items-center px-2.5 text-sm font-semibold transition-colors duration-[80ms] whitespace-nowrap border rounded-r-lg ${
                   reasoningMenuOpen
                     ? 'bg-accent-dim border-accent-border text-primary'
                     : 'bg-transparent border-line text-secondary'
                 }`}
-                style={{ borderRadius: '0 8px 8px 0' }}
               >
                 <span>{quickReasoningConfig.currentLabel}</span>
               </button>

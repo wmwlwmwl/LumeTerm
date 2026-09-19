@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as AppGo from '../../wailsjs/go/wailsapp/App.js';
 import { useTranslation } from '../i18n.ts';
+import { warnDev } from '../utils/devLog';
 import { Button, EmptyState } from './ui';
 import { ScrollText, Keyboard, Clipboard, Trash2, Rocket } from 'lucide-react';
 
@@ -63,7 +64,7 @@ export default function CommandHistory({ sessionId, historyServerId, terminalId,
         await AppGo.SaveGlobalCommandHistory(JSON.stringify(result));
         return result;
       } catch (e) {
-        console.error('Failed to update global history:', e);
+        warnDev('Failed to update global history:', e);
         return [];
       }
     });
@@ -215,7 +216,7 @@ export default function CommandHistory({ sessionId, historyServerId, terminalId,
     // 「再次运行」写入活动终端，无活动终端时回退到归组会话
     const writeTarget = terminalId || sessionId;
     AppGo.WriteTerminal(writeTarget, cmd + '\r').catch((err) => {
-      console.error('WriteTerminal failed:', err);
+      warnDev('WriteTerminal failed:', err);
     });
     addToast?.(t('已发送指令到终端'), 'info', 2000);
   };
@@ -238,7 +239,7 @@ export default function CommandHistory({ sessionId, historyServerId, terminalId,
         detail: { sessionId, historyServerId, scope }
       }));
     } catch (e) {
-      console.error('Failed to clear history:', e);
+      warnDev('Failed to clear history:', e);
       addToast?.(t('清空历史失败'), 'error', 2000);
     }
   };
@@ -266,7 +267,7 @@ export default function CommandHistory({ sessionId, historyServerId, terminalId,
         detail: { sessionId, historyServerId, scope }
       }));
     } catch (e) {
-      console.error('Failed to delete history item:', e);
+      warnDev('Failed to delete history item:', e);
       addToast?.(t('删除失败'), 'error', 2000);
     }
   };

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
@@ -33,11 +34,16 @@ import (
 )
 
 // parseIntOrDefault 解析字符串为整数，失败时返回默认值
+// ponytail: 不区分"0"和解析失败（保持向后兼容），通过日志诊断
 func parseIntOrDefault(s string, def int) int {
 	if s == "" {
 		return def
 	}
-	v, _ := strconv.Atoi(s)
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		slog.Error("配置整数解析失败", "raw", s, "error", err)
+		return def
+	}
 	return v
 }
 
@@ -768,7 +774,9 @@ func (c *ConfigManager) loadTombstoneStore() syncTombstoneStore {
 	if err != nil {
 		return store
 	}
-	_ = json.Unmarshal(data, &store)
+	if err := json.Unmarshal(data, &store); err != nil {
+		slog.Error("墓碑存储反序列化失败", "error", err)
+	}
 	if store.Connections == nil {
 		store.Connections = []SyncTombstone{}
 	}
@@ -943,7 +951,9 @@ func (c *ConfigManager) clearConnectionTombstonesLocked(ids []string) {
 		return
 	}
 	store.Connections = tombstonesFromMap(m)
-	_ = c.saveTombstoneStore(store)
+	if err := c.saveTombstoneStore(store); err != nil {
+		slog.Error("墓碑连接记录保存失败", "error", err)
+	}
 }
 
 func (c *ConfigManager) clearCredentialTombstonesLocked(ids []string) {
@@ -964,7 +974,9 @@ func (c *ConfigManager) clearCredentialTombstonesLocked(ids []string) {
 		return
 	}
 	store.Credentials = tombstonesFromMap(m)
-	_ = c.saveTombstoneStore(store)
+	if err := c.saveTombstoneStore(store); err != nil {
+		slog.Error("墓碑凭证记录保存失败", "error", err)
+	}
 }
 
 // SyncTombstoneStats 同步删除记录条数（供设置页展示）。

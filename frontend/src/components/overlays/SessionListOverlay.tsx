@@ -62,7 +62,7 @@ export default function SessionListOverlay({
       .map((s) => ({ kind: 'session', key: `s-${s.id}`, s }));
     const serverRows: QuickRow[] = (servers || [])
       .filter((v) => !openedByServerId.has(String(v.id)))
-      .filter((v) => hit(v.name, v.host, (v as unknown as Record<string, unknown>).group as string))
+      .filter((v) => hit(v.name, v.host, v.group))
       .map((v) => ({ kind: 'server', key: `c-${v.id}`, v }));
     return [...sessionRows, ...serverRows];
   }, [sessions, servers, sessionListQuery]);
@@ -70,7 +70,7 @@ export default function SessionListOverlay({
   const sessionGroupById = useMemo(() => {
     const m = new Map<string, string>();
     for (const v of servers || []) {
-      const g = (v as unknown as Record<string, unknown>).group;
+      const g = v.group;
       if (typeof g === 'string' && g) m.set(String(v.id), g);
     }
     return m;
@@ -156,8 +156,8 @@ export default function SessionListOverlay({
               >
                 <span className={`status-dot ${sessionAuthPrompts[s.id] ? 'attention' : s.status === 'connecting' ? 'connecting' : s.status === 'connected' ? 'online' : 'offline'}`} />
                 <span className="flex-1 truncate">{s.serverName}</span>
-                {sessionGroupById.get(String((s as unknown as Record<string, unknown>).serverId)) && (
-                  <span className="text-xs text-muted shrink-0">{sessionGroupById.get(String((s as unknown as Record<string, unknown>).serverId))}</span>
+                {sessionGroupById.get(String(s.serverId)) && (
+                  <span className="text-xs text-muted shrink-0">{sessionGroupById.get(String(s.serverId))}</span>
                 )}
                 <Tiptop text={t('关闭')} placement="bottom">
                   <span

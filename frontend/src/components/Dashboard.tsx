@@ -4,6 +4,7 @@ import type { DashboardHostPageMode, ServerListViewMode } from '../hooks/useDash
 import type { ServerFormData } from '../hooks/useServerCatalog.ts';
 import type { PingCounts, ServerPingResult } from '../hooks/useServerPing.ts';
 import { useTranslation } from '../i18n.ts';
+import { warnDev } from '../utils/devLog';
 import AddServerModal from './AddServerModal.tsx';
 import { DashboardBatchOperationBar } from './dashboard/DashboardBatchOperationBar.tsx';
 import { DashboardHeaderActions } from './dashboard/DashboardHeaderActions.tsx';
@@ -138,7 +139,7 @@ export default function Dashboard({
         setLocalShells(list || []);
       })
       .catch((err) => {
-        console.error('Failed to load local shells:', err);
+        warnDev('Failed to load local shells:', err);
       });
   }, []);
 

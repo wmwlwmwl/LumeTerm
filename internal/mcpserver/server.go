@@ -2,7 +2,9 @@ package mcpserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -56,7 +58,9 @@ func (s *Server) Start() error {
 	s.listener = listener
 	s.httpServer = &http.Server{Handler: mux}
 	go func(server *http.Server, currentListener net.Listener) {
-		_ = server.Serve(currentListener)
+		if err := server.Serve(currentListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("MCP HTTP 服务器异常退出", "error", err)
+		}
 	}(s.httpServer, listener)
 	return nil
 }

@@ -1,4 +1,5 @@
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
+import { warnDev } from '../../utils/devLog';
 
 export interface QuickCommandItem {
   type?: 'group' | 'command';
@@ -59,7 +60,7 @@ export async function saveCommands(list: QuickCommandItem[]) {
     await AppGo.SaveQuickCommands(JSON.stringify(list));
     window.dispatchEvent(new CustomEvent('quick-commands-changed'));
   } catch (e) {
-    console.error('[QuickCommands] saveCommands failed:', e);
+    warnDev('[QuickCommands] saveCommands failed:', e);
   }
 }
 

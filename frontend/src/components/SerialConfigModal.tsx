@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Cpu } from 'lucide-react';
 import * as AppGo from '../../wailsjs/go/wailsapp/App.js';
 import { useTranslation } from '../i18n.ts';
+import { warnDev } from '../utils/devLog';
 import { Button, Select, ModalDragStrip } from './ui';
 import { useOverlayScrollLock } from '../hooks/useOverlayScrollLock.ts';
 
@@ -44,7 +45,7 @@ export default function SerialConfigModal({ onClose, onConnect }: SerialConfigMo
         }
       })
       .catch((err) => {
-        console.error('Failed to list serial ports', err);
+        warnDev('Failed to list serial ports', err);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

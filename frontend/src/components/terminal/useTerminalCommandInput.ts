@@ -5,6 +5,7 @@ import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
 import { extractQuickCommandParams } from '../../utils/quickCommandParams.ts';
 import { buildWrappedMultiLineCommand, getTextareaAutocompletePopupPosition, isInteractivePromptText } from '../../utils/terminalHelpers.ts';
+import { warnDev } from '../../utils/devLog';
 import {
   buildPathAutocompleteContext,
   buildStaticAutocompleteItems,
@@ -114,7 +115,7 @@ export function useTerminalCommandInput(deps: {
         : text + '\r');
     prepareScreenScrollbackRef.current(text);
     AppGo.WriteTerminal(sessionId, finalPayload).catch((err) => {
-      console.error('WriteTerminal failed:', err);
+      warnDev('WriteTerminal failed:', err);
     });
     termRef.current?.scrollToBottom();
     if (!isBlankSubmit && text.length > 1 && !/^\d+$/.test(text) && !isInteractivePromptText(text) && !awaitingPasswordRef.current) {

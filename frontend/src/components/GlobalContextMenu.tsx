@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../i18n.ts';
+import { warnDev } from '../utils/devLog';
 import { formatShortcut } from '../utils/platform.ts';
 import { useOverlayScrollLock } from '../hooks/useOverlayScrollLock.ts';
 import { GLOBAL_CONTEXT_MENU_OPEN_EVENT, type GlobalContextMenuDetail } from '../utils/contextMenu.ts';
@@ -138,7 +139,7 @@ export default function GlobalContextMenu() {
         targetInput.select();
       }
     } catch (error) {
-      console.error('Context menu action failed:', error);
+      warnDev('Context menu action failed:', error);
     }
   }, []);
 
@@ -200,7 +201,7 @@ export default function GlobalContextMenu() {
     Promise.resolve()
       .then(() => onSelect(item))
       .catch((error) => {
-        console.error('Context menu action failed:', error);
+        warnDev('Context menu action failed:', error);
       });
   }, [closeMenu]);
 

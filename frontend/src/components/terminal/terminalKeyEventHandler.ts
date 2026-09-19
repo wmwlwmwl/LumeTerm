@@ -1,6 +1,7 @@
 import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { getModKey, buildCombo, isMac } from '../../utils/platform.ts';
+import { warnDev } from '../../utils/devLog';
 import { DEFAULT_TERMINAL_SHORTCUTS, TERMINAL_SIGNAL_BYTES, normalizeTerminalPasteText, readClipboardText, textEncoder } from '../../utils/terminalHelpers.ts';
 
 // 自定义快捷键处理器工厂：attachCustomKeyEventHandler 回调体从 Terminal.tsx 原样搬移。
@@ -76,7 +77,7 @@ export function createTerminalKeyEventHandler(deps: {
           wsRef.current.send(textEncoder.encode(payload));
         }
       }).catch((err) => {
-        console.error('Clipboard read failed:', err);
+        warnDev('Clipboard read failed:', err);
         termRef.current?.focus();
       });
       return false;

@@ -170,12 +170,12 @@ export default function SessionAuthCard({ prompt, isActive, t, onResolve }: Sess
                 id="session-auth-password"
                 name="session-auth-password"
                 autoComplete="off"
-                className="input rounded-[var(--radius-sm)]"
+                className="input rounded-[var(--radius-sm)] text-sm"
                 type={showPassword ? 'text' : 'password'}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder={t('请输入密码')}
-                style={{ width: '100%', fontSize: 14, padding: '10px 68px 10px 14px' }}
+                style={{ width: '100%', padding: '10px 68px 10px 14px' }}
               />
               <button
                 type="button"

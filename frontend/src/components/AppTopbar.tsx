@@ -13,6 +13,7 @@ import type { SessionLike } from '../utils/sessionWorkspace.ts';
 export interface TopbarSession extends SessionLike {
   id: string;
   serverName?: string;
+  serverId?: string;
   host?: string;
   status: string;
 }

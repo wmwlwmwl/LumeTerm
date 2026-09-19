@@ -44,13 +44,13 @@ class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, Erro
       console.error('[ErrorBoundary] 完整错误:', msg);
       console.error('[ErrorBoundary] 堆栈:', stack);
       return (
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          height: '100vh', background: 'var(--surface-base)', color: 'var(--danger)', fontFamily: 'monospace', gap: 12,
+        <div className="flex font-mono" style={{
+          flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          height: '100vh', background: 'var(--surface-base)', color: 'var(--danger)', gap: 12,
           padding: 20, textAlign: 'center'
         }}>
-          <div style={{ fontSize: 24 }}><AlertTriangle size={24} /></div>
-          <div style={{ fontSize: 14, fontWeight: 600 }}>{t('界面渲染出错')}</div>
+          <div className="text-2xl"><AlertTriangle size={24} /></div>
+          <div className="text-sm font-semibold">{t('界面渲染出错')}</div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 500, wordBreak: 'break-all' }}>{msg}</div>
           <pre style={{ fontSize: 10, color: 'var(--text-tertiary)', maxHeight: 200, overflow: 'auto', background: 'var(--surface-raised)', padding: 8, borderRadius: 4 }}>{stack}</pre>
           <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }} style={{

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { EventsOn, WindowHide } from '../../wailsjs/runtime/runtime.js';
 import * as AppGo from '../../wailsjs/go/wailsapp/App.js';
+import { warnDev } from '../utils/devLog';
 import type { config } from '../../wailsjs/go/models.ts';
 import type { SessionLike, WorkspaceContentTab } from '../utils/sessionWorkspace.ts';
 import type { TerminalPaneLayout } from '../utils/terminalPaneLayout.ts';
@@ -329,7 +330,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
           if (!currentServer) return prevServers;
           const detectedOs = staticInfo?.os || '';
           // 连接成功后统一同步；OS 检测失败时保留已有值，避免清空。
-          AppGo.SetConnectionOS(serverId, String(detectedOs || currentServer.os || '')).catch(console.error);
+          AppGo.SetConnectionOS(serverId, String(detectedOs || currentServer.os || '')).catch((err) => { warnDev(err); });
           if (detectedOs && currentServer.os !== detectedOs) {
             return prevServers.map(s => s.id === serverId ? { ...s, os: String(detectedOs) } : s);
           }

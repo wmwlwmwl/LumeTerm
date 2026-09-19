@@ -4,6 +4,7 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { extractQuickCommandParams, fillQuickCommandParams, normalizeQuickCommandParamHistory, type QuickCommandParamHistory } from '../../utils/quickCommandParams.ts';
 import { buildWrappedMultiLineCommand, isInteractivePromptText } from '../../utils/terminalHelpers.ts';
+import { warnDev } from '../../utils/devLog';
 import { normalizeQuickCommandItems, type FlattenedQuickCommand } from '../../utils/terminalCommandAutocomplete.ts';
 
 // ── 快捷命令条：输入框上方一排按钮，点击后弹确认框再发送（对齐安卓端） ──
@@ -116,7 +117,7 @@ export function useTerminalQuickCmd(deps: {
       prepareScreenScrollbackRef.current(text);
     }
     AppGo.WriteTerminal(sessionId, payload).catch((err) => {
-      console.error('WriteTerminal failed:', err);
+      warnDev('WriteTerminal failed:', err);
     });
     termRef.current?.scrollToBottom();
     if (text.length > 1 && !/^\d+$/.test(text) && !isInteractivePromptText(text)) {

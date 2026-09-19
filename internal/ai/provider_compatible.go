@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -104,8 +103,8 @@ func fetchCompatibleProviderModels(client *http.Client, profile AIProviderProfil
 	defer response.Body.Close()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		bodyBytes, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-		errorText := strings.TrimSpace(string(bodyBytes))
+		bodyStr := readErrorBody(response, 4096)
+		errorText := strings.TrimSpace(bodyStr)
 		if errorText == "" {
 			errorText = response.Status
 		}
@@ -202,9 +201,9 @@ func fetchMessagesProviderModels(client *http.Client, profile AIProviderProfile)
 				fallbackSucceeded = true
 				break
 			}
-			bodyBytes, _ := io.ReadAll(io.LimitReader(fallbackResp.Body, 1024))
+			bodyStr := readErrorBody(fallbackResp, 1024)
 			fallbackResp.Body.Close()
-			fallbackErr = fmt.Errorf("fallback to %s failed (status %d): %s", path, fallbackResp.StatusCode, strings.TrimSpace(string(bodyBytes)))
+			fallbackErr = fmt.Errorf("fallback to %s failed (status %d): %s", path, fallbackResp.StatusCode, strings.TrimSpace(bodyStr))
 		}
 		if !fallbackSucceeded {
 			if fallbackErr != nil {
@@ -224,8 +223,8 @@ func fetchMessagesProviderModels(client *http.Client, profile AIProviderProfile)
 	defer response.Body.Close()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		bodyBytes, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-		errorText := strings.TrimSpace(string(bodyBytes))
+		bodyStr := readErrorBody(response, 4096)
+		errorText := strings.TrimSpace(bodyStr)
 		if errorText == "" {
 			errorText = response.Status
 		}
@@ -371,8 +370,8 @@ func (a *Service) requestCompatibleAIChatRound(ctx context.Context, requestID st
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		errorText := strings.TrimSpace(string(bodyBytes))
+		bodyStr := readErrorBody(resp, 4096)
+		errorText := strings.TrimSpace(bodyStr)
 		if errorText == "" {
 			errorText = resp.Status
 		}

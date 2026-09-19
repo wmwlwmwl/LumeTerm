@@ -73,11 +73,12 @@ export function TerminalStatusBar({
       {/* 状态指示灯 - 使用全局 CSS 类，连接成功时触发涟漪动画 */}
       <div className={[
         'status-dot',
+        'shrink-0',
         isConnected  ? (justConnected ? 'just-connected' : 'online') : '',
         isConnecting ? 'connecting' : '',
         isError      ? 'offline' : '',
         !isConnected && !isConnecting && !isError ? 'offline' : '',
-      ].filter(Boolean).join(' ')} style={{ flexShrink: 0 }} />
+      ].filter(Boolean).join(' ')} />
       <span className="font-medium font-mono text-[var(--term-server-color)]">
         {serverName || 'Terminal'}
       </span>

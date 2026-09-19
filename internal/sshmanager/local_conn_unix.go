@@ -57,7 +57,7 @@ func (m *SSHManager) ConnectLocal(sessionId string, name string, shellPath strin
 	// 传初始 Winsize，避免 PTY 以 0x0 出生：部分 shell 在 0 列下 readline
 	// 不绘制提示符/回显，且首屏尺寸与前端不同步。前端会在 WS onopen 后
 	// 主动发一次实际 fit 尺寸，这里只需一个合理的出生尺寸。
-	initialSize := &pty.Winsize{Rows: 24, Cols: 80}
+	initialSize := &pty.Winsize{Rows: defaultTermRows, Cols: defaultTermCols}
 	ptyFile, err := pty.StartWithSize(cmd, initialSize)
 	if err != nil {
 		return fmt.Errorf("pty start error: %w", err)

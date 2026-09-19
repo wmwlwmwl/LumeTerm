@@ -36,7 +36,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
           height: '100%', padding: 24, color: 'var(--danger)', background: 'var(--surface-overlay)',
           fontFamily: 'system-ui, sans-serif', fontSize: 13,
         }}>
-          <div style={{ marginBottom: 8, fontWeight: 600 }}>
+          <div className="font-semibold" style={{ marginBottom: 8 }}>
             {label || t('组件渲染出错')}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 12, textAlign: 'center', maxWidth: 400 }}>

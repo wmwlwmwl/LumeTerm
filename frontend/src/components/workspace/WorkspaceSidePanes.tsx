@@ -45,7 +45,7 @@ export default function WorkspaceSidePanes({
           <>
             {aiPanelNode}
             {isActiveSessionConnected && (showAIPanel ? (
-              <Tiptop text={t('收起 AI 助手面板')} placement="bottom" style={{ display: 'flex' }}>
+              <Tiptop text={t('收起 AI 助手面板')} placement="bottom" className="flex">
                 <div
                   className={`split-resizer-v hotzone-left${collapseDragIntent === 'ai' ? ' armed' : ''}`}
                   onMouseDown={(e) => startDrag(e, 'ai')}
@@ -101,7 +101,7 @@ export default function WorkspaceSidePanes({
                 </button>
               </Tiptop>
             ) : (
-              <Tiptop text={t('收起监控面板')} placement="bottom" style={{ display: 'flex' }}>
+              <Tiptop text={t('收起监控面板')} placement="bottom" className="flex">
                 <div
                   className={`split-resizer-v hotzone-left probe-resizer${collapseDragIntent === 'probe' ? ' armed' : ''}`}
                   onMouseDown={(e) => startDrag(e, 'probe')}
@@ -136,7 +136,7 @@ export default function WorkspaceSidePanes({
               </button>
             </Tiptop>
           ) : (
-            <Tiptop text={t('收起监控面板')} placement="bottom" style={{ display: 'flex' }}>
+            <Tiptop text={t('收起监控面板')} placement="bottom" className="flex">
               <div
                 className={`split-resizer-v hotzone-right probe-resizer${collapseDragIntent === 'probe' ? ' armed' : ''}`}
                 onMouseDown={(e) => startDrag(e, 'probe')}
@@ -169,7 +169,7 @@ export default function WorkspaceSidePanes({
       {aiPanelNode && probePanelPosition === 'left' && (
         <>
           {isActiveSessionConnected && (showAIPanel ? (
-            <Tiptop text={t('收起 AI 助手面板')} placement="bottom" style={{ display: 'flex' }}>
+            <Tiptop text={t('收起 AI 助手面板')} placement="bottom" className="flex">
               <div
                 className={`split-resizer-v hotzone-right${collapseDragIntent === 'ai' ? ' armed' : ''}`}
                 onMouseDown={(e) => startDrag(e, 'ai')}

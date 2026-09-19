@@ -333,7 +333,7 @@ func (s *Service) failMCPTransfer(transferID string, phase string, detail string
 	})
 }
 
-func (s *Service) UpdateMCPTransferFromCompressedUploadEvent(sessionID string, uploadID string, phase string, progress float64, phaseProgress float64, bytesDone int64, bytesTotal int64, current string, detail string) {
+func (s *Service) UpdateMCPTransferFromCompressedUploadEvent(sessionID string, uploadID string, phase string, progress float64, bytesDone int64, bytesTotal int64, current string, detail string) {
 	trimmedUploadID := strings.TrimSpace(uploadID)
 	if trimmedUploadID == "" {
 		return
@@ -350,7 +350,6 @@ func (s *Service) UpdateMCPTransferFromCompressedUploadEvent(sessionID string, u
 		snapshot.Detail = strings.TrimSpace(detail)
 		snapshot.Status = mcpTransferStatusRunning
 		snapshot.Error = ""
-		_ = phaseProgress
 	})
 }
 

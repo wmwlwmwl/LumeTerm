@@ -202,7 +202,7 @@ export default function ChmodDialog({ path, permission, mode, rememberedMode = '
               </Button>
             </div>
             {showIncludeSubdirectories && (
-              <label htmlFor="fm-chmod-include-children" className="chmod-checkbox" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+              <label htmlFor="fm-chmod-include-children" className="chmod-checkbox flex" style={{ alignItems: 'center', gap: 8, marginTop: 12 }}>
                 <input type="checkbox" id="fm-chmod-include-children" name="fm-chmod-include-children" autoComplete="off" checked={includeChildren} onChange={(e) => setIncludeChildren(e.target.checked)} />
                 <span>{t('包含子目录')}</span>
               </label>

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { readClipboardText } from '../../utils/terminalHelpers.ts';
+import { warnDev } from '../../utils/devLog';
 import type { I18nKey } from '../../i18n.ts';
 
 type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
@@ -181,7 +182,7 @@ export function useTerminalMenus(deps: {
               }
             });
           }).catch((err) => {
-            console.error('Failed to read clipboard:', err);
+            warnDev('Failed to read clipboard:', err);
             input.focus();
           });
           break;

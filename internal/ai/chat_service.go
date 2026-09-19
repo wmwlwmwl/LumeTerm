@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -1684,8 +1685,7 @@ func purgeAIProtocolRetryNoiseFromMessages(messages []AIChatRequestMessage) []AI
 	return cleaned
 }
 
-func buildInvalidToolProtocolRetryMessage(conversationID string, detail string) string {
-	_ = conversationID
+func buildInvalidToolProtocolRetryMessage(detail string) string {
 	trimmedDetail := strings.TrimSpace(detail)
 	if trimmedDetail == "" {
 		trimmedDetail = "assistant response violated the XML tool protocol"
@@ -2606,7 +2606,9 @@ func (a *Service) runCompatibleAIChatLoop(ctx context.Context, requestID string,
 		if payload.ConversationID != "" {
 			globalSettings := a.GetAIGlobalSettings()
 			if globalSettings.ConversationAutoBackupEnabled {
-				_, _ = a.CreateAIConversationAutoBackup(payload.ConversationID)
+				if _, err := a.CreateAIConversationAutoBackup(payload.ConversationID); err != nil {
+					slog.Warn("自动备份创建失败", "conversationID", payload.ConversationID, "error", err)
+				}
 			}
 		}
 
@@ -2757,7 +2759,7 @@ func (a *Service) runCompatibleAIChatLoop(ctx context.Context, requestID string,
 			}
 
 			consecutiveNoToolCount++
-			protocolRetryPrompt := buildInvalidToolProtocolRetryMessage(payload.ConversationID, parseErr.Error())
+			protocolRetryPrompt := buildInvalidToolProtocolRetryMessage(parseErr.Error())
 			if consecutiveNoToolCount == 1 {
 				nextRequestMessages := buildAINextRequestMessagesWithAssistant(requestMessages, roundResult)
 				assistantCacheObjects := extractAILatestAssistantCacheObjects(nextRequestMessages)
