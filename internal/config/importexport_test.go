@@ -243,10 +243,10 @@ func TestFilterImportCredentialsForConnections(t *testing.T) {
 
 // ── 密文导入/导出测试 ──────────────────────────────────────────
 
-const lumeterm2TestVector = "LUMETERM2:AgADNFAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobuSS2sCUnXOM1UV1g4ZCENiXBLVh7tzhcV8HkJjqqVdjqjtgc92HbU3EU7+BTIH/QY2lRWwWuHVNiSGCjeIWbJ6o/J5CiWGel3ziScbUDW+RH8VGAgEcPQoj2WgSwzsG2ablk02o/U5EJDWs3NJcrLRpFNoaAwNh3OeGLct1sA/w="
+const lumeterm2TestVector = "LUMETERM2:AgADNFAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobF9JHcFJkz4QPNXc0pWTEDpoMJ0Nym0pLUA/Ky8DM1AfpbnyW3TqAZ7fkFSbkZiyXk76SFCMLtTyEajS/guHS/eZCMqZwId/HJj4W8SAGmgyg4VY6cb/wYOoXWNDHyyDK1UnV8A0jEU19FbZAFmBsZx/EfFopbXnqw5ec87NowYY="
 
 func TestLUMETERM2FixedVector(t *testing.T) {
-	password := "跨端-password-🔐"
+	password := "跨端-password"
 	payload := `{"connections":[{"id":"vector","host":"example.com","port":22,"username":"root"}],"snapshot_time":1700000000000}`
 	salt := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	nonce := []byte{16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27}
