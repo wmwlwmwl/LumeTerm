@@ -68,8 +68,8 @@ export function useAIConversationOrganizer({ t, addToast, showAlert, requestDele
     }
   }, [addToast, handleOpenConversation, persistConversationOrganizer, t])
   const handleCreateConversationGroup = useCallback(async () => {
-    const name = window?.luminDialog?.prompt
-      ? await window.luminDialog.prompt(t('请输入分组名称'), '', t('新建分组'))
+    const name = window?.lumeDialog?.prompt
+      ? await window.lumeDialog.prompt(t('请输入分组名称'), '', t('新建分组'))
       : window.prompt(t('请输入分组名称'))
     const normalizedName = typeof name === 'string' ? name.trim() : ''
     if (!normalizedName) return

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	aiprovider "luminssh-go/internal/ai/provider"
+	aiprovider "lumeterm/internal/ai/provider"
 )
 
 var aiLiveSearchTimezone = time.FixedZone("UTC+8", 8*3600)

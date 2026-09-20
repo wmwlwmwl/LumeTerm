@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"luminssh-go/internal/aitypes"
+	"lumeterm/internal/aitypes"
 )
 
 func (c *ConfigManager) aiProviderRegistryPath() string {

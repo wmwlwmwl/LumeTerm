@@ -1,4 +1,4 @@
-# Lumin-SSH 桌面端 UI 设计规范与组件指南 (UI Design System Specification)
+# LumeTerm 桌面端 UI 设计规范与组件指南 (UI Design System Specification)
 
 > **适用范围**：`frontend/src` 全站组件与页面。  
 > **设计哲学**：现代工业级桌面开发工具质感（参考 Linear / Raycast / VS Code / Zed 设计语言）。  

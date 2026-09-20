@@ -106,7 +106,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
     const remotePath = joinPath(currentPath, item.name);
     const needConfirm = localStorage.getItem('skipFileDeleteConfirm') !== 'true';
     if (needConfirm) {
-      const ok = await window.luminDialog?.confirm(`${t('确定删除')}${item.name}${t('？此操作不可撤销')}`);
+      const ok = await window.lumeDialog?.confirm(`${t('确定删除')}${item.name}${t('？此操作不可撤销')}`);
       fileListRef.current?.focus();
       if (!ok) { operationInProgressRef.current = false; return; }
     }
@@ -134,7 +134,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
     const remotePath = joinPath(currentPath, item.name);
     const needConfirm = localStorage.getItem('skipFileDeleteConfirm') !== 'true';
     if (needConfirm) {
-      const ok = await window.luminDialog?.confirm(`${t('确定删除')}${item.name}${t('？(rm -rf) 此操作不可撤销')}`);
+      const ok = await window.lumeDialog?.confirm(`${t('确定删除')}${item.name}${t('？(rm -rf) 此操作不可撤销')}`);
       fileListRef.current?.focus();
       if (!ok) { operationInProgressRef.current = false; return; }
     }
@@ -162,7 +162,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
     operationInProgressRef.current = true;
     const needConfirm = localStorage.getItem('skipFileDeleteConfirm') !== 'true';
     if (needConfirm) {
-      const ok = await window.luminDialog?.confirm(`${t('确定删除所选')} (${selectedPaths.length}${t('项')})${t('？此操作不可撤销')}`);
+      const ok = await window.lumeDialog?.confirm(`${t('确定删除所选')} (${selectedPaths.length}${t('项')})${t('？此操作不可撤销')}`);
       fileListRef.current?.focus();
       if (!ok) { operationInProgressRef.current = false; return; }
     }
@@ -296,7 +296,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
   }, [clipboard, currentPath, transferFileManagerItems]);
   const handleMkdir = async (targetDirPath = currentPath) => {
     const normalizedTargetDirPath = normalizePath(typeof targetDirPath === 'string' ? targetDirPath : (currentPathRef.current || currentPath)) || '/';
-    const promptResult = await window.luminDialog?.prompt(t('新文件夹名称:'));
+    const promptResult = await window.lumeDialog?.prompt(t('新文件夹名称:'));
     const name = typeof promptResult === 'string' ? promptResult : '';
     if (!name) return;
     const remotePath = joinPath(normalizedTargetDirPath, name);
@@ -329,7 +329,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
 
   const handleNewFile = async (targetDirPath = currentPath) => {
     const normalizedTargetDirPath = normalizePath(typeof targetDirPath === 'string' ? targetDirPath : (currentPathRef.current || currentPath)) || '/';
-    const promptResult = await window.luminDialog?.prompt(t('新文件名称:'));
+    const promptResult = await window.lumeDialog?.prompt(t('新文件名称:'));
     const name = typeof promptResult === 'string' ? promptResult : '';
     if (!name) return;
     const remotePath = joinPath(normalizedTargetDirPath, name);
@@ -401,7 +401,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
         if (preview?.mode === 'folder' && preview?.targetExists === true) {
           const targetName = String(preview?.targetName || item.name || '').trim() || t('文件夹');
           const targetKind = preview?.targetKind === 'file' ? t('文件') : t('文件夹');
-          const choice = await window.luminDialog?.choice?.(
+          const choice = await window.lumeDialog?.choice?.(
             `${t('准备解压到“{name}”', { name: targetName })}\n${t('但当前目录里已经有同名{kind}', { kind: targetKind })}\n\n${t('请选择这次怎么处理')}`,
             t('智能解压遇到同名'),
             [

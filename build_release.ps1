@@ -1,7 +1,7 @@
 $wailsJson = Get-Content "wails.json" | ConvertFrom-Json
 $version = $wailsJson.info.productVersion
 
-Write-Host "Start LuminSSH packaging process: V$version" -ForegroundColor Cyan
+Write-Host "Start LumeTerm packaging process: V$version" -ForegroundColor Cyan
 
 $basePath = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $nsisPath = "$basePath\Packaging_Tools\nsis\nsis-3.08"
@@ -18,10 +18,10 @@ wails build -clean -upx -nsis -ldflags "-s -w"
 if ($LASTEXITCODE -ne 0) { Write-Error "Build failed"; exit 1 }
 
 Write-Host "`n[2/2] Renaming output files..." -ForegroundColor Yellow
-$portableDest = "build\bin\Lumin-V$version-portable.exe"
-$setupDest = "build\bin\Lumin-V$version-amd64-installer.exe"
-Move-Item -Path "build\bin\Lumin.exe" -Destination $portableDest -Force
-Move-Item -Path "build\bin\Lumin-amd64-installer.exe" -Destination $setupDest -Force
+$portableDest = "build\bin\LumeTerm-$version-windows-amd64-portable.exe"
+$setupDest = "build\bin\LumeTerm-$version-windows-amd64-installer.exe"
+Move-Item -Path "build\bin\LumeTerm.exe" -Destination $portableDest -Force
+Move-Item -Path "build\bin\LumeTerm-amd64-installer.exe" -Destination $setupDest -Force
 
 Write-Host "`n==============================================" -ForegroundColor Cyan
 Write-Host "  SUCCESS!" -ForegroundColor Cyan

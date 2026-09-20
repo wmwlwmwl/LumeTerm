@@ -2,5 +2,5 @@
 # CRLF 会让 shell 把 \r 当成命令的一部分，导致 postinst/spec/desktop 在 Linux 上执行失败。
 build/linux/postinst text eol=lf
 build/linux/postrm   text eol=lf
-build/linux/lumin.spec text eol=lf
-build/linux/lumin.desktop text eol=lf
+build/linux/lumeterm.spec text eol=lf
+build/linux/lumeterm.desktop text eol=lf

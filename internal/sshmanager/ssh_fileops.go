@@ -246,7 +246,7 @@ func (m *SSHManager) ListOwnershipCandidates(sessionId string) (OwnershipCandida
 	if err != nil {
 		return OwnershipCandidates{}, err
 	}
-	out, err := m.executeCmdWithClient(client, `printf '__LUMIN_USERS__\n'; (getent passwd 2>/dev/null || cat /etc/passwd 2>/dev/null || true); printf '__LUMIN_GROUPS__\n'; (getent group 2>/dev/null || cat /etc/group 2>/dev/null || true)`)
+	out, err := m.executeCmdWithClient(client, `printf '__LUMETERM_USERS__\n'; (getent passwd 2>/dev/null || cat /etc/passwd 2>/dev/null || true); printf '__LUMETERM_GROUPS__\n'; (getent group 2>/dev/null || cat /etc/group 2>/dev/null || true)`)
 	if err != nil {
 		return OwnershipCandidates{}, err
 	}
@@ -255,10 +255,10 @@ func (m *SSHManager) ListOwnershipCandidates(sessionId string) (OwnershipCandida
 	for _, line := range strings.Split(out, "\n") {
 		trimmed := strings.TrimSpace(line)
 		switch trimmed {
-		case "__LUMIN_USERS__":
+		case "__LUMETERM_USERS__":
 			currentSection = "users"
 			continue
-		case "__LUMIN_GROUPS__":
+		case "__LUMETERM_GROUPS__":
 			currentSection = "groups"
 			continue
 		}
@@ -529,7 +529,7 @@ func (m *SSHManager) WriteFileContext(ctx context.Context, sessionId string, pat
 		hasOriginalMode = true
 	}
 	token := newCommandExecutionToken()
-	tempPath := path + ".lumin_tmp_" + token
+	tempPath := path + ".lumeterm_tmp_" + token
 	f, err := sftpClient.Create(tempPath)
 	if err != nil {
 		return err

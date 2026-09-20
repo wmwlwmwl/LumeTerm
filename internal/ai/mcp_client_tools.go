@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/mcp"
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcp"
+	"lumeterm/internal/mcpserver"
 )
 
 const aiUseMCPToolName = "use_mcp_tool"

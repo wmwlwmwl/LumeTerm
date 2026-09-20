@@ -16,8 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"luminssh-go/internal/mcpbridge"
-	"luminssh-go/internal/platformruntime"
+	"lumeterm/internal/apppaths"
+	"lumeterm/internal/mcpbridge"
+	"lumeterm/internal/platformruntime"
 
 	"github.com/energye/systray"
 	"github.com/wailsapp/wails/v2"
@@ -62,11 +63,11 @@ func setupSystray(app *App) {
 	systrayOnce.Do(func() {
 		log.Println("[Systray] setupSystray initializing...")
 		systray.SetIcon(app.icon)
-		systray.SetTitle("Lumin")
-		systray.SetTooltip("Lumin SSH")
+		systray.SetTitle("LumeTerm")
+		systray.SetTooltip("LumeTerm")
 
 		mShow := systray.AddMenuItem("显示主窗口", "Show Main Window")
-		mQuit := systray.AddMenuItem("完全退出", "Quit Lumin")
+		mQuit := systray.AddMenuItem("完全退出", "Quit LumeTerm")
 
 		showMain := func() {
 			log.Println("[Systray] showMain invoked, awakening main window")
@@ -107,7 +108,7 @@ func setupSystray(app *App) {
 		})
 
 		mQuit.Click(func() {
-			log.Println("[Systray] Menu item 'Quit Lumin' clicked")
+			log.Println("[Systray] Menu item 'Quit LumeTerm' clicked")
 			app.DoQuit()
 		})
 
@@ -115,7 +116,7 @@ func setupSystray(app *App) {
 	})
 }
 
-// maxLogFileSize 日志单文件上限：超过则轮转（lumin.log → lumin.log.1），
+// maxLogFileSize 日志单文件上限：超过则轮转（lumeterm.log → lumeterm.log.1），
 // 防止长期运行无限增长；保留一份历史便于回溯。
 const maxLogFileSize = 5 << 20 // 5MB
 
@@ -200,14 +201,15 @@ func (t teeLogWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// logExeDirSeam 仅测试注入：覆盖 exe 同级日志目录，避免测试在构建缓存目录留下 lumin.log。
+// logExeDirSeam 仅测试注入：覆盖 exe 同级日志目录，避免测试在构建缓存目录留下 lumeterm.log。
 var logExeDirSeam = ""
 
 // initLogFile 把标准 log 输出重定向（控制台 + 文件双写）：
 //  1. os.Stderr —— 从终端/调试器启动时日志仍可见；窗口应用没有控制台时静默丢弃
-//  2. %AppData%\Lumin\config\lumin.log —— 主日志，始终写入
-//  3. exe 同级目录 lumin.log —— 便携版场景：对方解压运行后日志就在运行目录，
+//  2. %AppData%\LumeTerm\config\lumeterm.log —— 主日志，始终写入
+//  3. exe 同级目录 lumeterm.log —— 便携版场景：对方解压运行后日志就在运行目录，
 //     无需进入隐藏的 %AppData%，直接取回即可；安装版（Program Files）写失败自动忽略
+//
 // 追加模式，0600，单文件 5MB 运行期轮转。
 // 返回清理函数（关闭文件句柄），应在 wails.Run 返回后调用。
 func initLogFile() func() {
@@ -216,14 +218,12 @@ func initLogFile() func() {
 
 	writers = append(writers, os.Stderr)
 
-	dir, err := os.UserConfigDir()
-	if err == nil {
-		dir = filepath.Join(dir, "Lumin", "config")
-		if err := os.MkdirAll(dir, 0700); err == nil {
-			if w, err := newRotatingFileWriter(filepath.Join(dir, "lumin.log")); err == nil {
-				writers = append(writers, w)
-				closers = append(closers, w)
-			}
+	// 触发数据目录迁移（Lumin → LumeTerm）：必须在打开任何旧目录文件句柄之前
+	dir := filepath.Join(apppaths.DataRoot(), "config")
+	if err := os.MkdirAll(dir, 0700); err == nil {
+		if w, err := newRotatingFileWriter(filepath.Join(dir, "lumeterm.log")); err == nil {
+			writers = append(writers, w)
+			closers = append(closers, w)
 		}
 	}
 	if exePath, err := os.Executable(); err == nil {
@@ -231,7 +231,7 @@ func initLogFile() func() {
 		if logExeDirSeam != "" {
 			dir = logExeDirSeam
 		}
-		if w, err := newRotatingFileWriter(filepath.Join(dir, "lumin.log")); err == nil {
+		if w, err := newRotatingFileWriter(filepath.Join(dir, "lumeterm.log")); err == nil {
 			writers = append(writers, w)
 			closers = append(closers, w)
 		}
@@ -240,7 +240,7 @@ func initLogFile() func() {
 		return func() {}
 	}
 	log.SetOutput(teeLogWriter{writers})
-	log.Printf("[Lumin] Logger initialized. Log files: %d", len(closers))
+	log.Printf("[LumeTerm] Logger initialized. Log files: %d", len(closers))
 	return func() {
 		for _, c := range closers {
 			_ = c.Close()
@@ -274,7 +274,7 @@ func Run(assets embed.FS, icon []byte) {
 
 	// Create application with options
 	opts := &options.App{
-		Title:     "Lumin",
+		Title:     "LumeTerm",
 		Width:     1440,
 		Height:    900,
 		Frameless: true,

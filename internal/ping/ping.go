@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"luminssh-go/internal/config"
-	"luminssh-go/internal/sshmanager"
+	"lumeterm/internal/config"
+	"lumeterm/internal/sshmanager"
 )
 
 // 智能模式下，疑似 TUN/代理路径的 Banner 可达性确认最短间隔。
@@ -337,7 +337,7 @@ func readSSHBanner(conn net.Conn, connectedAt time.Time) (int64, bool) {
 
 	// 未读到服务端 Banner 时，写客户端标识再读一次（部分代理链路需要客户端先说话）。
 	_ = conn.SetDeadline(time.Now().Add(3 * time.Second))
-	if _, writeErr := conn.Write([]byte("SSH-2.0-LuminPing\r\n")); writeErr != nil {
+	if _, writeErr := conn.Write([]byte("SSH-2.0-LumeTermPing\r\n")); writeErr != nil {
 		return 0, false
 	}
 	n, err = conn.Read(buf)

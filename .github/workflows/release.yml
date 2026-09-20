@@ -60,7 +60,7 @@ jobs:
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
           set -euo pipefail
-          TITLE="Lumin SSH Client ${TAG}"
+          TITLE="LumeTerm ${TAG}"
           NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
 
           # 上一发行 tag：按版本号排序，取当前 tag 的前一个 v*
@@ -138,11 +138,11 @@ jobs:
           VERSION: ${{ needs.create-draft.outputs.version }}
         run: |
           export PATH=$HOME/go/bin:$PATH
-          wails build -clean -tags webkit2_41 -ldflags "-s -w" -upx -o Lumin
-          cp build/bin/Lumin "build/Lumin-V${VERSION}-linux-amd64"
-          shasum -a 256 "build/Lumin-V${VERSION}-linux-amd64" | sed 's|build/||' > "build/Lumin-V${VERSION}-linux-amd64.sha256"
-          echo "binary=${{ github.workspace }}/build/Lumin-V${VERSION}-linux-amd64" >> $GITHUB_ENV
-          echo "binary_sha=${{ github.workspace }}/build/Lumin-V${VERSION}-linux-amd64.sha256" >> $GITHUB_ENV
+          wails build -clean -tags webkit2_41 -ldflags "-s -w" -upx -o LumeTerm
+          cp build/bin/LumeTerm "build/LumeTerm-${VERSION}-linux-amd64"
+          shasum -a 256 "build/LumeTerm-${VERSION}-linux-amd64" | sed 's|build/||' > "build/LumeTerm-${VERSION}-linux-amd64.sha256"
+          echo "binary=${{ github.workspace }}/build/LumeTerm-${VERSION}-linux-amd64" >> $GITHUB_ENV
+          echo "binary_sha=${{ github.workspace }}/build/LumeTerm-${VERSION}-linux-amd64.sha256" >> $GITHUB_ENV
 
       - name: Package .deb & .rpm
         env:
@@ -154,39 +154,39 @@ jobs:
           mkdir -p build/deb/usr/share/applications
           mkdir -p build/deb/usr/share/icons/hicolor/256x256/apps
           {
-            echo "Package: lumin"
+            echo "Package: lumeterm"
             echo "Version: ${VERSION}"
             echo "Section: net"
             echo "Priority: optional"
             echo "Architecture: amd64"
             echo "Depends: libgtk-3-0, libwebkit2gtk-4.1-0, libglib2.0-0, libc6, libayatana-appindicator3-1"
-            echo "Maintainer: Lumin <admin@662662.xyz>"
-            echo "Description: Lightweight SSH Client"
-            echo " A modern, lightweight SSH client built with Wails."
+            echo "Maintainer: LumeTerm <admin@662662.xyz>"
+            echo "Description: Lightweight Terminal Client"
+            echo " A modern, lightweight terminal client built with Wails."
             echo " Quickly manage and connect to your SSH servers."
           } > build/deb/DEBIAN/control
-          cp build/bin/Lumin build/deb/usr/bin/lumin
-          sudo chown root:root build/deb/usr/bin/lumin
-          cp build/appicon.png build/deb/usr/share/icons/hicolor/256x256/apps/lumin.png
-          cp build/linux/lumin.desktop build/deb/usr/share/applications/lumin.desktop
+          cp build/bin/LumeTerm build/deb/usr/bin/lumeterm
+          sudo chown root:root build/deb/usr/bin/lumeterm
+          cp build/appicon.png build/deb/usr/share/icons/hicolor/256x256/apps/lumeterm.png
+          cp build/linux/lumeterm.desktop build/deb/usr/share/applications/lumeterm.desktop
           # postinst/postrm 用独立脚本文件安装（不用 heredoc）：
           # heredoc 顶格会破坏 YAML 结构，带缩进又会破坏 shebang，两者无法兼得。
           cp build/linux/postinst build/deb/DEBIAN/postinst
           cp build/linux/postrm build/deb/DEBIAN/postrm
           sudo chmod 755 build/deb/DEBIAN/postinst build/deb/DEBIAN/postrm
           sudo chown root:root build/deb/DEBIAN/postinst build/deb/DEBIAN/postrm
-          sudo dpkg-deb --root-owner-group --build build/deb "build/Lumin-V${VERSION}-amd64.deb"
-          shasum -a 256 "build/Lumin-V${VERSION}-amd64.deb" | sed 's|build/||' > "build/Lumin-V${VERSION}-amd64.deb.sha256"
-          echo "deb=${{ github.workspace }}/build/Lumin-V${VERSION}-amd64.deb" >> $GITHUB_ENV
-          echo "deb_sha=${{ github.workspace }}/build/Lumin-V${VERSION}-amd64.deb.sha256" >> $GITHUB_ENV
+          sudo dpkg-deb --root-owner-group --build build/deb "build/LumeTerm-${VERSION}-linux-amd64.deb"
+          shasum -a 256 "build/LumeTerm-${VERSION}-linux-amd64.deb" | sed 's|build/||' > "build/LumeTerm-${VERSION}-linux-amd64.deb.sha256"
+          echo "deb=${{ github.workspace }}/build/LumeTerm-${VERSION}-linux-amd64.deb" >> $GITHUB_ENV
+          echo "deb_sha=${{ github.workspace }}/build/LumeTerm-${VERSION}-linux-amd64.deb.sha256" >> $GITHUB_ENV
 
           # ===== .rpm（rpmbuild 原生构建，不再依赖 alien 转换）=====
           RPM_TOPDIR="$HOME/rpmbuild"
           mkdir -p "${RPM_TOPDIR}/SOURCES" "${RPM_TOPDIR}/SPECS" "${RPM_TOPDIR}/BUILD" "${RPM_TOPDIR}/RPMS" "${RPM_TOPDIR}/SRPMS"
-          cp build/bin/Lumin "${RPM_TOPDIR}/SOURCES/Lumin"
+          cp build/bin/LumeTerm "${RPM_TOPDIR}/SOURCES/LumeTerm"
           cp build/appicon.png "${RPM_TOPDIR}/SOURCES/appicon.png"
-          cp build/linux/lumin.desktop "${RPM_TOPDIR}/SOURCES/lumin.desktop"
-          cp build/linux/lumin.spec "${RPM_TOPDIR}/SPECS/lumin.spec"
+          cp build/linux/lumeterm.desktop "${RPM_TOPDIR}/SOURCES/lumeterm.desktop"
+          cp build/linux/lumeterm.spec "${RPM_TOPDIR}/SPECS/lumeterm.spec"
           # rpm Version 字段不允许 '-'（它是 Version/Release 的分隔符）：
           # 把 1.2.6-test-ipc 拆成 Version=1.2.6, Release=1.test_ipc
           VER_RAW="${VERSION#V}"
@@ -197,16 +197,16 @@ jobs:
           else
             RPM_RELEASE="1.$(echo "${RPM_REL_SUFFIX}" | sed 's/[^a-zA-Z0-9.]/_/g')"
           fi
-          rpmbuild -bb "${RPM_TOPDIR}/SPECS/lumin.spec" \
+          rpmbuild -bb "${RPM_TOPDIR}/SPECS/lumeterm.spec" \
             --define "lum_version ${RPM_VER}" \
             --define "lum_release ${RPM_RELEASE}" \
             --define "_topdir ${RPM_TOPDIR}" \
             --target x86_64
-          BUILT_RPM=$(find "${RPM_TOPDIR}/RPMS" -name "lumin-*.x86_64.rpm" | head -1)
-          cp "${BUILT_RPM}" "build/Lumin-V${VERSION}-amd64.rpm"
-          shasum -a 256 "build/Lumin-V${VERSION}-amd64.rpm" | sed 's|build/||' > "build/Lumin-V${VERSION}-amd64.rpm.sha256"
-          echo "rpm=${{ github.workspace }}/build/Lumin-V${VERSION}-amd64.rpm" >> $GITHUB_ENV
-          echo "rpm_sha=${{ github.workspace }}/build/Lumin-V${VERSION}-amd64.rpm.sha256" >> $GITHUB_ENV
+          BUILT_RPM=$(find "${RPM_TOPDIR}/RPMS" -name "lumeterm-*.x86_64.rpm" | head -1)
+          cp "${BUILT_RPM}" "build/LumeTerm-${VERSION}-linux-amd64.rpm"
+          shasum -a 256 "build/LumeTerm-${VERSION}-linux-amd64.rpm" | sed 's|build/||' > "build/LumeTerm-${VERSION}-linux-amd64.rpm.sha256"
+          echo "rpm=${{ github.workspace }}/build/LumeTerm-${VERSION}-linux-amd64.rpm" >> $GITHUB_ENV
+          echo "rpm_sha=${{ github.workspace }}/build/LumeTerm-${VERSION}-linux-amd64.rpm.sha256" >> $GITHUB_ENV
 
       - name: Upload to Draft Release
         env:
@@ -255,21 +255,21 @@ jobs:
       - name: Build Wails
         run: |
           export PATH=$HOME/go/bin:$PATH
-          wails build -clean -ldflags "-s -w" -o Lumin
+          wails build -clean -ldflags "-s -w" -o LumeTerm
           uname -m
-          file build/bin/Lumin.app/Contents/MacOS/Lumin
-          lipo -archs build/bin/Lumin.app/Contents/MacOS/Lumin
+          file build/bin/LumeTerm.app/Contents/MacOS/LumeTerm
+          lipo -archs build/bin/LumeTerm.app/Contents/MacOS/LumeTerm
 
       - name: Package .app to .dmg
         env:
           VERSION: ${{ needs.create-draft.outputs.version }}
           ARCH: ${{ matrix.arch }}
         run: |
-          cp -r build/bin/Lumin.app build/Lumin.app
-          hdiutil create -volname "Lumin" -srcfolder build/Lumin.app -ov -format UDZO "build/Lumin-V${VERSION}-${ARCH}.dmg"
-          shasum -a 256 "build/Lumin-V${VERSION}-${ARCH}.dmg" | sed 's|build/||' > "build/Lumin-V${VERSION}-${ARCH}.dmg.sha256"
-          echo "app_dmg=${{ github.workspace }}/build/Lumin-V${VERSION}-${ARCH}.dmg" >> $GITHUB_ENV
-          echo "app_sha=${{ github.workspace }}/build/Lumin-V${VERSION}-${ARCH}.dmg.sha256" >> $GITHUB_ENV
+          cp -r build/bin/LumeTerm.app build/LumeTerm.app
+          hdiutil create -volname "LumeTerm" -srcfolder build/LumeTerm.app -ov -format UDZO "build/LumeTerm-${VERSION}-macos-${ARCH}.dmg"
+          shasum -a 256 "build/LumeTerm-${VERSION}-macos-${ARCH}.dmg" | sed 's|build/||' > "build/LumeTerm-${VERSION}-macos-${ARCH}.dmg.sha256"
+          echo "app_dmg=${{ github.workspace }}/build/LumeTerm-${VERSION}-macos-${ARCH}.dmg" >> $GITHUB_ENV
+          echo "app_sha=${{ github.workspace }}/build/LumeTerm-${VERSION}-macos-${ARCH}.dmg.sha256" >> $GITHUB_ENV
 
       - name: Upload to Draft Release
         env:
@@ -313,7 +313,7 @@ jobs:
       - name: Build Wails (binary + NSIS installer)
         run: |
           $env:PATH = "$env:USERPROFILE\go\bin;C:\Program Files (x86)\NSIS;" + $env:PATH
-          wails build -clean -o Lumin.exe --nsis -ldflags "-s -w" -upx
+          wails build -clean -o LumeTerm.exe --nsis -ldflags "-s -w" -upx
 
       - name: Package portable & installer
         shell: bash
@@ -335,17 +335,17 @@ jobs:
               echo "${h}  $(basename "$f")"
             fi
           }
-          cp build/bin/Lumin.exe "build/Lumin-V${VERSION}-portable.exe"
-          sha256_file "build/Lumin-V${VERSION}-portable.exe" > "build/Lumin-V${VERSION}-portable.exe.sha256"
+          cp build/bin/LumeTerm.exe "build/LumeTerm-${VERSION}-windows-amd64-portable.exe"
+          sha256_file "build/LumeTerm-${VERSION}-windows-amd64-portable.exe" > "build/LumeTerm-${VERSION}-windows-amd64-portable.exe.sha256"
           installer=$(ls build/bin/*-installer.exe | head -1)
-          cp "${installer}" "build/Lumin-V${VERSION}-amd64-installer.exe"
-          sha256_file "build/Lumin-V${VERSION}-amd64-installer.exe" > "build/Lumin-V${VERSION}-amd64-installer.exe.sha256"
+          cp "${installer}" "build/LumeTerm-${VERSION}-windows-amd64-installer.exe"
+          sha256_file "build/LumeTerm-${VERSION}-windows-amd64-installer.exe" > "build/LumeTerm-${VERSION}-windows-amd64-installer.exe.sha256"
           # GITHUB_ENV 在 Windows 上用正斜杠更稳
           WS="${GITHUB_WORKSPACE//\\//}"
-          echo "portable=${WS}/build/Lumin-V${VERSION}-portable.exe" >> "$GITHUB_ENV"
-          echo "portable_sha=${WS}/build/Lumin-V${VERSION}-portable.exe.sha256" >> "$GITHUB_ENV"
-          echo "installer=${WS}/build/Lumin-V${VERSION}-amd64-installer.exe" >> "$GITHUB_ENV"
-          echo "installer_sha=${WS}/build/Lumin-V${VERSION}-amd64-installer.exe.sha256" >> "$GITHUB_ENV"
+          echo "portable=${WS}/build/LumeTerm-${VERSION}-windows-amd64-portable.exe" >> "$GITHUB_ENV"
+          echo "portable_sha=${WS}/build/LumeTerm-${VERSION}-windows-amd64-portable.exe.sha256" >> "$GITHUB_ENV"
+          echo "installer=${WS}/build/LumeTerm-${VERSION}-windows-amd64-installer.exe" >> "$GITHUB_ENV"
+          echo "installer_sha=${WS}/build/LumeTerm-${VERSION}-windows-amd64-installer.exe.sha256" >> "$GITHUB_ENV"
 
       - name: Upload to Draft Release
         shell: bash
@@ -372,20 +372,20 @@ jobs:
         run: |
           set -euo pipefail
           required=(
-            "Lumin-V${VERSION}-portable.exe"
-            "Lumin-V${VERSION}-portable.exe.sha256"
-            "Lumin-V${VERSION}-amd64-installer.exe"
-            "Lumin-V${VERSION}-amd64-installer.exe.sha256"
-            "Lumin-V${VERSION}-linux-amd64"
-            "Lumin-V${VERSION}-linux-amd64.sha256"
-            "Lumin-V${VERSION}-amd64.deb"
-            "Lumin-V${VERSION}-amd64.deb.sha256"
-            "Lumin-V${VERSION}-amd64.rpm"
-            "Lumin-V${VERSION}-amd64.rpm.sha256"
-            "Lumin-V${VERSION}-arm64.dmg"
-            "Lumin-V${VERSION}-arm64.dmg.sha256"
-            "Lumin-V${VERSION}-amd64.dmg"
-            "Lumin-V${VERSION}-amd64.dmg.sha256"
+            "LumeTerm-${VERSION}-windows-amd64-portable.exe"
+            "LumeTerm-${VERSION}-windows-amd64-portable.exe.sha256"
+            "LumeTerm-${VERSION}-windows-amd64-installer.exe"
+            "LumeTerm-${VERSION}-windows-amd64-installer.exe.sha256"
+            "LumeTerm-${VERSION}-linux-amd64"
+            "LumeTerm-${VERSION}-linux-amd64.sha256"
+            "LumeTerm-${VERSION}-linux-amd64.deb"
+            "LumeTerm-${VERSION}-linux-amd64.deb.sha256"
+            "LumeTerm-${VERSION}-linux-amd64.rpm"
+            "LumeTerm-${VERSION}-linux-amd64.rpm.sha256"
+            "LumeTerm-${VERSION}-macos-arm64.dmg"
+            "LumeTerm-${VERSION}-macos-arm64.dmg.sha256"
+            "LumeTerm-${VERSION}-macos-amd64.dmg"
+            "LumeTerm-${VERSION}-macos-amd64.dmg.sha256"
           )
           assets=$(gh release view "${TAG}" --repo "${{ github.repository }}" --json assets --jq '.assets[].name')
           missing=0

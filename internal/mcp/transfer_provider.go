@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 type TransferProvider struct {

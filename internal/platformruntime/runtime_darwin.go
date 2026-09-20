@@ -18,8 +18,8 @@ func ApplyOptions(opts *options.App, _ bool) {
 		WebviewIsTransparent: false,
 		WindowIsTranslucent:  false,
 		About: &mac.AboutInfo{
-			Title:   "Lumin",
-			Message: "Lightweight SSH Client",
+			Title:   "LumeTerm",
+			Message: "Lightweight Terminal Client",
 		},
 	}
 }

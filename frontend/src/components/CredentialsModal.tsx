@@ -94,8 +94,8 @@ export default function CredentialsModal({ onClose, onChange, addToast }: Creden
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.name.trim()) return window.luminDialog?.alert(t('凭据名称'));
-    if (!form.username.trim()) return window.luminDialog?.alert(t('请填写用户名'));
+    if (!form.name.trim()) return window.lumeDialog?.alert(t('凭据名称'));
+    if (!form.username.trim()) return window.lumeDialog?.alert(t('请填写用户名'));
     setSaving(true);
     try {
       // 新增时无 id，保存参数允许缺省；断言为 Credential 便于调 Go 侧类型
@@ -106,14 +106,14 @@ export default function CredentialsModal({ onClose, onChange, addToast }: Creden
       closeForm();
       onChange?.();
     } catch (err) {
-      window.luminDialog?.alert(String(err));
+      window.lumeDialog?.alert(String(err));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (cred: config.Credential) => {
-    const ok = await window.luminDialog?.confirm(t('确定删除此凭据？'));
+    const ok = await window.lumeDialog?.confirm(t('确定删除此凭据？'));
     if (!ok) return;
     try {
       await AppGo.DeleteCredential(cred.id);
@@ -122,7 +122,7 @@ export default function CredentialsModal({ onClose, onChange, addToast }: Creden
       if (editing === cred.id) closeForm();
       onChange?.();
     } catch (err) {
-      window.luminDialog?.alert(String(err));
+      window.lumeDialog?.alert(String(err));
     }
   };
 

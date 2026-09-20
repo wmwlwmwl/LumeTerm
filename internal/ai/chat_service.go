@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode/utf16"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )

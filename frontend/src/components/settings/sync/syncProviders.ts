@@ -55,7 +55,7 @@ export const defaultWebdavForm: WebdavForm = {
   url: '',
   username: '',
   password: '',
-  remotePath: '/Lumin/',
+  remotePath: '/LumeTerm/',
   maxBackups: '',
 };
 
@@ -65,7 +65,7 @@ export const defaultR2Form: R2Form = {
   bucket: '',
   endpoint: '',
   region: 'auto',
-  prefix: 'Lumin/',
+  prefix: 'LumeTerm/',
   maxBackups: '',
 };
 
@@ -75,7 +75,7 @@ export const defaultFTPForm: FTPForm = {
   port: 21,
   username: '',
   password: '',
-  remoteDir: '/Lumin/',
+  remoteDir: '/LumeTerm/',
   maxBackups: '',
 };
 
@@ -86,7 +86,7 @@ export const defaultSFTPForm: SFTPForm = {
   password: '',
   authMethod: 'password',
   privateKey: '',
-  remoteDir: '/Lumin/',
+  remoteDir: '/LumeTerm/',
   maxBackups: '',
 };
 
@@ -116,7 +116,7 @@ export const PROVIDERS: { [K in ProviderKey]: ProviderDefinition<ProviderFormMap
     restoreWithPassword: (name, pw) => AppGo.RestoreFromWebdavFileWithPassword(name, pw),
     getConfig: () => AppGo.GetWebdavConfig(),
     isConfigured: (f) => !!f.username,
-    applyConfig: (data) => ({ url: (data.url as string) || '', username: (data.username as string) || '', password: (data.password as string) || '', remotePath: (data.remotePath as string) || '/Lumin/', maxBackups: (data.maxBackups as string) || '' }),
+    applyConfig: (data) => ({ url: (data.url as string) || '', username: (data.username as string) || '', password: (data.password as string) || '', remotePath: (data.remotePath as string) || '/LumeTerm/', maxBackups: (data.maxBackups as string) || '' }),
     summaryFields: (form) => {
       const f = form as WebdavForm;
       return [
@@ -144,7 +144,7 @@ export const PROVIDERS: { [K in ProviderKey]: ProviderDefinition<ProviderFormMap
     restoreWithPassword: (name, pw) => AppGo.RestoreFromR2FileWithPassword(name, pw),
     getConfig: () => AppGo.GetR2Config(),
     isConfigured: (f) => !!(f.bucket && f.endpoint),
-    applyConfig: (data) => ({ accessKeyId: (data.accessKeyId as string) || '', secretAccessKey: (data.secretAccessKey as string) || '', bucket: (data.bucket as string) || '', endpoint: (data.endpoint as string) || '', region: (data.region as string) || 'auto', prefix: (data.prefix as string) || 'Lumin/', maxBackups: (data.maxBackups as string) || '' }),
+    applyConfig: (data) => ({ accessKeyId: (data.accessKeyId as string) || '', secretAccessKey: (data.secretAccessKey as string) || '', bucket: (data.bucket as string) || '', endpoint: (data.endpoint as string) || '', region: (data.region as string) || 'auto', prefix: (data.prefix as string) || 'LumeTerm/', maxBackups: (data.maxBackups as string) || '' }),
     summaryFields: (form) => {
       const f = form as R2Form;
       return [
@@ -172,7 +172,7 @@ export const PROVIDERS: { [K in ProviderKey]: ProviderDefinition<ProviderFormMap
     restoreWithPassword: (name, pw) => AppGo.RestoreFromFTPFileWithPassword(name, pw),
     getConfig: () => AppGo.GetFTPConfig(),
     isConfigured: (f) => !!f.host,
-    applyConfig: (data) => ({ mode: (data.mode as string) || 'explicit_tls', host: (data.host as string) || '', port: (data.port as number) || 21, username: (data.username as string) || '', password: (data.password as string) || '', remoteDir: (data.remoteDir as string) || '/Lumin/', maxBackups: (data.maxBackups as string) || '' }),
+    applyConfig: (data) => ({ mode: (data.mode as string) || 'explicit_tls', host: (data.host as string) || '', port: (data.port as number) || 21, username: (data.username as string) || '', password: (data.password as string) || '', remoteDir: (data.remoteDir as string) || '/LumeTerm/', maxBackups: (data.maxBackups as string) || '' }),
     summaryFields: (form) => {
       const f = form as FTPForm;
       return [
@@ -202,7 +202,7 @@ export const PROVIDERS: { [K in ProviderKey]: ProviderDefinition<ProviderFormMap
     restoreWithPassword: (name, pw) => AppGo.RestoreFromSFTPFileWithPassword(name, pw),
     getConfig: () => AppGo.GetSFTPConfig(),
     isConfigured: (f) => !!f.host,
-    applyConfig: (data) => ({ host: (data.host as string) || '', port: (data.port as number) || 22, username: (data.username as string) || '', password: (data.password as string) || '', authMethod: (data.authMethod as string) || 'password', privateKey: (data.privateKey as string) || '', remoteDir: (data.remoteDir as string) || '/Lumin/', maxBackups: (data.maxBackups as string) || '' }),
+    applyConfig: (data) => ({ host: (data.host as string) || '', port: (data.port as number) || 22, username: (data.username as string) || '', password: (data.password as string) || '', authMethod: (data.authMethod as string) || 'password', privateKey: (data.privateKey as string) || '', remoteDir: (data.remoteDir as string) || '/LumeTerm/', maxBackups: (data.maxBackups as string) || '' }),
     summaryFields: (form) => {
       const f = form as SFTPForm;
       return [
@@ -225,7 +225,8 @@ export const PROVIDER_LIST = [
 
 export function getBackupFormatLabel(name = '') {
   const lower = String(name).toLowerCase();
-  if (lower.endsWith('.lumin2')) return 'LUMIN2';
+  // .lumeterm2 为新格式，兼容识别旧 .lumin2
+  if (lower.endsWith('.lumeterm2') || lower.endsWith('.lumin2')) return 'LUMETERM2';
   if (lower.endsWith('.json')) return 'JSON';
   return 'UNKNOWN';
 }

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 type taskScopedToolXMLTagSet struct {

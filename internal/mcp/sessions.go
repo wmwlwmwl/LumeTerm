@@ -1,6 +1,6 @@
 package mcp
 
-import "luminssh-go/internal/mcpserver"
+import "lumeterm/internal/mcpserver"
 
 type activeFileManagerWorkspaceStateProvider interface {
 	GetWorkspaceState() string

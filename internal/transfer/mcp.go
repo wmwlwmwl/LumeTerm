@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 const (

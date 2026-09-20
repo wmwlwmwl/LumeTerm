@@ -32,7 +32,7 @@ type Profile struct {
 	ModelMaxThinkingTokens                 int
 }
 
-const defaultAIUserAgentTemplate = "Mozilla/5.0 (${taskHash}_Lumin; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
+const defaultAIUserAgentTemplate = "Mozilla/5.0 (${taskHash}_LumeTerm; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
 
 func getTaskHash(taskID string) string {
 	normalizedTaskID := strings.TrimSpace(taskID)
@@ -319,7 +319,7 @@ func BuildResponsesPromptCacheKey(conversationID string, promptCacheBypassTimest
 	}
 	checksum := sha256.Sum256([]byte(bypassSource))
 	bypassHash := hex.EncodeToString(checksum[:])[:12]
-	cacheKey := "LuminSSH:resp:v3:" + trimmedConversationID + ":" + bypassHash
+	cacheKey := "LumeTerm:resp:v3:" + trimmedConversationID + ":" + bypassHash
 	if len(cacheKey) > 64 {
 		return cacheKey[len(cacheKey)-64:]
 	}

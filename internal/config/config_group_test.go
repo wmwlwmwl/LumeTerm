@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"encoding/hex"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -25,6 +26,34 @@ func testConfigManagerForGroup(t *testing.T) *ConfigManager {
 		connFile:  filepath.Join(dir, "connections.json"),
 		key:       key,
 		gcm:       gcm,
+	}
+}
+
+// 明文存储策略自检：encrypt 恒等；decrypt 兼容旧密文（hex+GCM）与明文（含 hex 形明文）。
+func TestPlaintextEncryptDecryptCompat(t *testing.T) {
+	c := testConfigManagerForGroup(t)
+
+	// encrypt 恒等
+	for _, s := range []string{"", "pass", "密码🔑", "123456"} {
+		got, err := c.encrypt(s)
+		if err != nil || got != s {
+			t.Fatalf("encrypt(%q)=%q err=%v，应为恒等", s, got, err)
+		}
+	}
+
+	// decrypt：明文原样返回
+	for _, s := range []string{"pass", "密码🔑", "123456", "-----BEGIN OPENSSH PRIVATE KEY-----\nabc"} {
+		if got := c.decrypt(s); got != s {
+			t.Fatalf("decrypt(明文 %q)=%q，应原样返回", s, got)
+		}
+	}
+
+	// decrypt：旧密文（手工按旧格式 Seal）解出明文
+	plain := "legacy-secret"
+	nonce := make([]byte, c.gcm.NonceSize())
+	ct := c.gcm.Seal(nonce, nonce, []byte(plain), nil)
+	if got := c.decrypt(hex.EncodeToString(ct)); got != plain {
+		t.Fatalf("decrypt(旧密文)=%q，应解出 %q", got, plain)
 	}
 }
 

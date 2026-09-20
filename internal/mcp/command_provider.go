@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 type CommandProvider struct {

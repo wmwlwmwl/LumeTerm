@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"luminssh-go/internal/aitypes"
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/aitypes"
+	"lumeterm/internal/mcpserver"
 )
 
 type (
@@ -1957,7 +1957,7 @@ func (a *Service) runAIChatCommandToolExecution(execution *aiToolExecutionState)
 	stopAfterThisTool := false
 	exitCodeText := ""
 	if execErr == nil && result.ExitCode != nil {
-		exitCodeText = fmt.Sprintf("[Lumin_EXIT_CODE_%d]", *result.ExitCode)
+		exitCodeText = fmt.Sprintf("[LumeTerm_EXIT_CODE_%d]", *result.ExitCode)
 	}
 
 	if execErr != nil {

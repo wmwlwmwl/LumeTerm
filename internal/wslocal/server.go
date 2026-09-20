@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/wsbuffer"
+	"lumeterm/internal/wsbuffer"
 
 	"github.com/gorilla/websocket"
 )

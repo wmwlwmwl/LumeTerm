@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 type Host interface {

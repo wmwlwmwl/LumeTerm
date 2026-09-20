@@ -144,7 +144,7 @@ export function useFileEditor(props: FileEditorProps) {
     const f = files.find((x) => x.path === path);
     const edited = editedContents[path];
     if (f && edited !== undefined && edited !== f.content) {
-      const ok = await window.luminDialog?.confirm(t('文件有未保存的修改，确定关闭？'));
+      const ok = await window.lumeDialog?.confirm(t('文件有未保存的修改，确定关闭？'));
       if (!ok) return;
     }
     setEditedContents((prev) => {
@@ -160,7 +160,7 @@ export function useFileEditor(props: FileEditorProps) {
       const edited = editedContents[f.path];
       return edited !== undefined && edited !== f.content;
     });
-    if (hasModified && !(await window.luminDialog?.confirm(t('有文件未保存，确定全部关闭？')))) return;
+    if (hasModified && !(await window.lumeDialog?.confirm(t('有文件未保存，确定全部关闭？')))) return;
     onCloseAll();
   };
 

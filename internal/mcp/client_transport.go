@@ -33,7 +33,7 @@ func initializeRPCTransport(ctx context.Context, transport rpcTransport) (client
 		"protocolVersion": "2025-11-25",
 		"capabilities":    map[string]any{},
 		"clientInfo": map[string]any{
-			"name":    "Lumin SSH",
+			"name":    "LumeTerm",
 			"version": "0.1.0",
 		},
 	}, &result); err != nil {

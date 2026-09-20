@@ -98,8 +98,8 @@ export default function AppTopbar({
             <div className="relative w-5 h-5 rounded-xs overflow-hidden shrink-0">
               <img
                 src={logoImg}
-                alt="Lumin SSH"
-                className="absolute inset-0 w-full h-full object-cover [transition:opacity_0.6s_ease,transform_0.7s_cubic-bezier(0.22,1,0.36,1),filter_0.6s_ease]"
+                alt="LumeTerm"
+                className="absolute inset-0 w-full h-full object-contain [transition:opacity_0.6s_ease,transform_0.7s_cubic-bezier(0.22,1,0.36,1),filter_0.6s_ease]"
                 style={{
                   opacity: showTopbarRefreshedLogo ? 0 : 1,
                   transform: showTopbarRefreshedLogo ? 'scale(0.9) rotate(-8deg)' : 'scale(1) rotate(0deg)',
@@ -108,8 +108,8 @@ export default function AppTopbar({
               />
               <img
                 src={topbarLogoTransitionImg}
-                alt="Lumin Theme Logo"
-                className="absolute inset-0 w-full h-full object-cover [transition:opacity_0.6s_ease,transform_0.7s_cubic-bezier(0.22,1,0.36,1),filter_0.6s_ease]"
+                alt="LumeTerm Theme Logo"
+                className="absolute inset-0 w-full h-full object-contain [transition:opacity_0.6s_ease,transform_0.7s_cubic-bezier(0.22,1,0.36,1),filter_0.6s_ease]"
                 style={{
                   opacity: showTopbarRefreshedLogo ? 1 : 0,
                   transform: showTopbarRefreshedLogo ? 'scale(1) rotate(0deg)' : 'scale(1.12) rotate(8deg)',
@@ -117,7 +117,7 @@ export default function AppTopbar({
                 }}
               />
             </div>
-            <div className="topbar-title">Lumin</div>
+            <div className="topbar-title">LumeTerm</div>
           </div>
 
           {sessions.length > 0 && (

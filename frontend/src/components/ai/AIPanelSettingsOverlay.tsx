@@ -149,10 +149,10 @@ export default function AIPanelSettingsOverlay({
       setTasksDirMigrating(true);
       await window?.go?.wailsapp?.App?.MigrateAITasksDir?.(selected);
       await refreshTasksDir();
-      window.luminDialog?.alert?.(t('AI 对话数据已迁移到新目录。'), t('提示'), { priority: 'settings' });
+      window.lumeDialog?.alert?.(t('AI 对话数据已迁移到新目录。'), t('提示'), { priority: 'settings' });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e || '');
-      if (msg.trim()) window.luminDialog?.alert?.(msg, t('错误'), { priority: 'settings' });
+      if (msg.trim()) window.lumeDialog?.alert?.(msg, t('错误'), { priority: 'settings' });
       await refreshTasksDir();
     } finally {
       setTasksDirMigrating(false);
@@ -164,30 +164,30 @@ export default function AIPanelSettingsOverlay({
     try {
       const bridge = window?.go?.wailsapp?.AIBindings || window?.go?.wailsapp?.App;
       if (!bridge?.RevealAIDebugLog) {
-        window.luminDialog?.alert?.(t('定位 AI 日志能力未就绪'), t('错误'), { priority: 'settings' });
+        window.lumeDialog?.alert?.(t('定位 AI 日志能力未就绪'), t('错误'), { priority: 'settings' });
         return;
       }
       await bridge.RevealAIDebugLog();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e || '');
-      if (msg.trim()) window.luminDialog?.alert?.(msg, t('错误'), { priority: 'settings' });
+      if (msg.trim()) window.lumeDialog?.alert?.(msg, t('错误'), { priority: 'settings' });
     }
   };
 
   const handleResetTasksDir = async () => {
     if (tasksDirMigrating) return;
     try {
-      const ok = await window.luminDialog?.confirm?.(
+      const ok = await window.lumeDialog?.confirm?.(
         t('恢复为默认目录？数据将自动迁移到默认目录。')
       );
       if (!ok) return;
       setTasksDirMigrating(true);
       await window?.go?.wailsapp?.App?.ResetTasksDir?.();
       await refreshTasksDir();
-      window.luminDialog?.alert?.(t('AI 对话数据已迁移到默认目录。'), t('提示'), { priority: 'settings' });
+      window.lumeDialog?.alert?.(t('AI 对话数据已迁移到默认目录。'), t('提示'), { priority: 'settings' });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e || '');
-      if (msg.trim()) window.luminDialog?.alert?.(msg, t('错误'), { priority: 'settings' });
+      if (msg.trim()) window.lumeDialog?.alert?.(msg, t('错误'), { priority: 'settings' });
       await refreshTasksDir();
     } finally {
       setTasksDirMigrating(false);

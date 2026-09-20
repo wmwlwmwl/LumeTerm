@@ -193,7 +193,7 @@ export function DashboardBatchOperationBar({
 
       <button
         onClick={async () => {
-          if (await window.luminDialog?.confirm(`${t('确定删除')} ${selectedIds.length} ${t('个服务器')}？`)) {
+          if (await window.lumeDialog?.confirm(`${t('确定删除')} ${selectedIds.length} ${t('个服务器')}？`)) {
             onBatchDelete?.(selectedIds);
           }
         }}

@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-var commandMarkerStart = []byte("\x1fLUMIN_CMD\x1f")
-var cwdMarkerStart = []byte("\x1fLUMIN_CWD\x1f")
+var commandMarkerStart = []byte("\x1fLUMETERM_CMD\x1f")
+var cwdMarkerStart = []byte("\x1fLUMETERM_CWD\x1f")
 
 const markerEnd byte = 0x1e
 const markerPayloadMax = 64 * 1024

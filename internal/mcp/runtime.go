@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 const mcpListenAddr = "127.0.0.1:5779"
@@ -104,12 +104,12 @@ func StartServer(host Host, settings ServiceSettings) {
 			Endpoint:       "/mcp",
 			AllowedOrigins: allowedOrigins,
 			ServerInfo: mcpserver.Implementation{
-				Name:        "lumin-ssh",
-				Title:       "Lumin SSH MCP Server",
-				Version:     "0.1.0",
-				Description: "MCP server for connected Lumin SSH terminal sessions",
-			},
-			Instructions: "Call list_connected_sessions first and use the returned session_id for subsequent SSH-scoped tools. If a tool reports that the session's server is disconnected, call reconnect_server with that session_id to restore the connection, then retry.",
+			Name:        "lumeterm",
+			Title:       "LumeTerm MCP Server",
+			Version:     "0.1.0",
+			Description: "MCP server for connected LumeTerm terminal sessions",
+		},
+		Instructions: "Call list_connected_sessions first and use the returned session_id for subsequent SSH-scoped tools. If a tool reports that the session's server is disconnected, call reconnect_server with that session_id to restore the connection, then retry.",
 			Logger:       appendMCPLog,
 		},
 		catalog,

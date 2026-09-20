@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	aitypes "luminssh-go/internal/aitypes"
+	aitypes "lumeterm/internal/aitypes"
 )
 
 func isBetterAIChatTerminalCandidate(left aitypes.AIChatCommandTerminalCandidate, right aitypes.AIChatCommandTerminalCandidate, currentCwd string) bool {

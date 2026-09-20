@@ -128,7 +128,7 @@ export function useFileManagerTransfers(deps: ReturnType<typeof useFileManagerCo
       pathStrategies: {},
     });
     for (const conflict of conflicts) {
-      const choice = await window.luminDialog?.choice(
+      const choice = await window.lumeDialog?.choice(
         buildDownloadConflictMessage(conflict, item.name),
         t('下载同名冲突'),
         buttons,
@@ -867,11 +867,11 @@ export function useFileManagerTransfers(deps: ReturnType<typeof useFileManagerCo
           destName = copyName;
           destPath = joinPath(normalizedTargetPath, copyName);
         } else if (existing.has(name)) {
-          if (typeof window.luminDialog?.confirm !== 'function') {
+          if (typeof window.lumeDialog?.confirm !== 'function') {
             addToast?.(`${t('无法确认覆盖操作，已跳过')} ${name}`, 'error');
             continue;
           }
-          const ok = await window.luminDialog.confirm(
+          const ok = await window.lumeDialog.confirm(
             `${t('目标已存在同名项目')} "${name}"${t('，是否覆盖？')}`
           );
           if (!ok) continue;

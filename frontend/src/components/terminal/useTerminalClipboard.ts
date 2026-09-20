@@ -125,7 +125,7 @@ export function useTerminalClipboard(deps: {
 
     const lineCount = selectedText.replace(/\r\n?/g, '\n').split('\n').length;
     if (lineCount > 3 && localStorage.getItem('skipTerminalSelectionPasteConfirm') !== 'true') {
-      const result = await window.luminDialog?.confirm(
+      const result = await window.lumeDialog?.confirm(
         t('所选内容超过3行，是否继续粘贴？'),
         t('确认粘贴'),
         t('不再询问')

@@ -226,7 +226,7 @@ export default function CommandHistory({ sessionId, historyServerId, terminalId,
     const msg = scope === 'global'
       ? t('确定要清空全部服务器的历史指令吗？')
       : t('确定要清空该服务器的历史指令吗？');
-    if (!(await window.luminDialog?.confirm(msg))) return;
+    if (!(await window.lumeDialog?.confirm(msg))) return;
     try {
       if (scope === 'global') {
         await AppGo.SaveGlobalCommandHistory('[]');

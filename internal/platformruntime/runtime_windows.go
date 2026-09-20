@@ -4,8 +4,8 @@ package platformruntime
 
 import (
 	"log"
+	"lumeterm/internal/apppaths"
 	"os"
-	"path/filepath"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -77,7 +77,7 @@ const (
 	nimDelete = 0x00000002
 	// energye/systray 固定 uID=100；NIM_DELETE 靠 hWnd+uID 定位图标
 	systrayIconID   = 100
-	mainWindowTitle = "Lumin"
+	mainWindowTitle = "LumeTerm"
 	wailsFormClass  = "winc_Form"
 	systrayClass    = "SystrayClass"
 	// SendMessageTimeoutW
@@ -481,7 +481,7 @@ func ForceShowWindow() {
 func EnsureSingleInstance() {
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
 	procCreateMutex := kernel32.NewProc("CreateMutexW")
-	mutexName, _ := syscall.UTF16PtrFromString("LuminSSH_Global_Single_Instance_Mutex")
+	mutexName, _ := syscall.UTF16PtrFromString("LumeTerm_Global_Single_Instance_Mutex")
 	_, _, errMutex := procCreateMutex.Call(0, 1, uintptr(unsafe.Pointer(mutexName)))
 	if errMutex == syscall.ERROR_ALREADY_EXISTS {
 		findAndShowWindow()
@@ -572,13 +572,10 @@ func ApplyOptions(opts *options.App, webviewGpuDisabled bool) {
 		opts.Height = targetH
 	}
 
-	// 固定 WebView2 用户数据根目录为 %AppData%\Lumin，避免便携包改名后按 exe 名多出
-	// Lumin-x.y.z-portable.exe/EBWebView。引擎会在其下自建 EBWebView，与 config 同级。
-	webviewUserDataPath := ""
-	if appData, err := os.UserConfigDir(); err == nil {
-		webviewUserDataPath = filepath.Join(appData, "Lumin")
-		_ = os.MkdirAll(webviewUserDataPath, 0700)
-	}
+	// 固定 WebView2 用户数据根目录为 %AppData%\LumeTerm，避免便携包改名后按 exe 名多出
+	// LumeTerm-x.y.z-portable.exe/EBWebView。引擎会在其下自建 EBWebView，与 config 同级。
+	webviewUserDataPath := apppaths.DataRoot()
+	_ = os.MkdirAll(webviewUserDataPath, 0700)
 
 	opts.Windows = &windows.Options{
 		WebviewIsTransparent:              true,

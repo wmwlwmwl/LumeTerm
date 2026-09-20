@@ -225,7 +225,7 @@ export default function SyncTab({
       <SettingsPanel data-settings-section-id={syncSettings.sections.cloud.id} className="p-3.5">
         <div data-settings-field-id={syncSettings.fields.cloudBackup.id} className="text-[16px] font-semibold text-primary mb-2">{$t('云端同步')}</div>
         <div className="text-sm text-secondary mb-5">
-          {hasRecoveryPassword ? $t('同步将写入 .lumin2 加密备份') : $t('未开启同步加密时写入明文 .json 备份')}
+          {hasRecoveryPassword ? $t('同步将写入 .lumeterm2 加密备份') : $t('未开启同步加密时写入明文 .json 备份')}
         </div>
         {autoSyncEnabled && isAnyConfigured ? (
           <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[rgba(var(--success-rgb),0.12)] border border-[rgba(var(--success-rgb),0.28)] rounded-lg mb-5 text-success text-base">

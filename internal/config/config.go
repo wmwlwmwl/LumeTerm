@@ -29,8 +29,9 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/text/encoding/ianaindex"
 
-	aitypes "luminssh-go/internal/aitypes"
-	runtimeenv "luminssh-go/module/runtimeenv"
+	aitypes "lumeterm/internal/aitypes"
+	"lumeterm/internal/apppaths"
+	runtimeenv "lumeterm/module/runtimeenv"
 )
 
 // parseIntOrDefault 解析字符串为整数，失败时返回默认值
@@ -85,15 +86,15 @@ type Connection struct {
 	TerminalEncoding    string `json:"terminalEncoding,omitempty"`
 	AllowLegacySSHRSA   bool   `json:"allowLegacySshRsa,omitempty"`
 	// AutoReconnect 自动重连(按服务器粒度,默认关):传输/保活断开后前端自动重连该会话。
-	AutoReconnect bool         `json:"autoReconnect,omitempty"`
-	ProxyMode     string       `json:"proxyMode,omitempty"`
-	ProxyNodeID         string `json:"proxyNodeId,omitempty"`
-	ProxyType           string `json:"proxyType,omitempty"`
-	ProxyHost           string `json:"proxyHost,omitempty"`
-	ProxyPort           int    `json:"proxyPort,omitempty"`
-	ProxyUsername       string `json:"proxyUsername,omitempty"`
-	ProxyPassword       string `json:"proxyPassword,omitempty"`
-	LastModified        int64  `json:"last_modified,omitempty"` // Unix 毫秒时间戳，合并时判断新旧
+	AutoReconnect bool   `json:"autoReconnect,omitempty"`
+	ProxyMode     string `json:"proxyMode,omitempty"`
+	ProxyNodeID   string `json:"proxyNodeId,omitempty"`
+	ProxyType     string `json:"proxyType,omitempty"`
+	ProxyHost     string `json:"proxyHost,omitempty"`
+	ProxyPort     int    `json:"proxyPort,omitempty"`
+	ProxyUsername string `json:"proxyUsername,omitempty"`
+	ProxyPassword string `json:"proxyPassword,omitempty"`
+	LastModified  int64  `json:"last_modified,omitempty"` // Unix 毫秒时间戳，合并时判断新旧
 }
 
 // Credential 可复用的认证凭据，多个 Connection 可引用同一 Credential
@@ -179,13 +180,13 @@ type ConfigManager struct {
 	credFile                  string
 	davFile                   string
 	key                       []byte
-	gcm                       cipher.AEAD // ponytail: 缓存 GCM cipher，避免每次 encrypt/decrypt 重建
+	gcm                       cipher.AEAD // ponytail: 仅用于解密旧版密文（明文存储过渡），不再用于加密
 	syncModeFile              string
 	autoSyncEnabledFile       string
 	syncTimeFile              string // 本地快照时间戳文件
 	lastSyncFile              string // 上次同步时间戳文件（仅在同步完成时更新）
 	tombstoneFile             string // 同步删除墓碑（连接/凭据）
-	recoveryPasswordFile      string // 恢复密码（加密存储）
+	recoveryPasswordFile      string // 恢复密码（明文存储，0600）
 	quickCmdFile              string
 	paramHistFile             string
 	fileManagerSettingsFile   string
@@ -209,21 +210,12 @@ type ConfigManager struct {
 }
 
 func NewConfigManager() *ConfigManager {
-	appData, err := os.UserConfigDir()
-	if err != nil {
-		home, herr := os.UserHomeDir()
-		if herr != nil {
-			log.Fatalf("无法确定配置目录: %v / %v", err, herr)
-		}
-		appData = home
-	}
-	dir := filepath.Join(appData, "Lumin", "config")
+	dir := filepath.Join(apppaths.DataRoot(), "config")
 
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		log.Fatalf("无法创建配置目录 %s: %v", dir, err)
 	}
 
-	keyFile := filepath.Join(dir, "lumin.key")
 	var key []byte
 
 	connFile := filepath.Join(dir, "connections.json")
@@ -242,17 +234,17 @@ func NewConfigManager() *ConfigManager {
 		log.Printf("[NewConfigManager] 无法创建历史目录 %s: %v", historyDir, err)
 	}
 
-	// ponytail: os.ReadFile 不存在时自动返回 err，无需 os.Stat 前置检查
-	data, err := os.ReadFile(keyFile)
-	if err == nil && len(data) == 32 {
+	// 配置明文存储：密钥文件与密文本就同目录，本地加密无真实防护，已退役。
+	// 旧版密钥文件（lumin.key）存在时加载，仅用于解密旧密文（读兼容过渡）；全新用户用随机占位 key（不落盘）。
+	// 退役计划：v1.4.0 起明文化写入；存量用户任何一次配置保存即完成密文→明文迁移。
+	// v1.5.0 起可删除本兼容分支与 decrypt 的旧密文路径（届时活跃用户均已经过 1.4.x 完成迁移；
+	// 直接从 1.3.x 跳到删除版的用户需重填凭据密码，属可接受的边缘损失）。
+	if data, err := os.ReadFile(filepath.Join(dir, "lumin.key")); err == nil && len(data) == 32 {
 		key = data
 	} else {
 		key = make([]byte, 32)
 		if _, err := rand.Read(key); err != nil {
-			log.Fatalf("无法生成加密密钥: %v", err)
-		}
-		if err := os.WriteFile(keyFile, key, 0600); err != nil {
-			log.Fatalf("无法写入密钥文件: %v", err)
+			log.Fatalf("无法生成占位密钥: %v", err)
 		}
 	}
 
@@ -292,41 +284,38 @@ func NewConfigManager() *ConfigManager {
 }
 
 func (c *ConfigManager) encrypt(text string) (string, error) {
-	if text == "" {
-		return "", nil
-	}
-	nonce := make([]byte, c.gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", fmt.Errorf("generate nonce: %w", err)
-	}
-	ciphertext := c.gcm.Seal(nonce, nonce, []byte(text), nil)
-	return hex.EncodeToString(ciphertext), nil
+	// ponytail: 配置明文存储（见 NewConfigManager），恒等返回；保留签名避免改动 30+ 调用点
+	return text, nil
 }
 
 func (c *ConfigManager) decrypt(hexText string) string {
 	if hexText == "" {
 		return ""
 	}
+	// 旧密文（hex+GCM）解开返回明文；否则视为已是明文原样返回。
+	// 误判兜底：明文恰好是合法 hex 时 GCM.Open 必失败，同样原样返回。
 	ciphertext, err := hex.DecodeString(hexText)
-	if err != nil {
-		log.Printf("[decrypt] hex decode failed: %v", err)
-		return ""
-	}
-	if len(ciphertext) < c.gcm.NonceSize() {
-		return ""
+	if err != nil || len(ciphertext) < c.gcm.NonceSize() {
+		return hexText
 	}
 	nonce, ct := ciphertext[:c.gcm.NonceSize()], ciphertext[c.gcm.NonceSize():]
 	plaintext, err := c.gcm.Open(nil, nonce, ct, nil)
 	if err != nil {
-		return ""
+		return hexText
 	}
 	return string(plaintext)
 }
 
 const (
-	lumin2Prefix     = "LUMIN2:"
-	lumin2Iterations = 210000
-	lumin2HeaderSize = 1 + 4 + 16 + 12
+	// LUMETERM2 为当前密文格式前缀；LUMIN2 为改名前旧前缀，读取兼容。
+	// 退役计划（含 .lumin2 扩展名识别、synchelper isBackupName 双后缀、
+	// hasBackupPrefix/trimBackupPrefix 的旧分支）：云端旧备份会被滚动清理自然消失，
+	// 但用户手里的 .lumin2 导出文件属长期资产，删除兼容即拒收老备份文件。
+	// 建议保留至 v2.0 或发布明确的弃用公告后再删。
+	lumeterm2Prefix     = "LUMETERM2:"
+	legacyLumin2Prefix  = "LUMIN2:"
+	lumeterm2Iterations = 210000
+	lumeterm2HeaderSize = 1 + 4 + 16 + 12
 )
 
 var (
@@ -334,7 +323,20 @@ var (
 	errRecoveryPasswordResetRequired = errors.New("RECOVERY_PASSWORD_RESET_REQUIRED")
 )
 
-func encryptLUMIN2(text, password string) (string, error) {
+// hasBackupPrefix 判断是否为受支持的密文（新 LUMETERM2: 或旧 LUMIN2:）
+func hasBackupPrefix(text string) bool {
+	return strings.HasPrefix(text, lumeterm2Prefix) || strings.HasPrefix(text, legacyLumin2Prefix)
+}
+
+// trimBackupPrefix 去掉密文前缀（新旧皆可）
+func trimBackupPrefix(text string) string {
+	if strings.HasPrefix(text, lumeterm2Prefix) {
+		return text[len(lumeterm2Prefix):]
+	}
+	return strings.TrimPrefix(text, legacyLumin2Prefix)
+}
+
+func encryptLUMETERM2(text, password string) (string, error) {
 	salt, nonce := make([]byte, 16), make([]byte, 12)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		return "", fmt.Errorf("generate salt: %w", err)
@@ -342,14 +344,14 @@ func encryptLUMIN2(text, password string) (string, error) {
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return "", fmt.Errorf("generate nonce: %w", err)
 	}
-	return encryptLUMIN2WithSaltNonce(text, password, salt, nonce)
+	return encryptLUMETERM2WithSaltNonce(text, password, salt, nonce)
 }
 
-func encryptLUMIN2WithSaltNonce(text, password string, salt, nonce []byte) (string, error) {
+func encryptLUMETERM2WithSaltNonce(text, password string, salt, nonce []byte) (string, error) {
 	if len(salt) != 16 || len(nonce) != 12 {
-		return "", fmt.Errorf("LUMIN2 salt/nonce 长度无效")
+		return "", fmt.Errorf("LUMETERM2 salt/nonce 长度无效")
 	}
-	key := pbkdf2.Key([]byte(password), salt, lumin2Iterations, 32, sha256.New)
+	key := pbkdf2.Key([]byte(password), salt, lumeterm2Iterations, 32, sha256.New)
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", fmt.Errorf("aes.NewCipher: %w", err)
@@ -358,41 +360,41 @@ func encryptLUMIN2WithSaltNonce(text, password string, salt, nonce []byte) (stri
 	if err != nil {
 		return "", fmt.Errorf("cipher.NewGCM: %w", err)
 	}
-	payload := make([]byte, lumin2HeaderSize)
+	payload := make([]byte, lumeterm2HeaderSize)
 	payload[0] = 2
-	binary.BigEndian.PutUint32(payload[1:5], lumin2Iterations)
+	binary.BigEndian.PutUint32(payload[1:5], lumeterm2Iterations)
 	copy(payload[5:21], salt)
 	copy(payload[21:33], nonce)
 	payload = gcm.Seal(payload, nonce, []byte(text), nil)
-	return lumin2Prefix + base64.StdEncoding.EncodeToString(payload), nil
+	return lumeterm2Prefix + base64.StdEncoding.EncodeToString(payload), nil
 }
 
-func decryptLUMIN2(text, password string) (string, error) {
-	if !strings.HasPrefix(text, lumin2Prefix) {
-		return "", fmt.Errorf("缺少 LUMIN2 前缀")
+func decryptLUMETERM2(text, password string) (string, error) {
+	if !hasBackupPrefix(text) {
+		return "", fmt.Errorf("缺少 LUMETERM2 前缀")
 	}
-	payload, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(text, lumin2Prefix))
+	payload, err := base64.StdEncoding.DecodeString(trimBackupPrefix(text))
 	if err != nil {
-		return "", fmt.Errorf("LUMIN2 Base64 无效: %w", err)
+		return "", fmt.Errorf("LUMETERM2 Base64 无效: %w", err)
 	}
-	if len(payload) < lumin2HeaderSize+16 {
-		return "", fmt.Errorf("LUMIN2 数据长度不足")
+	if len(payload) < lumeterm2HeaderSize+16 {
+		return "", fmt.Errorf("LUMETERM2 数据长度不足")
 	}
 	if payload[0] != 2 {
-		return "", fmt.Errorf("不支持的 LUMIN2 版本: %d", payload[0])
+		return "", fmt.Errorf("不支持的 LUMETERM2 版本: %d", payload[0])
 	}
 	iterations := binary.BigEndian.Uint32(payload[1:5])
 	if iterations < 100000 || iterations > 2000000 {
-		return "", fmt.Errorf("LUMIN2 迭代次数无效: %d", iterations)
+		return "", fmt.Errorf("LUMETERM2 迭代次数无效: %d", iterations)
 	}
 	key := pbkdf2.Key([]byte(password), payload[5:21], int(iterations), 32, sha256.New)
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", fmt.Errorf("LUMIN2 密钥无效: %w", err)
+		return "", fmt.Errorf("LUMETERM2 密钥无效: %w", err)
 	}
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return "", fmt.Errorf("LUMIN2 GCM 初始化失败: %w", err)
+		return "", fmt.Errorf("LUMETERM2 GCM 初始化失败: %w", err)
 	}
 	plaintext, err := gcm.Open(nil, payload[21:33], payload[33:], nil)
 	if err != nil {
@@ -1617,7 +1619,7 @@ func (c *ConfigManager) SaveWebdavConfig(config map[string]string) error {
 		MaxBackups: maxBackups,
 	}
 	if conf.RemotePath == "" {
-		conf.RemotePath = "/Lumin/"
+		conf.RemotePath = "/LumeTerm/"
 	}
 	data, err := json.MarshalIndent(conf, "", "  ")
 	if err != nil {
@@ -2692,4 +2694,3 @@ func NormalizeTerminalEncoding(value string) string {
 func AtomicWriteFile(path string, data []byte, perm os.FileMode) error {
 	return atomicWriteFile(path, data, perm)
 }
-

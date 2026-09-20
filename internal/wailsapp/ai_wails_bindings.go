@@ -12,13 +12,13 @@ import (
 	"sync"
 	"time"
 
-	ai "luminssh-go/internal/ai"
-	"luminssh-go/internal/config"
-	"luminssh-go/internal/localopen"
-	"luminssh-go/internal/mcp"
-	"luminssh-go/internal/mcpbridge"
-	"luminssh-go/internal/mcpserver"
-	"luminssh-go/internal/sshmanager"
+	ai "lumeterm/internal/ai"
+	"lumeterm/internal/config"
+	"lumeterm/internal/localopen"
+	"lumeterm/internal/mcp"
+	"lumeterm/internal/mcpbridge"
+	"lumeterm/internal/mcpserver"
+	"lumeterm/internal/sshmanager"
 
 	"github.com/pkg/sftp"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -34,12 +34,15 @@ type AIBindings struct {
 
 func NewAIBindings(app *App) *AIBindings {
 	root := os.TempDir()
-	if matches, err := filepath.Glob(filepath.Join(root, "lumin-ai-temporary-conversations-*")); err == nil {
-		for _, match := range matches {
-			_ = os.RemoveAll(match)
+	// 清理时同时匹配旧前缀（改名前的遗留目录）与新前缀
+	for _, pattern := range []string{"lumeterm-ai-temporary-conversations-*", "lumin-ai-temporary-conversations-*"} {
+		if matches, err := filepath.Glob(filepath.Join(root, pattern)); err == nil {
+			for _, match := range matches {
+				_ = os.RemoveAll(match)
+			}
 		}
 	}
-	tempDir, _ := os.MkdirTemp(root, "lumin-ai-temporary-conversations-*")
+	tempDir, _ := os.MkdirTemp(root, "lumeterm-ai-temporary-conversations-*")
 	return &AIBindings{app: app, temporaryConversationsDir: tempDir}
 }
 

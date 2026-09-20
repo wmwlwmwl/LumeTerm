@@ -114,7 +114,7 @@ export default function ExportSelectedDialog({ onClose, onExport, hasRecoveryPas
               {radioDot(format === 'encrypted')}
               <div>
                 <div className="text-base font-semibold">{t('密文')}</div>
-                <div className="text-xs text-tertiary">.lumin2</div>
+                <div className="text-xs text-tertiary">.lumeterm2</div>
               </div>
             </div>
           </div>

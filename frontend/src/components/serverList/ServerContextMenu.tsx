@@ -89,7 +89,7 @@ export function ServerContextMenu({
                 danger: true,
                 onSelect: () => {
                   void (async () => {
-                    if (await window.luminDialog?.confirm(`${t('确定删除服务器')}「${menuServer.name || menuServer.host}」？`)) {
+                    if (await window.lumeDialog?.confirm(`${t('确定删除服务器')}「${menuServer.name || menuServer.host}」？`)) {
                       onDelete(menuServer.id);
                     }
                   })();

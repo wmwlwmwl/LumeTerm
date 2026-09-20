@@ -3,7 +3,7 @@ package transfer
 import (
 	"testing"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 func TestResolveMCPTransferPathsRejectEscape(t *testing.T) {

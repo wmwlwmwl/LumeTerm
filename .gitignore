@@ -9,7 +9,7 @@
 /build/*.rpm
 /build/*.sha256
 /build/deb/usr/bin/
-/build/deb/usr/share/doc/lumin/*.gz
+/build/deb/usr/share/doc/lumeterm/*.gz
 /build/x86_64/
 /build/windows/installer/Output/
 /build/windows/installer/wails_tools.nsh

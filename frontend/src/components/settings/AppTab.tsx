@@ -116,8 +116,8 @@ export default function AppTab({ CURRENT_VERSION, BUILD_TIME, updateInfo, checki
         <div className="relative w-24 h-24 rounded-3xl overflow-hidden shadow-sm border border-line-light bg-overlay shrink-0">
           <img
             src={logoImg}
-            alt="Lumin"
-            className="absolute inset-0 w-full h-full object-cover"
+            alt="LumeTerm"
+            className="absolute inset-0 w-full h-full object-contain"
             style={{
               opacity: showRefreshedLogo ? 0 : 1,
               transform: showRefreshedLogo ? 'scale(0.9) rotate(-8deg)' : 'scale(1) rotate(0deg)',
@@ -127,8 +127,8 @@ export default function AppTab({ CURRENT_VERSION, BUILD_TIME, updateInfo, checki
           />
           <img
             src={logoTransitionImg}
-            alt="Lumin Refresh"
-            className="absolute inset-0 w-full h-full object-cover"
+            alt="LumeTerm Refresh"
+            className="absolute inset-0 w-full h-full object-contain"
             style={{
               opacity: showRefreshedLogo ? 1 : 0,
               transform: showRefreshedLogo ? 'scale(1) rotate(0deg)' : 'scale(1.12) rotate(8deg)',
@@ -139,7 +139,7 @@ export default function AppTab({ CURRENT_VERSION, BUILD_TIME, updateInfo, checki
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="text-[32px] font-extrabold text-primary tracking-[-0.5px] flex items-baseline gap-2">
-            Lumin
+            LumeTerm
             <span className="text-md font-medium text-tertiary tracking-normal">by WuMing</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">

@@ -72,7 +72,7 @@ func quoteShellArg(value string) string {
 }
 
 // ApplyElevated 以提权方式执行便携版热替换。
-// 当 Lumin 安装在 /usr/bin/ 等系统目录时，普通用户无写入权限，
+// 当 LumeTerm 安装在 /usr/bin/ 等系统目录时，普通用户无写入权限，
 // 需要借助 pkexec（优先）或 sudo 执行替换操作。
 // 同时，只提权做文件替换，新程序以普通用户权限启动（更安全）。
 func ApplyElevated(targetPath, exePath string) error {

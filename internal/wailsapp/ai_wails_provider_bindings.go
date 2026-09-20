@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	ai "luminssh-go/internal/ai"
-	"luminssh-go/internal/config"
+	ai "lumeterm/internal/ai"
+	"lumeterm/internal/config"
 )
 
 type AIProviderBindings struct {

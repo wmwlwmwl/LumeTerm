@@ -998,10 +998,10 @@ function GitRepositoryPanel({
     if (typeof window !== 'undefined' && window.localStorage.getItem(CONFIRM_KEYS[key]) === 'true') {
       return true;
     }
-    if (typeof window === 'undefined' || typeof window.luminDialog?.confirm !== 'function') {
+    if (typeof window === 'undefined' || typeof window.lumeDialog?.confirm !== 'function') {
       return window.confirm(message);
     }
-    const result = await window.luminDialog.confirm(message, translate('操作确认'), translate('不再询问'));
+    const result = await window.lumeDialog.confirm(message, translate('操作确认'), translate('不再询问'));
     const confirmed = result === true || (typeof result === 'object' && result !== null && result.confirmed === true);
     if (confirmed && typeof result === 'object' && result.checked) {
       window.localStorage.setItem(CONFIRM_KEYS[key], 'true');
@@ -1171,7 +1171,7 @@ function GitRepositoryPanel({
     }
     const message = state.commitMessage.trim();
     if (!message) {
-      await window.luminDialog?.alert?.(translate('请输入提交消息'));
+      await window.lumeDialog?.alert?.(translate('请输入提交消息'));
       return;
     }
     const commands: string[][] = [];
@@ -1385,7 +1385,7 @@ function GitRepositoryPanel({
     try {
       await navigator.clipboard.writeText(value);
     } catch {
-      await window.luminDialog?.alert?.(translate('复制失败'));
+      await window.lumeDialog?.alert?.(translate('复制失败'));
     }
   }, []);
 

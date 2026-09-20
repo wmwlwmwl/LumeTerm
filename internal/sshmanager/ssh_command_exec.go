@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	aitypes "luminssh-go/internal/aitypes"
-	"luminssh-go/internal/mcp"
-	"luminssh-go/internal/mcpserver"
+	aitypes "lumeterm/internal/aitypes"
+	"lumeterm/internal/mcp"
+	"lumeterm/internal/mcpserver"
 )
 
-var luminExitCodePattern = regexp.MustCompile(`\[Lumin_EXIT_CODE_(\d+)\]`)
+var luminExitCodePattern = regexp.MustCompile(`\[LumeTerm_EXIT_CODE_(\d+)\]`)
 
 const maxInteractiveCapturedOutputBytes = 1 << 20
 const interactiveIdlePollInterval = 200 * time.Millisecond
@@ -39,8 +39,8 @@ func (m *SSHManager) ExecuteCommandInTerminal(sessionID string, command string, 
 	if !ok || sessionData == nil || sessionData.Stdin == nil {
 		return result, fmt.Errorf("session not found")
 	}
-	startMarker := "[Lumin_START_" + newCommandExecutionToken() + "]"
-	endMarker := "[Lumin_END_" + newCommandExecutionToken() + "]"
+	startMarker := "[LumeTerm_START_" + newCommandExecutionToken() + "]"
+	endMarker := "[LumeTerm_END_" + newCommandExecutionToken() + "]"
 	_, outputChannel, cancel := m.registerSessionOutputTap(sessionID)
 	defer cancel()
 	if _, _, _, err := m.waitForInteractiveSessionIdle(sessionID, nil, nil, outputChannel, nil); err != nil {
@@ -211,8 +211,8 @@ func (m *SSHManager) ExecuteCommandInTerminalControlled(sessionID string, comman
 	}
 
 	currentSessionID := sessionID
-	startMarker := "[Lumin_START_" + newCommandExecutionToken() + "]"
-	endMarker := "[Lumin_END_" + newCommandExecutionToken() + "]"
+	startMarker := "[LumeTerm_START_" + newCommandExecutionToken() + "]"
+	endMarker := "[LumeTerm_END_" + newCommandExecutionToken() + "]"
 	queuedDuringWait := false
 
 	var outputChannel <-chan []byte
@@ -390,13 +390,13 @@ func (m *SSHManager) prepareInteractiveCommandWrapper(sessionID string, command 
 
 func buildUnixInteractiveCommandPlan(command string, cwd string, startMarker string, endMarker string) unixInteractiveCommandPlan {
 	token := newCommandExecutionToken()
-	scriptPath := "/tmp/lumin_mcp_" + token + ".sh"
+	scriptPath := "/tmp/lumeterm_mcp_" + token + ".sh"
 	scriptLines := []string{
 		"#!/bin/sh",
 		"cleanup() {",
-		"  lumin_mcp_exit=$?",
+		"  lumeterm_mcp_exit=$?",
 		"  rm -f " + quotePOSIX(scriptPath),
-		`  printf '%s\n' "[Lumin_EXIT_CODE_${lumin_mcp_exit}]"`,
+		`  printf '%s\n' "[LumeTerm_EXIT_CODE_${lumeterm_mcp_exit}]"`,
 		"  printf '%s\\n' " + quotePOSIX(endMarker),
 		"  exit 0",
 		"}",
@@ -484,20 +484,20 @@ func buildPowerShellInteractiveCommandWrapper(command string, cwd string, startM
 	scriptLines = append(scriptLines, command)
 	scriptLines = append(scriptLines,
 		`} finally {`,
-		`  $lumin_mcp_exit = $LASTEXITCODE`,
-		`  if ($lumin_mcp_exit -eq $null) { $lumin_mcp_exit = if ($?) { 0 } else { 1 } }`,
+		`  $lumeterm_mcp_exit = $LASTEXITCODE`,
+		`  if ($lumeterm_mcp_exit -eq $null) { $lumeterm_mcp_exit = if ($?) { 0 } else { 1 } }`,
 		`  Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue`,
-		`  Write-Output ("[Lumin_EXIT_CODE_" + $lumin_mcp_exit + "]")`,
+		`  Write-Output ("[LumeTerm_EXIT_CODE_" + $lumeterm_mcp_exit + "]")`,
 		`  Write-Output '`+escapePowerShellSingleQuoted(endMarker)+`'`,
 		`  exit 0`,
 		`}`,
 	)
 	encodedScript := base64.StdEncoding.EncodeToString([]byte(strings.Join(scriptLines, "\r\n")))
 	return strings.Join([]string{
-		"$__lumin_path = Join-Path $env:TEMP 'lumin_mcp_" + token + ".ps1'",
+		"$__lumeterm_path = Join-Path $env:TEMP 'lumeterm_mcp_" + token + ".ps1'",
 		"$__lumin_bytes = [System.Convert]::FromBase64String('" + encodedScript + "')",
-		"[System.IO.File]::WriteAllBytes($__lumin_path, $__lumin_bytes)",
-		"& $__lumin_path",
+		"[System.IO.File]::WriteAllBytes($__lumeterm_path, $__lumin_bytes)",
+		"& $__lumeterm_path",
 	}, "\r\n")
 }
 
@@ -513,15 +513,15 @@ func buildCmdInteractiveCommandWrapper(command string, cwd string, startMarker s
 		"echo "+startMarker,
 		command,
 		`set "__LUMIN_EXIT=%ERRORLEVEL%"`,
-		`echo [Lumin_EXIT_CODE_%__LUMIN_EXIT%]`,
+		`echo [LumeTerm_EXIT_CODE_%__LUMIN_EXIT%]`,
 		"echo "+endMarker,
 		`(goto) 2>nul & del "%~f0"`,
 		`exit /b 0`,
 	)
 	encodedScript := base64.StdEncoding.EncodeToString([]byte(strings.Join(scriptLines, "\r\n")))
 	return strings.Join([]string{
-		`powershell -NoProfile -Command "$p = Join-Path $env:TEMP 'lumin_mcp_` + token + `.cmd'; [System.IO.File]::WriteAllBytes($p, [System.Convert]::FromBase64String('` + encodedScript + `'))"`,
-		`call "%TEMP%\lumin_mcp_` + token + `.cmd"`,
+		`powershell -NoProfile -Command "$p = Join-Path $env:TEMP 'lumeterm_mcp_` + token + `.cmd'; [System.IO.File]::WriteAllBytes($p, [System.Convert]::FromBase64String('` + encodedScript + `'))"`,
+		`call "%TEMP%\lumeterm_mcp_` + token + `.cmd"`,
 	}, "\r\n")
 }
 

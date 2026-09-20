@@ -101,8 +101,8 @@ export function useAIPanelSettingsState({ t, isWorkspaceTabActive, panelMountedR
   const showAlert = useCallback(async (message: string) => {
     // message 为动态内容（可能不在翻译表），t() 内部有兜底
     const finalMessage = typeof message === 'string' && message.trim() ? translate(message.trim() as I18nKey) : translate('当前状态不支持还原')
-    if (window?.luminDialog?.alert) {
-      await window.luminDialog.alert(finalMessage, t('提示'))
+    if (window?.lumeDialog?.alert) {
+      await window.lumeDialog.alert(finalMessage, t('提示'))
       return
     }
     window.alert(finalMessage)
@@ -267,7 +267,7 @@ export function useAIPanelSettingsState({ t, isWorkspaceTabActive, panelMountedR
     if (!normalizedGlobalAISettings.confirmDelete) {
       return true
     }
-    const confirm = window?.luminDialog?.confirm
+    const confirm = window?.lumeDialog?.confirm
     if (typeof confirm !== 'function') {
       return true
     }

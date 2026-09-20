@@ -1,4 +1,4 @@
-module luminssh-go
+module lumeterm
 
 go 1.26.0
 

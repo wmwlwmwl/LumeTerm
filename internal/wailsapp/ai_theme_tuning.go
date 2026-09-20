@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	ai "luminssh-go/internal/ai"
-	"luminssh-go/internal/config"
+	ai "lumeterm/internal/ai"
+	"lumeterm/internal/config"
 )
 
 type aiThemeToolDraftState struct {

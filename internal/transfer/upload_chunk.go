@@ -291,7 +291,7 @@ func (s *Service) BeginChunkedUploadFile(taskID string, relativePath string, siz
 	}
 	fileID := newUploadObjectID("upload_file")
 	finalPath := pathpkg.Join(task.remoteBaseDir, safeRelativePath)
-	tempPath := finalPath + ".luminpart." + fileID
+	tempPath := finalPath + ".lumetermpart." + fileID
 	client, err := task.pool.Acquire()
 	if err != nil {
 		return "", err

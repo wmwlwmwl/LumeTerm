@@ -7,18 +7,18 @@ func TestIsAllowedDownloadURL(t *testing.T) {
 		url  string
 		want bool
 	}{
-		{"https://github.com/wmwlwmwl/Lumin-SSH/releases/download/v1.2.0.1/Lumin-V1.2.0.1-portable.exe", true},
-		{"https://objects.githubusercontent.com/wmwlwmwl/Lumin-SSH/releases/download/v1/x.exe", false},
-		{"https://github.com:443/wmwlwmwl/Lumin-SSH/releases/download/v1/x.exe", true},
-		{"https://ghproxy.net/https://github.com/wmwlwmwl/Lumin-SSH/releases/download/v1.2.0.1/x.exe", false},
-		{"https://evil.com/github.com/wmwlwmwl/Lumin-SSH/releases/download/v1/x.exe", false},
-		{"https://github.com.evil.com/wmwlwmwl/Lumin-SSH/releases/download/v1/x.exe", false},
+		{"https://github.com/wmwlwmwl/LumeTerm/releases/download/v1.2.0.1/LumeTerm-1.2.0.1-windows-amd64-portable.exe", true},
+		{"https://objects.githubusercontent.com/wmwlwmwl/LumeTerm/releases/download/v1/x.exe", false},
+		{"https://github.com:443/wmwlwmwl/LumeTerm/releases/download/v1/x.exe", true},
+		{"https://ghproxy.net/https://github.com/wmwlwmwl/LumeTerm/releases/download/v1.2.0.1/x.exe", false},
+		{"https://evil.com/github.com/wmwlwmwl/LumeTerm/releases/download/v1/x.exe", false},
+		{"https://github.com.evil.com/wmwlwmwl/LumeTerm/releases/download/v1/x.exe", false},
 		{"https://evil.com/?x=https://github.com/a/b/releases/download/v1/x.exe", false},
 		{"javascript:alert(1)", false},
-		{"https://github.com/wmwlwmwl/Lumin-SSH/releases/tag/v1.2.0.1", false},
-		{"https://github.com/wmwlwmwl/Lumin-SSH/releases/latest", false},
-		{"https://github.com/wmwlwmwl/Lumin-SSH/releases/download/v1/x.exe.sha256", false},
-		{"http://github.com/wmwlwmwl/Lumin-SSH/releases/download/v1/x.exe", false},
+		{"https://github.com/wmwlwmwl/LumeTerm/releases/tag/v1.2.0.1", false},
+		{"https://github.com/wmwlwmwl/LumeTerm/releases/latest", false},
+		{"https://github.com/wmwlwmwl/LumeTerm/releases/download/v1/x.exe.sha256", false},
+		{"http://github.com/wmwlwmwl/LumeTerm/releases/download/v1/x.exe", false},
 		{"", false},
 	}
 	for _, tc := range cases {
@@ -33,8 +33,8 @@ func TestIsAllowedFilename(t *testing.T) {
 		name string
 		want bool
 	}{
-		{"Lumin-V1.2.0.1-portable.exe", true},
-		{"Lumin-V1.2.0.1-amd64-installer.exe", true},
+		{"LumeTerm-1.2.0.1-windows-amd64-portable.exe", true},
+		{"LumeTerm-1.2.0.1-windows-amd64-installer.exe", true},
 		{"pkg.deb", true},
 		{"pkg.rpm", true},
 		{"pkg.dmg", true},

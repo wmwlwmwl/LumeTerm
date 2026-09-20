@@ -57,13 +57,13 @@ func InstallDMG(dmgPath, exePath string) error {
 	}
 
 	targetParent := filepath.Dir(targetApp)
-	writeProbe, err := os.MkdirTemp(targetParent, ".lumin-update-write-test-")
+	writeProbe, err := os.MkdirTemp(targetParent, ".lumeterm-update-write-test-")
 	if err != nil {
 		return fmt.Errorf("application directory is not writable: %w", err)
 	}
 	os.Remove(writeProbe)
 
-	mountPoint, err := os.MkdirTemp("", "lumin-update-mount-")
+	mountPoint, err := os.MkdirTemp("", "lumeterm-update-mount-")
 	if err != nil {
 		return fmt.Errorf("failed to create DMG mount point: %w", err)
 	}
@@ -148,7 +148,7 @@ fi
 exit 1
 `
 
-	scriptFile, err := os.CreateTemp("", "lumin-updater-*.sh")
+	scriptFile, err := os.CreateTemp("", "lumeterm-updater-*.sh")
 	if err != nil {
 		detachOnError()
 		return fmt.Errorf("failed to create updater script: %w", err)
@@ -171,7 +171,7 @@ exit 1
 		return fmt.Errorf("failed to prepare updater script: %w", err)
 	}
 
-	logPath := filepath.Join(os.TempDir(), "Lumin-update.log")
+	logPath := filepath.Join(os.TempDir(), "LumeTerm-update.log")
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		os.Remove(scriptPath)

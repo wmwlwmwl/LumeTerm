@@ -49,7 +49,7 @@ func ApplyElevated(targetPath, exePath string) error {
 	targetPath = quoteBatchArg(targetPath)
 	exePath = quoteBatchArg(exePath)
 	script := fmt.Sprintf(`@echo off
-title Lumin Updater
+title LumeTerm Updater
 tasklist /FI "PID eq %s" 2>NUL | find "%s" >NUL
 :wait
 ping -n 2 127.0.0.1 >NUL
@@ -57,7 +57,7 @@ tasklist /FI "PID eq %s" 2>NUL | find "%s" >NUL
 if not errorlevel 1 goto wait
 move /Y "%s" "%s" >NUL
 if errorlevel 1 (
-    echo Replace failed > "%%temp%%\Lumin-update-error.log"
+    echo Replace failed > "%%temp%%\LumeTerm-update-error.log"
     exit /b 1
 )
 start "" "%s"
@@ -66,7 +66,7 @@ del "%%~f0"`,
 		strconv.Itoa(os.Getpid()), strconv.Itoa(os.Getpid()),
 		targetPath, exePath, exePath)
 
-	scriptPath := filepath.Join(os.TempDir(), "lumin-update.bat")
+	scriptPath := filepath.Join(os.TempDir(), "lumeterm-update.bat")
 	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
 		return fmt.Errorf("failed to create updater script: %w", err)
 	}

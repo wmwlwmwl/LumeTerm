@@ -94,7 +94,7 @@ export default function RestoreDialogs({
                     <span
                       className={cn(
                         'py-[2px] px-1.5 rounded-full border border-line',
-                        getBackupFormatLabel(bk.name as string) === 'LUMIN2' ? 'text-success' : 'text-secondary',
+                        getBackupFormatLabel(bk.name as string) === 'LUMETERM2' ? 'text-success' : 'text-secondary',
                       )}
                     >
                       {getBackupFormatLabel(bk.name as string)}

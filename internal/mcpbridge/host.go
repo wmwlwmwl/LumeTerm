@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/config"
-	mcp "luminssh-go/internal/mcp"
-	"luminssh-go/internal/mcpserver"
-	"luminssh-go/internal/sshmanager"
+	"lumeterm/internal/config"
+	mcp "lumeterm/internal/mcp"
+	"lumeterm/internal/mcpserver"
+	"lumeterm/internal/sshmanager"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -264,7 +264,7 @@ func (h Host) UploadTempTextContext(ctx context.Context, sessionID string, suffi
 	if err != nil {
 		return "", err
 	}
-	path := "/tmp/lumin_mcp_" + sshmanager.NewCommandExecutionToken() + suffix
+	path := "/tmp/lumeterm_mcp_" + sshmanager.NewCommandExecutionToken() + suffix
 	file, err := sftpClient.Create(path)
 	if err != nil {
 		return "", err

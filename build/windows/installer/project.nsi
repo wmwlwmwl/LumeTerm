@@ -1,4 +1,4 @@
-﻿Unicode true
+Unicode true
 
 ####
 ## Please note: Template replacements don't work in this file. They are provided with default defines like
@@ -114,8 +114,8 @@ SectionEnd
 Section "uninstall"
     !insertmacro wails.setShellContext
 
-    RMDir /r "$AppData\Lumin" # Remove the WebView2 DataPath and app data
-    RMDir /r "$LocalAppData\Lumin" # Clean local app data as well
+    RMDir /r "$AppData\LumeTerm" # Remove the WebView2 DataPath and app data
+    RMDir /r "$LocalAppData\LumeTerm" # Clean local app data as well
 
     RMDir /r $INSTDIR
 

@@ -443,7 +443,7 @@ export function useAIProviderSelector({
     if (!provider) {
       return;
     }
-    const confirmed = await window.luminDialog?.confirm(`${t('确定删除供应商')}「${provider.name || provider.provider || provider.id}」？${t('此操作不可撤销')}`);
+    const confirmed = await window.lumeDialog?.confirm(`${t('确定删除供应商')}「${provider.name || provider.provider || provider.id}」？${t('此操作不可撤销')}`);
     if (!confirmed) {
       return;
     }

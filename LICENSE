@@ -1,7 +1,7 @@
-Lumin SSH Source License
+LumeTerm Source License
 Version 1.1
 
-Copyright (c) 2026 Lumin SSH Authors
+Copyright (c) 2026 LumeTerm Authors
 
 重要提示 / IMPORTANT
 本文件不构成法律意见。若你计划大规模分发、上架应用商店或商业合作，
@@ -47,8 +47,8 @@ This file is not legal advice. Third-party components remain under their own lic
 2.1 将本软件或衍生作品用于第 0.3 条定义的商用；
 2.2 以第 0.5 条定义的混淆/加密发布方式对外分发本软件或衍生作品；
 2.3 删除、篡改本软件中的版权声明、本许可文本或合理署名；
-2.4 使用「Lumin」「Lumin SSH」等名称或标识，使人误认为你的衍生作品
-    为版权人官方版本或已获官方背书（事实描述「基于 Lumin SSH Android
+2.4 使用「LumeTerm」等名称或标识，使人误认为你的衍生作品
+    为版权人官方版本或已获官方背书（事实描述「基于 LumeTerm Android
     修改」且不造成混淆的除外）。
 
 ## 3. 再发布条件
@@ -109,7 +109,7 @@ Termux terminal 相关组件、OkHttp、JSch 等）。该等组件的版权与�
 English (reference translation; Chinese text controls on conflict)
 ------------------------------------------------------------------------
 
-Copyright (c) 2026 Lumin SSH Authors
+Copyright (c) 2026 LumeTerm Authors
 
 ### 0. Definitions (summary)
 “Software” means original code/resources/docs in this repository under the
@@ -130,7 +130,7 @@ non-exclusive, non-transferable, terminable license. All other rights reserved.
 ### 2. Restrictions
 Without prior written consent: no commercial use; no encrypted/obfuscated
 distribution without source-available compliance; no removal of notices;
-no trademark/endorsement confusion regarding “Lumin” / “Lumin SSH”.
+no trademark/endorsement confusion regarding “LumeTerm”.
 
 ### 3. Redistribution
 Must include this License, preserve notices, keep source available, describe

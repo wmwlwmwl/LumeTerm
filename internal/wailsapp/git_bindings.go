@@ -2,7 +2,7 @@ package wailsapp
 
 import (
 	"fmt"
-	"luminssh-go/internal/sshmanager"
+	"lumeterm/internal/sshmanager"
 )
 
 func (a *App) ListGitTerminalCandidates(sessionID string) ([]map[string]interface{}, error) {

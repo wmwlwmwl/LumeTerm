@@ -34,8 +34,8 @@ git push origin v1.2.3
 
 ## 发版后
 
-1. 看 Actions：https://github.com/wmwlwmwl/Lumin-SSH/actions  
-2. 看 Release：标题 `Lumin SSH Client v…`、更新日志、14 个资产（含 `.sha256`）  
+1. 看 Actions：https://github.com/wmwlwmwl/LumeTerm/actions  
+2. 看 Release：标题 `LumeTerm v…`、更新日志、14 个资产（含 `.sha256`）  
 3. 缺资产时 job 会失败并**保持 draft**，不会半套包变成 latest
 
 ## 手动重跑

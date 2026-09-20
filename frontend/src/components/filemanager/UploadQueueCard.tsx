@@ -35,7 +35,7 @@ export default function UploadQueueCard({ item, isAbortable, onAbortItem, onRemo
     try {
       await window?.go?.wailsapp?.App?.OpenLocalPathInExplorer?.(localPath, item.mode !== 'download-file');
     } catch (err) {
-      window.luminDialog?.alert?.(`${t('打开所在目录失败')}: ${err}`);
+      window.lumeDialog?.alert?.(`${t('打开所在目录失败')}: ${err}`);
     }
   };
 
@@ -45,8 +45,8 @@ export default function UploadQueueCard({ item, isAbortable, onAbortItem, onRemo
       return;
     }
     const title = item?.direction === 'download' ? t('下载失败详情') : t('上传失败详情');
-    if (window?.luminDialog?.alert) {
-      await window.luminDialog.alert(message, title, { copyable: true });
+    if (window?.lumeDialog?.alert) {
+      await window.lumeDialog.alert(message, title, { copyable: true });
       return;
     }
     window.alert(message);

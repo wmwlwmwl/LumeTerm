@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const singletonSocketName = "lumin-ssh.sock"
+const singletonSocketName = "lumeterm.sock"
 
 var (
 	singletonLock *os.File
@@ -29,7 +29,7 @@ func singleInstanceSocketPath() string {
 	if runDir := os.Getenv("XDG_RUNTIME_DIR"); filepath.IsAbs(runDir) {
 		return filepath.Join(runDir, singletonSocketName)
 	}
-	return filepath.Join(os.TempDir(), fmt.Sprintf("lumin-ssh-%d.sock", os.Getuid()))
+	return filepath.Join(os.TempDir(), fmt.Sprintf("lumeterm-%d.sock", os.Getuid()))
 }
 
 func findAndShowWindow() {
@@ -110,14 +110,14 @@ func StopSingletonServer() {
 
 // EnsureSingleInstance 获取当前用户的实例锁；已有实例时通知其显示窗口并退出。
 func EnsureSingleInstance() {
-	lockPath := filepath.Join(os.TempDir(), fmt.Sprintf("lumin-ssh-%d.lock", os.Getuid()))
+	lockPath := filepath.Join(os.TempDir(), fmt.Sprintf("lumeterm-%d.lock", os.Getuid()))
 	file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		return
 	}
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		_ = file.Close()
-		fmt.Println("Lumin 已在运行。")
+		fmt.Println("LumeTerm 已在运行。")
 		findAndShowWindow()
 		os.Exit(0)
 	}

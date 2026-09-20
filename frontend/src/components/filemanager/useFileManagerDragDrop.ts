@@ -202,7 +202,7 @@ export function useFileManagerDragDrop(deps: ReturnType<typeof useFileManagerCor
       ? joinPath(normalizedTargetDirPath, sourceName)
       : normalizedTargetDirPath;
     const message = `${t('确认{action}', { action: actionLabel })}\n${primarySourcePath}\n${t('到')}\n${targetPath}`;
-    const confirm = await window.luminDialog?.confirm?.(message);
+    const confirm = await window.lumeDialog?.confirm?.(message);
     return confirm !== false;
   }, [fileManagerDualPaneDragPromptOnDirectory, joinPath, normalizePath, t]);
 

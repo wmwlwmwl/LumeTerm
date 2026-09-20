@@ -1,8 +1,8 @@
 package mcpbridge
 
 import (
-	ai "luminssh-go/internal/ai"
-	mcp "luminssh-go/internal/mcp"
+	ai "lumeterm/internal/ai"
+	mcp "lumeterm/internal/mcp"
 )
 
 // LoadServiceSettings 从 AI 全局设置中提取 MCP 服务配置。

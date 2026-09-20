@@ -286,7 +286,7 @@ const settingsTreeSource = rootNode(
           optionNode('fileManager.uncompress-prompt', 'uncompressPrompt', '每次都询问我', '每次遇到同名文件夹时都弹窗让我选', { value: 'prompt' }),
         ], { control: 'radio-group', stateKey: 'fileManagerSmartUncompressConflictStrategy' }),
         fieldGroupNode('fileManager.default-open-mode', 'defaultOpenMode', '打开文件默认方式', '双击或点“编辑”时的默认打开方式；编辑器内仍可随时切换到系统/指定编辑器', [
-          optionNode('fileManager.builtin-editor', 'builtinEditor', '内置编辑器', '使用 Lumin 内置编辑器打开，支持高亮与保存回远端', { value: 'builtin' }),
+          optionNode('fileManager.builtin-editor', 'builtinEditor', '内置编辑器', '使用 LumeTerm 内置编辑器打开，支持高亮与保存回远端', { value: 'builtin' }),
           optionNode('fileManager.system-editor', 'systemEditor', '系统编辑器', '用系统默认程序打开临时文件，保存后自动同步回远端', { value: 'system' }),
           optionNode('fileManager.external-editor', 'externalEditor', '指定外部编辑器', '始终使用你选择的编辑器程序打开，例如 VS Code / Notepad++', { value: 'external' }),
         ], { control: 'radio-group', stateKey: 'fileManagerDefaultOpenMode' }),
@@ -464,7 +464,7 @@ const settingsTreeSource = rootNode(
     ], { targetId: 'sync.webdav' }),
     sectionNode('sync', 'cloud', '云端同步', [
       panelNode('sync.panel.cloud', [
-        fieldNode('sync.cloud-backup', 'cloudBackup', '云端同步', '同步将写入 .lumin2 加密备份', { control: 'status' }),
+        fieldNode('sync.cloud-backup', 'cloudBackup', '云端同步', '同步将写入 .lumeterm2 加密备份', { control: 'status' }),
         fieldNode('sync.tombstones', 'tombstones', '删除记录', '用于多设备同步删除，一般无需处理。', { control: 'maintenance' }),
         actionNode('sync.merge-sync', 'mergeSync', '合并同步', '', { actionKey: 'syncNow' }),
         actionNode('sync.restore', 'restore', '从云端恢复', '', { actionKey: 'restoreFromCloud' }),

@@ -107,11 +107,11 @@ export function useAddServerForm({
 
   const submitForm = async (submitAction = 'save') => {
     if (Date.now() < suppressSubmitUntilRef.current) return;
-    if (!form.host.trim()) return window.luminDialog?.alert(t('请填写主机地址'));
-    if (authMode === 'custom' && !form.username.trim()) return window.luminDialog?.alert(t('请填写用户名'));
-    if (authMode === 'credential' && !selectedCredId) return window.luminDialog?.alert(t('请选择凭据'));
-    if (form.proxyMode === 'node' && !form.proxyNodeId) return window.luminDialog?.alert(t('请选择代理节点'));
-    if (form.proxyMode === 'custom' && !String(form.proxyHost || '').trim()) return window.luminDialog?.alert(t('请输入代理主机地址'));
+    if (!form.host.trim()) return window.lumeDialog?.alert(t('请填写主机地址'));
+    if (authMode === 'custom' && !form.username.trim()) return window.lumeDialog?.alert(t('请填写用户名'));
+    if (authMode === 'credential' && !selectedCredId) return window.lumeDialog?.alert(t('请选择凭据'));
+    if (form.proxyMode === 'node' && !form.proxyNodeId) return window.lumeDialog?.alert(t('请选择代理节点'));
+    if (form.proxyMode === 'custom' && !String(form.proxyHost || '').trim()) return window.lumeDialog?.alert(t('请输入代理主机地址'));
 
     setSaving(true);
     try {
@@ -180,7 +180,7 @@ export function useAddServerForm({
         setForm((f) => ({ ...f, privateKey: content }));
       }
     } catch (e) {
-      if (e) window.luminDialog?.alert(`${t('读取私钥文件失败')}: ${e}`, t('错误'));
+      if (e) window.lumeDialog?.alert(`${t('读取私钥文件失败')}: ${e}`, t('错误'));
     }
   };
 

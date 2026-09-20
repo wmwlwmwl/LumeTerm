@@ -224,7 +224,7 @@ export function AIConversationTabPanel({ width, side, terminalId = 'global', ses
   // 客户端配置文件（如 ~/.claude.json）期望的 type 值为 "http"，这里做映射。
   // 仅 streamable-http 需要转换，其他值（如 sse、stdio）保持原样。
   const mcpConfigType = mcpInfo.transport === 'streamable-http' ? 'http' : (mcpInfo.transport || 'http')
-  const configText = `"lumin-ssh": {
+  const configText = `"lumeterm": {
   "type": "${mcpConfigType}",
   "url": "${mcpInfo.url || ''}",
   "oauth": false,

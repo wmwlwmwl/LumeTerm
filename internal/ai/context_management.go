@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	aiprovider "luminssh-go/internal/ai/provider"
-	"luminssh-go/internal/aitypes"
+	aiprovider "lumeterm/internal/ai/provider"
+	"lumeterm/internal/aitypes"
 )
 
 type AIConversationContextMetrics struct {

@@ -8,26 +8,30 @@ import (
 	"strings"
 	"time"
 
-	aitypes "luminssh-go/internal/aitypes"
+	aitypes "lumeterm/internal/aitypes"
 )
 
 // 节点导入/导出功能。
 //
 // 设计要点：
-//   - 导出文件格式为 Lumin-SSH 自有 JSON（明文，含真实密码/私钥），便于跨机器完整还原。
+//   - 导出文件格式为 LumeTerm 自有 JSON（明文，含真实密码/私钥），便于跨机器完整还原。
 //   - 导入采用"合并（跳过重复）"策略：按 host+port+username 判重，已存在则跳过，仅新增。
 //   - 敏感数据全程在后端处理，不经过前端暴露面。
 //   - 导入后走 saveConnectionsFile/saveCredentialsFile 自动加密 + 原子写，并触发云同步。
 
-const connectionsExportFormat = "lumin-ssh-connections"
+// connectionsExportFormat 导出 format 字段值（写新读旧：旧文件为 lumin-ssh-connections）
+const connectionsExportFormat = "lumeterm-connections"
+
+// legacyConnectionsExportFormat 旧品牌时期的 format 值，导入时兼容识别
+const legacyConnectionsExportFormat = "lumin-ssh-connections"
 
 // connectionsExport 节点导出文件的顶层结构
 type connectionsExport struct {
-	Format      string           `json:"format"` // 固定 lumin-ssh-connections，导入时据此校验来源
-	Version     int              `json:"version"`
-	ExportedAt  int64            `json:"exportedAt"` // Unix 毫秒时间戳
-	Connections []Connection     `json:"connections"`
-	Credentials []Credential     `json:"credentials"` // 仅含被 connection 引用的凭据
+	Format      string                `json:"format"` // 固定 lumeterm-connections（兼容旧 lumin-ssh-connections），导入时据此校验来源
+	Version     int                   `json:"version"`
+	ExportedAt  int64                 `json:"exportedAt"` // Unix 毫秒时间戳
+	Connections []Connection          `json:"connections"`
+	Credentials []Credential          `json:"credentials"` // 仅含被 connection 引用的凭据
 	ProxyNodes  []aitypes.AIProxyNode `json:"proxy_nodes,omitempty"`
 }
 
@@ -276,7 +280,7 @@ func parseConnectionsExport(data []byte) (*connectionsExport, error) {
 	if err := json.Unmarshal(data, &exp); err != nil {
 		return nil, fmt.Errorf("解析文件失败：%w", err)
 	}
-	if exp.Format != connectionsExportFormat {
+	if exp.Format != connectionsExportFormat && exp.Format != legacyConnectionsExportFormat {
 		return nil, fmt.Errorf("无效的导入文件格式（format 应为 %s）", connectionsExportFormat)
 	}
 	// 字段容错：补默认值
@@ -342,13 +346,13 @@ func BuildImportTemplate(lang string) SyncSnapshot {
 var errNeedPassword = errors.New("need password")
 var ErrNeedPassword = errNeedPassword // 导出别名供 package main 引用
 
-// encryptExportData 把导出对象序列化为 JSON 并用指定密码加密，返回 LUMIN2 字符串。
+// encryptExportData 把导出对象序列化为 JSON 并用指定密码加密，返回 LUMETERM2 字符串。
 func (c *ConfigManager) encryptExportData(exp SyncSnapshot, password string) (string, error) {
 	data, err := json.MarshalIndent(exp, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("marshal export: %w", err)
 	}
-	enc, err := encryptLUMIN2(string(data), password)
+	enc, err := encryptLUMETERM2(string(data), password)
 	if err != nil {
 		return "", fmt.Errorf("encrypt export: %w", err)
 	}
@@ -360,12 +364,12 @@ func (c *ConfigManager) EncryptExportData(exp SyncSnapshot, password string) (st
 	return c.encryptExportData(exp, password)
 }
 
-// parseImportData 智能解析导入文件原始字节：先试明文 JSON，失败则用密码解密 LUMIN2。
+// parseImportData 智能解析导入文件原始字节：先试明文 JSON，失败则用密码解密 LUMETERM2。
 //
 // 解析优先级：
 //  1. 明文 connectionsExport（format 字段匹配）
 //  2. 明文 SyncSnapshot
-//  3. LUMIN2 密文（需 password）
+//  3. LUMETERM2 密文（需 password）
 //
 // password 为空表示用户未提供密码；解密失败时返回 errNeedPassword。
 func (c *ConfigManager) parseImportData(data []byte, password string) (*SyncSnapshot, error) {
@@ -379,13 +383,13 @@ func (c *ConfigManager) parseImportData(data []byte, password string) (*SyncSnap
 	}
 
 	raw := strings.TrimSpace(string(data))
-	if !strings.HasPrefix(raw, lumin2Prefix) {
-		return nil, fmt.Errorf("不支持的导入格式：仅支持明文 JSON 与 LUMIN2 密文（.lumin2）")
+	if !hasBackupPrefix(raw) {
+		return nil, fmt.Errorf("不支持的导入格式：仅支持明文 JSON 与 LUMETERM2 密文（.lumeterm2/.lumin2）")
 	}
 	if password == "" {
 		return nil, errNeedPassword
 	}
-	decrypted, err := decryptLUMIN2(raw, password)
+	decrypted, err := decryptLUMETERM2(raw, password)
 	if err != nil {
 		return nil, errNeedPassword
 	}
@@ -395,7 +399,7 @@ func (c *ConfigManager) parseImportData(data []byte, password string) (*SyncSnap
 	if exp, ok := tryParseExportJSON([]byte(decrypted)); ok {
 		return exp, nil
 	}
-	return nil, fmt.Errorf("LUMIN2 解密成功但内容不是有效 SyncSnapshot")
+	return nil, fmt.Errorf("LUMETERM2 解密成功但内容不是有效 SyncSnapshot")
 }
 
 // ParseImportData 导出包装器
@@ -409,7 +413,7 @@ func tryParseExportJSON(data []byte) (*SyncSnapshot, bool) {
 	if err := json.Unmarshal(data, &exp); err != nil {
 		return nil, false
 	}
-	if exp.Format != connectionsExportFormat {
+	if exp.Format != connectionsExportFormat && exp.Format != legacyConnectionsExportFormat {
 		return nil, false
 	}
 	snap := &SyncSnapshot{

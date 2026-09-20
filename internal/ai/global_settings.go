@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/aitypes"
+	"lumeterm/internal/aitypes"
 )
 
 // Types and normalization/persistence helpers live in internal/aitypes so that

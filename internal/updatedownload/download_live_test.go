@@ -18,7 +18,7 @@ func TestUpdateDownloadSpeedLive(t *testing.T) {
 	}
 
 	const (
-		directURL    = "https://github.com/wmwlwmwl/Lumin-SSH/releases/download/v1.2.2.1/Lumin-V1.2.2.1-amd64-installer.exe"
+		directURL    = "https://github.com/wmwlwmwl/LumeTerm/releases/download/v1.2.2.1/LumeTerm-1.2.2.1-windows-amd64-installer.exe"
 		expectedSize = int64(18832855)
 	)
 	proxies := []struct {

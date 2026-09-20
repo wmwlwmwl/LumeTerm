@@ -1,11 +1,11 @@
 <div align="center">
 
-# Lumin
+# LumeTerm
 
-**轻量、高速、全平台 SSH 客户端**
+**轻量、高速、全平台终端客户端**
 
-[![Release](https://img.shields.io/github/v/release/wmwlwmwl/Lumin-SSH?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/wmwlwmwl/Lumin-SSH/releases)
-[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS%20%7C%20macOS%20%7C%20Linux-0078D6.svg?style=flat-square)](https://github.com/wmwlwmwl/Lumin-SSH/releases)
+[![Release](https://img.shields.io/github/v/release/wmwlwmwl/LumeTerm?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/wmwlwmwl/LumeTerm/releases)
+[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS%20%7C%20macOS%20%7C%20Linux-0078D6.svg?style=flat-square)](https://github.com/wmwlwmwl/LumeTerm/releases)
 [![License](https://img.shields.io/badge/LICENSE-Source%20License%201.1-8CBA00.svg?style=flat-square)](LICENSE)
 
 [English](./README_EN.md) · [简体中文](./README.md)
@@ -18,12 +18,12 @@
 
 > **Android 客户端**（独立仓库、分开发版）：[Lumin-SSH-Android](https://github.com/wmwlwmwl/Lumin-SSH-Android) · [发行版](https://github.com/wmwlwmwl/Lumin-SSH-Android/releases)
 
-Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **Go 原生并发 + 本机 WebSocket + xterm.js**，在 Wails 桌面壳中提供低延迟终端体验。内置系统资源探针、远程文件管理器（内置/外置编辑器）、命令历史与智能补全、连接级代理、可选加密云同步、AI 对话与 MCP 集成等能力，**无需在服务器安装 Agent**。
+LumeTerm 是一款面向开发者和运维人员的桌面终端客户端。基于 **Go 原生并发 + 本机 WebSocket + xterm.js**，在 Wails 桌面壳中提供低延迟终端体验。内置系统资源探针、远程文件管理器（内置/外置编辑器）、命令历史与智能补全、连接级代理、可选加密云同步、AI 对话与 MCP 集成等能力，**无需在服务器安装 Agent**。
 
 <div align="center">
-  <img src="assets/pc_empty_main.png" alt="Lumin 主面板" width="800" />
+  <img src="assets/pc_empty_main.png" alt="LumeTerm 主面板" width="800" />
   <br /><br />
-  <img src="assets/pc_connected_session.png" alt="Lumin 终端与资源监控" width="800" />
+  <img src="assets/pc_connected_session.png" alt="LumeTerm 终端与资源监控" width="800" />
 </div>
 
 ---
@@ -57,7 +57,7 @@ Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **
 ### 服务器管理
 - **保存并连接** — 添加后可立即建连
 - **克隆服务器** — 右键克隆，拷贝配置（含密码/密钥/凭据引用/代理）
-- **导入 / 导出** — 导出全部或勾选节点（含引用凭据与代理节点）为 **明文 JSON** 或 **密文 `.lumin2`**；密文可复用恢复密码或自定义密码；导入自动识别 JSON / `.lumin2`；提供导入模板
+- **导入 / 导出** — 导出全部或勾选节点（含引用凭据与代理节点）为 **明文 JSON** 或 **密文 `.lumeterm2`**；密文可复用恢复密码或自定义密码；导入自动识别 JSON / `.lumeterm2`（兼容旧 `.lumin2`）；提供导入模板
 - **重复检测** — host + port + username 重复时拦截
 - **分组管理** — 分组、移动、按组过滤
 - **操作系统图标** — 自动识别 Ubuntu、Debian、CentOS、RHEL、Rocky、Alma、Fedora、Arch、NixOS、Alpine、Kali、Gentoo、openSUSE、openEuler、OpenCloudOS、Anolis、TencentOS、Alibaba、AOSC、Oracle、FreeBSD、Windows、macOS 等；图标资源位于 `frontend/public/`
@@ -66,7 +66,7 @@ Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **
 - **初始路径** — 终端与文件管理器可分别设置初始目录
 
 ### 系统资源探针
-- **零 Agent** — 连上后按需部署监控脚本（如 `~/.lumin/probe.sh`），无需常驻服务
+- **零 Agent** — 连上后按需部署监控脚本（如 `~/.lumeterm/probe.sh`），无需常驻服务
 - **实时指标** — 每核 CPU、内存、网络吞吐、磁盘分区等
 - **GPU / RAID** — 额外信息查询（环境支持时）
 - **进程管理** — 查看、搜索、排序、发信号；可开启终止确认；低开销 top-N 采样（兼容 OpenWrt 等精简环境，排除采样脚本自身开销）
@@ -133,15 +133,15 @@ Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **
 - **后端** — WebDAV、Cloudflare R2（S3 兼容）、FTP、SFTP（均为**用户自建/自有**端点）
 - **快照内容** — 服务器、凭据、快捷指令、AI 供应商与全局设置、代理节点、删除墓碑等
 - **加密策略**
-  - 已设置**恢复密码** → 上传 **`.lumin2`**（PBKDF2 + AES-GCM）
+  - 已设置**恢复密码** → 上传 **`.lumeterm2`**（PBKDF2 + AES-GCM）
   - **未设置** → 上传**明文 `.json`**（便于迁移，但云端可读敏感字段，请谨慎）
 - **合并与墓碑** — 按时间与删除记录合并，降低多端互相覆盖；自动同步可独立开关，模式可选单一后端或「全部」
 - **保留份数** — 可配置
 
-### 本地加密
-- 首次运行生成 **32 字节** `lumin.key`（配置目录，权限尽量收紧）
-- 连接密码、私钥、passphrase、代理密码、凭据、恢复密码、部分云账号密钥等经 **AES-256-GCM** 后写入本地 JSON
-- **说明**：AI API Key、部分代理节点文件等当前以业务 JSON 保存，**不全部**走 `lumin.key`；云同步密文依赖**恢复密码**，与 `lumin.key` 是两套体系
+### 本地存储
+- 配置**明文**存储：密码、私钥、passphrase、代理密码、凭据、恢复密码、AI Key 等直接写入本地 JSON（目录权限 0700）
+- **不再本地加密**：密钥文件与密文同目录本无真实防护（拿到目录即拿到密钥），防护只保留在真正离开本机的环节——云同步与导出的 `LUMETERM2` 密文由**恢复密码**派生密钥
+- 旧版本加密数据升级后自动解密读取，首次保存即转为明文
 
 ### 自动更新
 - 启动约 2.5s 后检查 GitHub Release（不阻塞首屏）
@@ -176,7 +176,7 @@ Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **
 ## 快速开始
 
 ### 首次使用
-1. 从 [Releases](https://github.com/wmwlwmwl/Lumin-SSH/releases) 下载当前平台包（Windows 便携/安装包、Linux deb/rpm、macOS dmg 等）
+1. 从 [Releases](https://github.com/wmwlwmwl/LumeTerm/releases) 下载当前平台包（Windows 便携/安装包、Linux deb/rpm、macOS dmg 等）
 2. 运行后配置目录自动创建（见下表）
 3. 仪表盘左侧填写主机信息 → **保存** 或 **保存并连接**
 4. 需要时在设置中配置代理节点、云同步、恢复密码、AI 供应商等
@@ -194,23 +194,22 @@ Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **
 
 | 平台 | 配置目录 |
 |------|----------|
-| Windows | `%APPDATA%\Lumin\config\` |
-| macOS | `~/Library/Application Support/Lumin/config/` |
-| Linux | `~/.config/Lumin/config/` |
+| Windows | `%APPDATA%\LumeTerm\config\` |
+| macOS | `~/Library/Application Support/LumeTerm/config/` |
+| Linux | `~/.config/LumeTerm/config/` |
 
 ### 主要文件（节选）
 
 | 文件 / 目录 | 用途 |
 |-------------|------|
-| `lumin.key` | 本地 AES 主密钥（首次生成）。**丢失则本机已加密字段无法解密，请备份** |
-| `connections.json` | 服务器列表（敏感字段 AES-GCM） |
+| `connections.json` | 服务器列表（明文存储） |
 | `credentials.json` | 凭据库 |
-| `webdav.json` 等 | 各同步后端配置（账号密钥等加密存储） |
+| `webdav.json` 等 | 各同步后端配置（账号密钥等明文存储） |
 | `quick_commands.json` | 快捷指令 |
 | `param_history.json` | 动态参数历史 |
 | `history/` | 命令历史 |
 | `sync_mode.json` / `auto_sync_enabled.json` / `sync_tombstones.json` 等 | 同步模式、自动同步开关、时间戳与删除墓碑 |
-| `recovery_password` | 恢复密码（由 `lumin.key` 加密存放） |
+| `recovery_password` | 恢复密码（明文存放，0600） |
 | `ai_global_settings.json` | AI 全局（含 MCP 开关、自动批准等） |
 | `ai_providers.json` | AI 供应商列表（含 API Key 等业务字段） |
 | `proxy_nodes.json` | 代理节点 |
@@ -220,13 +219,13 @@ Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **
 | `app_settings.json` | 应用偏好（GPU 加速、运行环境、主题包、AI 对话存储路径） |
 | `workspace_*.json` | 工作区状态、偏好与会话恢复 |
 
-> Windows 的 WebView2 用户数据目录固定在 `%APPDATA%\Lumin\`，与 `config\` 同级；便携版可执行文件改名不会再创建多套浏览器数据目录。
+> Windows 的 WebView2 用户数据目录固定在 `%APPDATA%\LumeTerm\`，与 `config\` 同级；便携版可执行文件改名不会再创建多套浏览器数据目录。
 
 ---
 
 ## 自动更新
 
-1. 拉取 `wmwlwmwl/Lumin-SSH` 的 GitHub Release 元数据  
+1. 拉取 `wmwlwmwl/LumeTerm` 的 GitHub Release 元数据  
 2. 按平台匹配安装包 / 便携包  
 3. HTTPS 下载（可镜像）→ **`.sha256` 校验** → 平台安装或热替换  
 
@@ -262,17 +261,17 @@ Lumin 是一款面向开发者和运维人员的桌面 SSH 客户端。基于 **
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
-git clone https://github.com/wmwlwmwl/Lumin-SSH.git
-cd Lumin-SSH
+git clone https://github.com/wmwlwmwl/LumeTerm.git
+cd LumeTerm
 
 wails dev            # 启动开发模式
 wails build          # 便携/平台默认产物
 wails build -nsis    # Windows 安装包（需 NSIS）
 ```
 
-常见产物：`build/bin/Lumin` / `Lumin.exe`；安装包与 deb/rpm/dmg 由 CI 或本地脚本按平台生成。
+常见产物：`build/bin/LumeTerm` / `LumeTerm.exe`；安装包与 deb/rpm/dmg 由 CI 或本地脚本按平台生成。
 
-Windows 本地一键构建（自动同步版本号、UPX 压缩、输出 `Lumin-V{版本}-portable.exe` 与 `Lumin-V{版本}-amd64-installer.exe`）：
+Windows 本地一键构建（自动同步版本号、UPX 压缩、输出 `LumeTerm-V{版本}-portable.exe` 与 `LumeTerm-V{版本}-amd64-installer.exe`）：
 
 ```powershell
 .\build_release.ps1    # 需本地具备 Go、NSIS、UPX 环境
@@ -285,7 +284,7 @@ Windows 本地一键构建（自动同步版本号、UPX 压缩、输出 `Lumin-
 ## 安全与注意
 
 ### 务必了解
-- **`lumin.key` 备份** — 本地 AES 主密钥。丢失后，**本机**已加密的密码/私钥/恢复密码等**无法解密**。若另有恢复密码保护的云端 `.lumin2` 或明文导出，仍可能从其他副本恢复，但本地仓本身会失效。
+- **配置明文存储** — 本机配置目录内含明文密码/私钥/AI Key（目录权限 0700）。请勿把配置目录拷给不受信任的人；需要外发备份时用**加密导出**（恢复密码保护）或加密云同步。
 - **恢复密码与明文同步** — 未设恢复密码时，云同步为**明文 JSON**（含服务器密码、私钥、AI Key 等）。生产环境强烈建议设置强恢复密码。
 - **主机密钥** — 首次连接核对指纹；变更会提示，降低 MITM 风险。
 - **终端 WebSocket** — 仅 `127.0.0.1`、随机端口、随机 token、Origin 限制。
@@ -302,7 +301,7 @@ Windows 本地一键构建（自动同步版本号、UPX 压缩、输出 `Lumin-
 ## FAQ
 
 ### 密码如何存？
-本机用 `lumin.key` 做 AES-256-GCM。云同步另用恢复密码生成 `.lumin2`，或明文 `.json`。
+本机配置**明文**存储（目录 0700）。云同步与加密导出用恢复密码派生密钥生成 `.lumeterm2` 密文，或明文 `.json`。
 
 ### 如何多机同步？
 设置 → 同步与云 → 配置自有 WebDAV/R2/FTP/SFTP。建议先设恢复密码再开自动同步。
@@ -326,7 +325,7 @@ Windows、macOS、Linux 原生构建。
 
 ## 赞助
 
-如果你觉得 Lumin 有用，欢迎扫码支持：
+如果你觉得 LumeTerm 有用，欢迎扫码支持：
 
 <div align="center">
   <table>
@@ -351,14 +350,14 @@ Windows、macOS、Linux 原生构建。
 
 ## 贡献
 
-- Bug：[Issues](https://github.com/wmwlwmwl/Lumin-SSH/issues/new)
+- Bug：[Issues](https://github.com/wmwlwmwl/LumeTerm/issues/new)
 - PR：Fork 后提交；尽量贴合现有风格；I/O 与网络保持非阻塞
 
 ---
 
 ## 许可证
 
-见 [LICENSE](LICENSE)（**Lumin SSH Source License 1.1**，与 Android 端同族）：
+见 [LICENSE](LICENSE)（**LumeTerm Source License 1.1**，与 Android 端同族）：
 
 | | |
 |--|--|

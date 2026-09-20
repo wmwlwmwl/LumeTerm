@@ -39,7 +39,7 @@ export default function PortForwardDialog({
       const list = await AppGo.ListPortForwards(sessionId);
       setPortForwards(list || []);
     } catch (err) {
-      window.luminDialog?.alert(`${t('加载端口映射失败')}: ${String(err)}`);
+      window.lumeDialog?.alert(`${t('加载端口映射失败')}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ export default function PortForwardDialog({
         setError(t('本地端口已占用'));
         return;
       }
-      window.luminDialog?.alert(`${kind === 'local' ? t('创建本地端口映射失败') : t('创建远程端口映射失败')}: ${String(err)}`);
+      window.lumeDialog?.alert(`${kind === 'local' ? t('创建本地端口映射失败') : t('创建远程端口映射失败')}: ${String(err)}`);
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +121,7 @@ export default function PortForwardDialog({
       notifyChanged();
       await refreshPortForwards();
     } catch (err) {
-      window.luminDialog?.alert(`${t('关闭端口映射失败')}: ${String(err)}`);
+      window.lumeDialog?.alert(`${t('关闭端口映射失败')}: ${String(err)}`);
     }
   };
 
@@ -131,7 +131,7 @@ export default function PortForwardDialog({
       notifyChanged();
       await refreshPortForwards();
     } catch (err) {
-      window.luminDialog?.alert(`${t('关闭端口映射失败')}: ${String(err)}`);
+      window.lumeDialog?.alert(`${t('关闭端口映射失败')}: ${String(err)}`);
     }
   };
 
@@ -142,7 +142,7 @@ export default function PortForwardDialog({
       notifyChanged();
       await refreshPortForwards();
     } catch (err) {
-      window.luminDialog?.alert(`${t('关闭端口映射失败')}: ${String(err)}`);
+      window.lumeDialog?.alert(`${t('关闭端口映射失败')}: ${String(err)}`);
     }
   };
 

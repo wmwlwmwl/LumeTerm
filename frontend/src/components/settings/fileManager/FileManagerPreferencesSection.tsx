@@ -182,7 +182,7 @@ export default function FileManagerPreferencesSection({
               definition={fmSettings.fields.builtinEditor}
               selected={fileManagerDefaultOpenMode === 'builtin'}
               label={$t('内置编辑器')}
-              description={$t('使用 Lumin 内置编辑器打开，支持高亮与保存回远端')}
+              description={$t('使用 LumeTerm 内置编辑器打开，支持高亮与保存回远端')}
               onClick={() => onFileManagerDefaultOpenModeChange?.('builtin')}
             />
             <RadioOption

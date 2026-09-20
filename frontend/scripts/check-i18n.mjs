@@ -63,7 +63,7 @@ if (!baseline) {
 const baselineKeys = new Set(baseline.entries.keys());
 const english = tables.get('en-US')?.entries || new Map();
 const naturalEnglish = /[A-Za-z]{3,}\s+[A-Za-z]{2,}|^(?:[A-Za-z]+[ .,:;!?-]*){2,}$/;
-const technicalOnly = /^(AI|SSH|GitHub|TCP|TUN|URL|JSON|MCP|WebDAV|SFTP|FTP|FTPS|HTTP|HTTPS|RTT|EOF|SIGINT|SIGTSTP|Ctrl|Alt|Shift|Space|WebSocket|Windows|Android|Linux|Unix|Debian|Ubuntu|macOS|OpenAI|Anthropic|Claude|Sonnet|Opus|Haiku|Lumin|Lumin-SSH|Clash|V2Ray|Git|GitHub|Markdown|CSS|HTML|JavaScript|Python|Go|SQL|SCP|SSH Banner RTT|TCP Dial|<1ms|\d+(?:\.\d+)?\s*(?:ms|KB|MB|GB))$/i;
+const technicalOnly = /^(AI|SSH|GitHub|TCP|TUN|URL|JSON|MCP|WebDAV|SFTP|FTP|FTPS|HTTP|HTTPS|RTT|EOF|SIGINT|SIGTSTP|Ctrl|Alt|Shift|Space|WebSocket|Windows|Android|Linux|Unix|Debian|Ubuntu|macOS|OpenAI|Anthropic|Claude|Sonnet|Opus|Haiku|LumeTerm|Lumin|Lumin-SSH|Lumin-SSH-Android|Clash|V2Ray|Git|GitHub|Markdown|CSS|HTML|JavaScript|Python|Go|SQL|SCP|SSH Banner RTT|TCP Dial|<1ms|\d+(?:\.\d+)?\s*(?:ms|KB|MB|GB))$/i;
 const englishSameWordAllowlist = {
   cs: new Set(['编辑器', '模型']),
   de: new Set(['存储桶', '终端', '名称', '离线', '文本', '系统', '缓存', '别名', '系统编辑', '编辑器', '参数', '版本', '导出']),

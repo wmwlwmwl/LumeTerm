@@ -37,7 +37,7 @@ export default function GlobalDialog({ suspendDefault = false }: GlobalDialogPro
 
   useEffect(() => {
     // 注册全局 API
-    window.luminDialog = {
+    window.lumeDialog = {
       alert: (message: string, title = t('提示'), options: Record<string, unknown> = {}) => {
         const normalizedMessage = typeof message === 'string' ? message : String(message ?? '');
         return new Promise<void>((resolve) => {
@@ -106,7 +106,7 @@ export default function GlobalDialog({ suspendDefault = false }: GlobalDialogPro
       }
     };
     return () => {
-      delete window.luminDialog;
+      delete window.lumeDialog;
     };
   }, [pushDialog]);
 

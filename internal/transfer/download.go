@@ -527,7 +527,7 @@ func (s *Service) DownloadDirectoryToLocal(sessionId string, downloadID string, 
 	if !localTargetExisted {
 		task.setLocalTargetPath(localRoot)
 	}
-	tempDir, err := os.MkdirTemp("", "lumin-download-dir-*")
+	tempDir, err := os.MkdirTemp("", "lumeterm-download-dir-*")
 	if err != nil {
 		return err
 	}
@@ -666,7 +666,7 @@ func (s *Service) DownloadDirectoryCompressed(sessionId string, downloadID strin
 	if !localTargetExisted {
 		task.setLocalTargetPath(localRoot)
 	}
-	tempDir, err := os.MkdirTemp("", "lumin-download-*")
+	tempDir, err := os.MkdirTemp("", "lumeterm-download-*")
 	if err != nil {
 		return err
 	}
@@ -683,7 +683,7 @@ func (s *Service) DownloadDirectoryCompressed(sessionId string, downloadID strin
 
 	remoteParentDir := pathpkg.Dir(normalizedRemotePath)
 	remoteBaseName := pathpkg.Base(normalizedRemotePath)
-	remoteArchiveName := fmt.Sprintf(".lumin_download_%d_%s.tar.gz", time.Now().UnixNano(), sanitizeDownloadArchiveName(remoteBaseName))
+	remoteArchiveName := fmt.Sprintf(".lumeterm_download_%d_%s.tar.gz", time.Now().UnixNano(), sanitizeDownloadArchiveName(remoteBaseName))
 	remoteArchivePath := pathpkg.Join(remoteParentDir, remoteArchiveName)
 	localArchivePath := filepath.Join(tempDir, remoteArchiveName)
 	task.setRemoteArchive(remoteArchivePath)

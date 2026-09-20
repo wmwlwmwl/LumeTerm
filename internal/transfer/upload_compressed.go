@@ -644,11 +644,11 @@ func createLocalTarGz(ctx context.Context, localPaths []string, stats localArchi
 	if len(localPaths) == 0 {
 		return "", "", fmt.Errorf("no local paths")
 	}
-	tempDir, err := os.MkdirTemp("", "lumin-upload-*")
+	tempDir, err := os.MkdirTemp("", "lumeterm-upload-*")
 	if err != nil {
 		return "", "", err
 	}
-	archiveName := fmt.Sprintf("lumin_upload_%d.tar.gz", time.Now().UnixNano())
+	archiveName := fmt.Sprintf("lumeterm_upload_%d.tar.gz", time.Now().UnixNano())
 	archivePath := filepath.Join(tempDir, archiveName)
 	file, err := os.Create(archivePath)
 	if err != nil {
@@ -784,7 +784,7 @@ func bestEffortRemoteChmod(sftpClient *sftp.Client, remotePath string, mode os.F
 }
 
 func probeRemoteDirectoryWritable(sftpClient *sftp.Client, remotePath string) error {
-	probeName := fmt.Sprintf(".lumin_write_probe_%d", time.Now().UnixNano())
+	probeName := fmt.Sprintf(".lumeterm_write_probe_%d", time.Now().UnixNano())
 	probePath := joinRemoteUploadPath(remotePath, probeName)
 	probeFile, err := sftpClient.Create(probePath)
 	if err != nil {
@@ -1097,7 +1097,7 @@ func (s *Service) uploadLocalFileWithContext(ctx context.Context, sshClient *ssh
 	}
 
 	destPath := filepath.ToSlash(filepath.Join(remoteDir, filepath.Base(localPath)))
-	tempPath := destPath + ".luminpart." + newUploadObjectID("upload_file")
+	tempPath := destPath + ".lumetermpart." + newUploadObjectID("upload_file")
 
 	pool := newSFTPUploadPool(sshClient, maxConcurrent, s.Tuning())
 	if sessionId, ok := ctx.Value(compressedUploadSessionIDKey).(string); ok && strings.TrimSpace(sessionId) != "" {

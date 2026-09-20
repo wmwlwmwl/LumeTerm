@@ -18,7 +18,7 @@ type Dependencies struct {
 }
 
 func deployProbeScript(script string) (string, func(), error) {
-	directory, err := os.MkdirTemp("", "lumin-probe-*")
+	directory, err := os.MkdirTemp("", "lumeterm-probe-*")
 	if err != nil {
 		return "", nil, err
 	}

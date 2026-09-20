@@ -3,7 +3,7 @@ import * as AppGo from '../../../../wailsjs/go/wailsapp/App.js';
 import { t as $t, type I18nKey } from '../../../i18n.ts';
 import { syncWithRecoveryPassword } from '../../../utils/recoveryPasswordSync.ts';
 import { settingsChoice, settingsPrompt } from '../settingsDialogs.ts';
-import type { LuminDialogPromptOptions } from '../../../types/luminDialog.js';
+import type { LumeDialogPromptOptions } from '../../../types/lumeDialog.js';
 import { PROVIDERS, type ProviderFormMap, type ProviderKey, type ProviderStateEntry } from './syncProviders.ts';
 
 type AddToast = (message: string | Error, type?: string, duration?: number, actions?: unknown[]) => number;
@@ -189,7 +189,7 @@ export function useSyncRestore({
         retry: (password) => AppGo.SyncWithRecoveryPassword(password),
         // 保持原 spread 语义（按位置透传）；无 checkbox 场景恒为 string | null，非 string 视作取消
         prompt: async (title, placeholder, message, okLabel, options) => {
-          const value = await settingsPrompt(title, placeholder, message, okLabel, options as LuminDialogPromptOptions);
+          const value = await settingsPrompt(title, placeholder, message, okLabel, options as LumeDialogPromptOptions);
           return typeof value === 'string' ? value : null;
         },
         // $t 是严格 key 签名（I18nKey），此处逃生为宽松 (key: string)

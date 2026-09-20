@@ -47,7 +47,7 @@ func (c *ConfigManager) getR2ConfigLocked() *R2Config {
 		conf.Region = "auto"
 	}
 	if conf.Prefix == "" {
-		conf.Prefix = "Lumin/"
+		conf.Prefix = "LumeTerm/"
 	}
 	return &conf
 }
@@ -68,7 +68,7 @@ func (c *ConfigManager) SaveR2Config(config map[string]string) error {
 
 	prefix := config["prefix"]
 	if prefix == "" {
-		prefix = "Lumin/"
+		prefix = "LumeTerm/"
 	}
 	if prefix[len(prefix)-1] != '/' {
 		prefix += "/"

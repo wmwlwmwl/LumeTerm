@@ -256,7 +256,7 @@ func (m *SSHManager) ReconnectDisconnectedSession(sessionId string) (ReconnectOu
 	if err := m.Connect(record.ParentSessionId, conn); err != nil {
 		wrapped := fmt.Errorf("reconnect 失败: %w", err)
 		if errors.Is(err, ErrHostKeyChanged) {
-			wrapped = fmt.Errorf("reconnect 失败: 主机密钥已变更, 等待用户在 Lumin 界面确认后重试")
+			wrapped = fmt.Errorf("reconnect 失败: 主机密钥已变更, 等待用户在 LumeTerm 界面确认后重试")
 		} else if errors.Is(err, ErrAuthFailed) {
 			wrapped = fmt.Errorf("reconnect 失败: 认证失败, 需要用户更新凭据: %w", err)
 		}

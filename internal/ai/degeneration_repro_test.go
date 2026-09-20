@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	aiprovider "luminssh-go/internal/ai/provider"
+	aiprovider "lumeterm/internal/ai/provider"
 )
 
 // TestCompatibleChatDegenerationRepro 用与 Lumin 完全相同的流程复现"流内退化重复":
@@ -29,7 +29,7 @@ import (
 //
 // 可用环境变量:
 //
-//	LUMIN_CONFIG_DIR       Lumin 配置目录,默认 <UserConfigDir>/Lumin/config
+//	LUMIN_CONFIG_DIR       LumeTerm 配置目录,默认 <UserConfigDir>/LumeTerm/config
 //	LUMIN_CONV_ID          会话 ID,默认 conv-da02222ff7825401
 //	LUMIN_PROVIDER_ID      供应商 ID,默认取 ai_global_settings.json 的 currentProviderId
 //	LUMIN_REPRO_PROMPT     追加的用户消息,默认 "继续"
@@ -45,7 +45,7 @@ func TestCompatibleChatDegenerationRepro(t *testing.T) {
 		if err != nil {
 			t.Fatalf("无法定位用户配置目录: %v", err)
 		}
-		configDir = filepath.Join(userConfigDir, "Lumin", "config")
+		configDir = filepath.Join(userConfigDir, "LumeTerm", "config")
 	}
 	conversationID := strings.TrimSpace(os.Getenv("LUMIN_CONV_ID"))
 	if conversationID == "" {

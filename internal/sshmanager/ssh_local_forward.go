@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/tcpforward"
+	"lumeterm/internal/tcpforward"
 
 	"golang.org/x/crypto/ssh"
 )

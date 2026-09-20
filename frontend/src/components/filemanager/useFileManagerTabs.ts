@@ -613,7 +613,7 @@ export function useFileManagerTabs(deps: ReturnType<typeof useFileManagerCore> &
     const currentCustomTitle = String(targetTab.customTitle || '').trim();
     const currentLabel = getFileManagerTabLabel(targetTab.path, t, currentCustomTitle);
     const defaultLabel = getFileManagerTabLabel(targetTab.path, t, '');
-    const nextTitle = await window.luminDialog?.prompt(`${t('标签标题')}: ${currentLabel}`);
+    const nextTitle = await window.lumeDialog?.prompt(`${t('标签标题')}: ${currentLabel}`);
     if (nextTitle === null || nextTitle === undefined) {
       return;
     }
@@ -647,7 +647,7 @@ export function useFileManagerTabs(deps: ReturnType<typeof useFileManagerCore> &
     const displayName = normalizedTargetPath === '/' ? t('目录根') : (normalizedTargetPath.split('/').filter(Boolean).pop() || normalizedTargetPath);
     const needConfirm = localStorage.getItem('skipFileDeleteConfirm') !== 'true';
     if (needConfirm) {
-      const ok = await window.luminDialog?.confirm(
+      const ok = await window.lumeDialog?.confirm(
         useShell
           ? `${t('确定删除')}${displayName}${t('？(rm -rf) 此操作不可撤销')}`
           : `${t('确定删除')}${displayName}${t('？此操作不可撤销')}`

@@ -17,10 +17,10 @@ import (
 	"sync"
 	"time"
 
-	"luminssh-go/internal/config"
-	"luminssh-go/internal/localsftp"
-	"luminssh-go/internal/terminalstream"
-	"luminssh-go/internal/transfer"
+	"lumeterm/internal/config"
+	"lumeterm/internal/localsftp"
+	"lumeterm/internal/terminalstream"
+	"lumeterm/internal/transfer"
 
 	"github.com/pkg/sftp"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -1465,7 +1465,7 @@ func runCommandWithSessionContext(ctx context.Context, session *ssh.Session, cmd
 }
 
 const dynamicProbeScript = `#!/bin/sh
-# LuminSSH Dynamic Probe - auto generated
+# LumeTerm Dynamic Probe - auto generated
 # Collects dynamic metrics via /proc
 
 # ── 进程双采样 + 远端选 top6(只传 6 条,流量与 1.2.7 ps|head -6 持平)──
@@ -1566,8 +1566,8 @@ if [ "$1" = "network" ]; then if command -v ss >/dev/null 2>&1; then out=$(ss -H
 echo ---DISKIO1---
 cat /proc/diskstats
 if [ "$1" = "procs" ]; then
-mkdir -p /tmp/.lumin 2>/dev/null
-proctmp=/tmp/.lumin/.ptop.$$
+mkdir -p /tmp/.lumeterm 2>/dev/null
+proctmp=/tmp/.lumeterm/.ptop.$$
 ts1p=$(cut -d' ' -f1 /proc/uptime 2>/dev/null || date +%s)
 sample_procs > "$proctmp"
 fi
@@ -1582,7 +1582,7 @@ echo ---DISKIO2---
 cat /proc/diskstats
 if [ "$1" = "procs" ]; then
 ts2p=$(cut -d' ' -f1 /proc/uptime 2>/dev/null || date +%s)
-proctop=/tmp/.lumin/.ptop6.$$
+proctop=/tmp/.lumeterm/.ptop6.$$
 sample_procs | sample_procs_select "$proctmp" > "$proctop"
 rm -f "$proctmp"
 echo ---PROC1---

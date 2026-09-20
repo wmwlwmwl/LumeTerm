@@ -348,10 +348,10 @@ func procFullLine(pid int, comm string, utime, stime, starttime, rss, threads ui
 func TestProbeDeployCmdHeredocStructure(t *testing.T) {
 	cmd := probeDeployCmd()
 	for _, want := range []string{
-		"tee ~/.lumin/probe.sh /tmp/.lumin/probe.sh >/dev/null <<'LUMIN_EOF'",
+		"tee ~/.lumeterm/probe.sh /tmp/.lumeterm/probe.sh >/dev/null <<'LUMETERM_EOF'",
 		"---PROC1---",
 		"---PROC2---",
-		"[ -f ~/.lumin/probe.sh ] || [ -f /tmp/.lumin/probe.sh ]",
+		"[ -f ~/.lumeterm/probe.sh ] || [ -f /tmp/.lumeterm/probe.sh ]",
 	} {
 		if !strings.Contains(cmd, want) {
 			t.Fatalf("部署命令缺少 %q", want)
@@ -360,8 +360,8 @@ func TestProbeDeployCmdHeredocStructure(t *testing.T) {
 	if strings.Contains(cmd, "---PROC---\n") {
 		t.Fatal("部署命令不应再包含旧 ps 进程段")
 	}
-	if strings.Contains(dynamicProbeScript, "LUMIN_EOF") {
-		t.Fatal("探针脚本内容不能包含 heredoc 定界符 LUMIN_EOF,否则部署截断")
+	if strings.Contains(dynamicProbeScript, "LUMETERM_EOF") {
+		t.Fatal("探针脚本内容不能包含 heredoc 定界符 LUMETERM_EOF,否则部署截断")
 	}
 }
 
@@ -674,7 +674,7 @@ func TestBuildProbeScriptRunCommandNoDoubleRun(t *testing.T) {
 	if strings.Contains(cmd, "&&") || strings.Contains(cmd, "||") {
 		t.Fatalf("不得用 &&/|| 串联双路径: %s", cmd)
 	}
-	for _, want := range []string{`if [ -f "$f" ]; then`, `sh "$f" network`, `sh /tmp/.lumin/probe.sh network`, "fi"} {
+	for _, want := range []string{`if [ -f "$f" ]; then`, `sh "$f" network`, `sh /tmp/.lumeterm/probe.sh network`, "fi"} {
 		if !strings.Contains(cmd, want) {
 			t.Fatalf("缺少 %q: %s", want, cmd)
 		}

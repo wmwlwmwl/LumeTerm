@@ -134,8 +134,8 @@ export default function NetworkTab({ pingEnabled, onTogglePingEnabled, pingMode,
   }, []);
 
   const showAlert = (message: string) => {
-    if (window?.luminDialog?.alert) {
-      window.luminDialog.alert(message, $t('提示'), { priority: 'settings' });
+    if (window?.lumeDialog?.alert) {
+      window.lumeDialog.alert(message, $t('提示'), { priority: 'settings' });
       return;
     }
     window.alert(message);
@@ -182,7 +182,7 @@ export default function NetworkTab({ pingEnabled, onTogglePingEnabled, pingMode,
   const handleProxyDelete = async (id: string) => {
     const node = proxyNodes.find((item) => item?.id === id);
     const name = node?.name || node?.host || $t('未命名节点');
-    const confirmed = await window.luminDialog?.confirm?.(
+    const confirmed = await window.lumeDialog?.confirm?.(
       `${$t('确定删除代理节点')}「${name}」？${$t('此操作不可撤销')}`,
       $t('操作确认'),
       '',

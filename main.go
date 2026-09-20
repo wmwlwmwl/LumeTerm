@@ -4,7 +4,7 @@ import (
 	"embed"
 	goruntime "runtime"
 
-	"luminssh-go/internal/wailsapp"
+	"lumeterm/internal/wailsapp"
 )
 
 //go:embed all:frontend/dist

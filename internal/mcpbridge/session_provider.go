@@ -1,6 +1,6 @@
 package mcpbridge
 
-import "luminssh-go/internal/mcpserver"
+import "lumeterm/internal/mcpserver"
 
 // SessionProvider 适配 Host 到 mcpserver.SessionProvider 和 ai.SessionProviderDelegate 接口。
 type SessionProvider struct {

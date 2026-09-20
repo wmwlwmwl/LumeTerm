@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	runtimeenv "luminssh-go/module/runtimeenv"
+	runtimeenv "lumeterm/module/runtimeenv"
 )
 
 const uvLatestReleaseAPIURL = "https://api.github.com/repos/astral-sh/uv/releases/latest"
@@ -178,7 +178,7 @@ func fetchLatestUVRelease(client *http.Client, language string) (gitHubRelease, 
 			continue
 		}
 		request.Header.Set("Accept", "application/vnd.github+json")
-		request.Header.Set("User-Agent", "Lumin-SSH")
+		request.Header.Set("User-Agent", "LumeTerm")
 		response, err := client.Do(request)
 		if err != nil {
 			lastErr = err

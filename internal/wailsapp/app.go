@@ -20,22 +20,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	ai "luminssh-go/internal/ai"
-	"luminssh-go/internal/config"
-	"luminssh-go/internal/externaledit"
-	"luminssh-go/internal/localopen"
-	"luminssh-go/internal/mcpbridge"
-	"luminssh-go/internal/ping"
-	"luminssh-go/internal/platformruntime"
-	"luminssh-go/internal/platformupdate"
-	"luminssh-go/internal/programfonts"
-	"luminssh-go/internal/sshmanager"
-	"luminssh-go/internal/transfer"
-	"luminssh-go/internal/updatedownload"
-	"luminssh-go/internal/wsbuffer"
-	"luminssh-go/internal/wslocal"
-	runtimeenv "luminssh-go/module/runtimeenv"
-	runtimeinstaller "luminssh-go/module/runtimeinstaller"
+	ai "lumeterm/internal/ai"
+	"lumeterm/internal/config"
+	"lumeterm/internal/externaledit"
+	"lumeterm/internal/localopen"
+	"lumeterm/internal/mcpbridge"
+	"lumeterm/internal/ping"
+	"lumeterm/internal/platformruntime"
+	"lumeterm/internal/platformupdate"
+	"lumeterm/internal/programfonts"
+	"lumeterm/internal/sshmanager"
+	"lumeterm/internal/transfer"
+	"lumeterm/internal/updatedownload"
+	"lumeterm/internal/wsbuffer"
+	"lumeterm/internal/wslocal"
+	runtimeenv "lumeterm/module/runtimeenv"
+	runtimeinstaller "lumeterm/module/runtimeinstaller"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -138,7 +138,7 @@ type GitHubContributor struct {
 	Weeks  []GitHubContributorWeek `json:"weeks"`
 }
 
-const githubRepoURL = "https://github.com/wmwlwmwl/Lumin-SSH"
+const githubRepoURL = "https://github.com/wmwlwmwl/LumeTerm"
 
 const githubContributorsAPIURL = githubRepoURL + "/graphs/contributors-data"
 
@@ -357,8 +357,8 @@ func (a *App) BatchDeleteConnections(ids []string) {
 }
 
 // ExportConnections 导出全部节点到用户选择的文件。
-// useEncryption=false 导出明文 .json（含真实密码/私钥）；true 导出密文 .lumin2。
-// password 非空时用于 LUMIN2 PBKDF2 派生；空则用本机恢复密码（与云端同步加密口径一致）。
+// useEncryption=false 导出明文 .json（含真实密码/私钥）；true 导出密文 .lumeterm2。
+// password 非空时用于 LUMETERM2 PBKDF2 派生；空则用本机恢复密码（与云端同步加密口径一致）。
 // 弹出保存对话框；用户取消时返回 ("", nil)。返回写入的文件路径。
 func (a *App) ExportConnections(useEncryption bool, password string) (string, error) {
 	if useEncryption && strings.TrimSpace(password) == "" {
@@ -372,12 +372,12 @@ func (a *App) ExportConnections(useEncryption bool, password string) (string, er
 	ext := ".json"
 	title := "导出节点"
 	if useEncryption {
-		ext = ".lumin2"
+		ext = ".lumeterm2"
 	}
 	timestamp := time.Now().Format("20060102_150405.000_-0700")
-	defaultName := fmt.Sprintf("lumin-ssh-connections-%s%s", timestamp, ext)
+	defaultName := fmt.Sprintf("lumeterm-connections-%s%s", timestamp, ext)
 	filters := []runtime.FileFilter{
-		{DisplayName: fmt.Sprintf("Lumin-SSH (*%s)", ext), Pattern: "*" + ext},
+		{DisplayName: fmt.Sprintf("LumeTerm (*%s)", ext), Pattern: "*" + ext},
 	}
 	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		Title:           title,
@@ -409,7 +409,7 @@ func (a *App) ExportConnections(useEncryption bool, password string) (string, er
 		return path, nil
 	}
 
-	// 密文：序列化 → LUMIN2 加密
+	// 密文：序列化 → LUMETERM2 加密
 	encrypted, err := a.configManager.EncryptExportData(exp, password)
 	if err != nil {
 		return "", fmt.Errorf("导出失败: %w", err)
@@ -422,8 +422,8 @@ func (a *App) ExportConnections(useEncryption bool, password string) (string, er
 
 // ExportConnectionsByIDs 按 ID 列表导出节点到用户选择的文件。
 // ids 为空时等同导出全部（向后兼容 ExportConnections）。
-// useEncryption=false 导出明文 .json；true 导出密文 .lumin2。
-// password 非空时用于 LUMIN2 PBKDF2 派生；空则用本机恢复密码。
+// useEncryption=false 导出明文 .json；true 导出密文 .lumeterm2。
+// password 非空时用于 LUMETERM2 PBKDF2 派生；空则用本机恢复密码。
 func (a *App) ExportConnectionsByIDs(ids []string, useEncryption bool, password string) (string, error) {
 	if useEncryption && strings.TrimSpace(password) == "" {
 		password = a.configManager.GetRecoveryPassword()
@@ -436,12 +436,12 @@ func (a *App) ExportConnectionsByIDs(ids []string, useEncryption bool, password 
 	ext := ".json"
 	title := "导出节点"
 	if useEncryption {
-		ext = ".lumin2"
+		ext = ".lumeterm2"
 	}
 	timestamp := time.Now().Format("20060102_150405.000_-0700")
-	defaultName := fmt.Sprintf("lumin-ssh-connections-%s%s", timestamp, ext)
+	defaultName := fmt.Sprintf("lumeterm-connections-%s%s", timestamp, ext)
 	filters := []runtime.FileFilter{
-		{DisplayName: fmt.Sprintf("Lumin-SSH (*%s)", ext), Pattern: "*" + ext},
+		{DisplayName: fmt.Sprintf("LumeTerm (*%s)", ext), Pattern: "*" + ext},
 	}
 	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		Title:           title,
@@ -488,7 +488,7 @@ func (a *App) ExportConnectionsByIDs(ids []string, useEncryption bool, password 
 		return path, nil
 	}
 
-	// 密文：序列化 → LUMIN2 加密
+	// 密文：序列化 → LUMETERM2 加密
 	encrypted, err := a.configManager.EncryptExportData(exp, password)
 	if err != nil {
 		return "", fmt.Errorf("导出失败: %w", err)
@@ -505,7 +505,7 @@ func (a *App) SelectImportFile() (string, error) {
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "导入节点",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "Lumin-SSH (*.json;*.lumin2)", Pattern: "*.json;*.lumin2"},
+			{DisplayName: "LumeTerm (*.json;*.lumeterm2;*.lumin2)", Pattern: "*.json;*.lumeterm2;*.lumin2"},
 		},
 	})
 	if err != nil {
@@ -516,7 +516,7 @@ func (a *App) SelectImportFile() (string, error) {
 
 // ImportConnections 从指定文件导入节点（合并，跳过重复）。
 // filePath 由前端通过 SelectImportFile 获取；password 为弹窗输入的自定义解密密码（可空）。
-// 智能识别明文 JSON / LUMIN2 密文：
+// 智能识别明文 JSON / LUMETERM2 密文：
 //   - 明文直接解析
 //   - 密文优先用本机恢复密码，失败返回 config.ErrNeedPassword，前端弹窗输入自定义密码后再试
 func (a *App) ImportConnections(filePath string, password string) (config.ImportResult, error) {
@@ -552,7 +552,7 @@ func (a *App) DownloadImportTemplate(lang string) (string, error) {
 	}
 	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
 		Title:           title,
-		DefaultFilename: "lumin-ssh-import-template.json",
+		DefaultFilename: "lumeterm-import-template.json",
 		Filters: []runtime.FileFilter{
 			{DisplayName: "JSON (*.json)", Pattern: "*.json"},
 		},
@@ -1161,7 +1161,7 @@ func (a *App) ensureMainLivenessLock() error {
 	if a.mainLivenessLockRelease != nil && strings.TrimSpace(a.mainLivenessLockPath) != "" {
 		return nil
 	}
-	lockPath := filepath.Join(a.configManager.GetConfigDir(), "luminssh-main.lock")
+	lockPath := filepath.Join(a.configManager.GetConfigDir(), "lumeterm-main.lock")
 	release, err := platformruntime.AcquireMainLivenessLock(lockPath)
 	if err != nil {
 		return err
@@ -1309,7 +1309,7 @@ func getGitHubContributorsOnce(client *http.Client) ([]GitHubContributor, error)
 		return nil, err
 	}
 	request.Header.Set("Accept", "application/json")
-	request.Header.Set("User-Agent", "Lumin-SSH")
+	request.Header.Set("User-Agent", "LumeTerm")
 	request.Header.Set("X-Requested-With", "XMLHttpRequest")
 	request.Header.Set("Referer", githubContributorsRefererURL)
 
@@ -2150,7 +2150,7 @@ func (a *App) UpdateApp(downloadUrl string, filename string, proxyFirst bool) er
 		if err := platformupdate.InstallDeb(targetPath); err != nil {
 			return err
 		}
-		// dpkg -i 已替换 /usr/bin/lumin，重启为新版本
+		// dpkg -i 已替换 /usr/bin/lumeterm，重启为新版本
 		if err := platformupdate.Restart(exePath); err != nil {
 			return err
 		}

@@ -135,7 +135,7 @@ export default function useImportExport({ addToast, loadServers, t, lang }: UseI
           addToast(`${t('导入失败')}: ${String(error)}`, 'error');
           return;
         }
-        const password = await window.luminDialog?.prompt?.(
+        const password = await window.lumeDialog?.prompt?.(
           t('密文需要密码请输入'), '', t('导入密码'), '',
         );
         if (password === null) return;

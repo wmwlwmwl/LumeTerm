@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/config"
-	"luminssh-go/internal/localsftp"
-	"luminssh-go/internal/localsysinfo"
-	"luminssh-go/internal/terminalstream"
+	"lumeterm/internal/config"
+	"lumeterm/internal/localsftp"
+	"lumeterm/internal/localsysinfo"
+	"lumeterm/internal/terminalstream"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/text/encoding"

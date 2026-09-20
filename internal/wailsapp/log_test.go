@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// initLogFile 必须真正落盘：设置临时配置目录后，log.Printf 应写入 lumin.log。
+// initLogFile 必须真正落盘：设置临时配置目录后，log.Printf 应写入 lumeterm.log。
 // exe 同级目录通过 logExeDirSeam 指到临时目录，避免测试在构建缓存目录留下日志。
 func TestInitLogFileWritesToDisk(t *testing.T) {
 	tmp := t.TempDir()
@@ -32,27 +32,28 @@ func TestInitLogFileWritesToDisk(t *testing.T) {
 	}()
 	log.Printf("[channel-diag] TEST-MARKER connect session=probe")
 
-	// 预期路径与 initLogFile 保持一致：os.UserConfigDir() 平台自适配，
+	// 预期路径与 initLogFile 保持一致（apppaths 首次调用于 initLogFile 内，
+	// 此时 Setenv 已生效）：os.UserConfigDir() 平台自适配，
 	// Windows=APPDATA、Linux=$XDG_CONFIG_HOME 或 ~/.config，避免测试写死 Windows 路径。
 	ucd, err := os.UserConfigDir()
 	if err != nil {
 		t.Fatalf("获取用户配置目录失败: %v", err)
 	}
-	logPath := filepath.Join(ucd, "Lumin", "config", "lumin.log")
+	logPath := filepath.Join(ucd, "LumeTerm", "config", "lumeterm.log")
 	raw, err := os.ReadFile(logPath)
 	if err != nil {
-		t.Fatalf("lumin.log 未生成: %v", err)
+		t.Fatalf("lumeterm.log 未生成: %v", err)
 	}
 	if !contains(string(raw), "TEST-MARKER") {
-		t.Fatalf("lumin.log 内容缺少测试标记: %q", string(raw))
+		t.Fatalf("lumeterm.log 内容缺少测试标记: %q", string(raw))
 	}
 	// exe 同级目录也应落盘（便携版场景），且不能污染真实运行目录
-	exeLog, err := os.ReadFile(filepath.Join(logExeDirSeam, "lumin.log"))
+	exeLog, err := os.ReadFile(filepath.Join(logExeDirSeam, "lumeterm.log"))
 	if err != nil {
-		t.Fatalf("exe 同级 lumin.log 未生成: %v", err)
+		t.Fatalf("exe 同级 lumeterm.log 未生成: %v", err)
 	}
 	if !contains(string(exeLog), "TEST-MARKER") {
-		t.Fatalf("exe 同级 lumin.log 内容缺少测试标记: %q", string(exeLog))
+		t.Fatalf("exe 同级 lumeterm.log 内容缺少测试标记: %q", string(exeLog))
 	}
 }
 

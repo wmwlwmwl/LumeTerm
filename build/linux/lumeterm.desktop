@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=LumeTerm
+Comment=Lightweight Terminal Client
+Exec=lumeterm
+TryExec=/usr/bin/lumeterm
+Icon=lumeterm
+Terminal=false
+Type=Application
+Categories=Network;RemoteAccess;
+StartupNotify=true
+StartupWMClass=LumeTerm

@@ -173,7 +173,7 @@ export function useTerminalCommandInput(deps: {
       : `${t('关闭后将不再显示命令输入快捷键提示')}\n${t('随时按 {shortcut} 可重新开启').replace('{shortcut}', 'F1')}`;
     let confirmed = false;
     try {
-      confirmed = Boolean(await window.luminDialog?.confirm(detail, t('提示')));
+      confirmed = Boolean(await window.lumeDialog?.confirm(detail, t('提示')));
     } catch {
       confirmed = false;
     }

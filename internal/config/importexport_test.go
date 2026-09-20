@@ -3,7 +3,8 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	aitypes "luminssh-go/internal/aitypes"
+	aitypes "lumeterm/internal/aitypes"
+	"strings"
 	"testing"
 )
 
@@ -132,7 +133,7 @@ func TestMergeImport_InternalIDDuplicate(t *testing.T) {
 }
 
 func TestParseConnectionsExport_Valid(t *testing.T) {
-	raw := `{"format":"lumin-ssh-connections","version":1,"exportedAt":100,"connections":[{"id":"a","host":"h","username":"u"}],"credentials":[]}`
+	raw := `{"format":"lumeterm-connections","version":1,"exportedAt":100,"connections":[{"id":"a","host":"h","username":"u"}],"credentials":[]}`
 	exp, err := parseConnectionsExport([]byte(raw))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -146,6 +147,14 @@ func TestParseConnectionsExport_Valid(t *testing.T) {
 	}
 	if exp.Connections[0].AuthMethod != "password" {
 		t.Fatalf("expected default authMethod password, got %s", exp.Connections[0].AuthMethod)
+	}
+}
+
+// 旧品牌时期的 format 值（lumin-ssh-connections）仍应可导入（写新读旧）
+func TestParseConnectionsExport_LegacyFormat(t *testing.T) {
+	raw := `{"format":"lumin-ssh-connections","version":1,"exportedAt":100,"connections":[{"id":"a","host":"h","username":"u"}],"credentials":[]}`
+	if _, err := parseConnectionsExport([]byte(raw)); err != nil {
+		t.Fatalf("legacy format should be accepted: %v", err)
 	}
 }
 
@@ -234,23 +243,29 @@ func TestFilterImportCredentialsForConnections(t *testing.T) {
 
 // ── 密文导入/导出测试 ──────────────────────────────────────────
 
-const lumin2TestVector = "LUMIN2:AgADNFAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobuSS2sCUnXOM1UV1g4ZCENiXBLVh7tzhcV8HkJjqqVdjqjtgc92HbU3EU7+BTIH/QY2lRWwWuHVNiSGCjeIWbJ6o/J5CiWGel3ziScbUDW+RH8VGAgEcPQoj2WgSwzsG2ablk02o/U5EJDWs3NJcrLRpFNoaAwNh3OeGLct1sA/w="
+const lumeterm2TestVector = "LUMETERM2:AgADNFAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobuSS2sCUnXOM1UV1g4ZCENiXBLVh7tzhcV8HkJjqqVdjqjtgc92HbU3EU7+BTIH/QY2lRWwWuHVNiSGCjeIWbJ6o/J5CiWGel3ziScbUDW+RH8VGAgEcPQoj2WgSwzsG2ablk02o/U5EJDWs3NJcrLRpFNoaAwNh3OeGLct1sA/w="
 
-func TestLUMIN2FixedVector(t *testing.T) {
+func TestLUMETERM2FixedVector(t *testing.T) {
 	password := "跨端-password-🔐"
 	payload := `{"connections":[{"id":"vector","host":"example.com","port":22,"username":"root"}],"snapshot_time":1700000000000}`
 	salt := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 	nonce := []byte{16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27}
-	got, err := encryptLUMIN2WithSaltNonce(payload, password, salt, nonce)
+	got, err := encryptLUMETERM2WithSaltNonce(payload, password, salt, nonce)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != lumin2TestVector {
+	if got != lumeterm2TestVector {
 		t.Fatalf("vector mismatch:\n%s", got)
 	}
-	decrypted, err := decryptLUMIN2(got, password)
+	decrypted, err := decryptLUMETERM2(got, password)
 	if err != nil || decrypted != payload {
 		t.Fatalf("decrypt mismatch: %v", err)
+	}
+	// 旧前缀（LUMIN2:，改名前存量密文）应同样可解：仅前缀不同、容器结构一致
+	legacy := "LUMIN2:" + strings.TrimPrefix(lumeterm2TestVector, "LUMETERM2:")
+	legacyDecrypted, err := decryptLUMETERM2(legacy, password)
+	if err != nil || legacyDecrypted != payload {
+		t.Fatalf("legacy prefix decrypt mismatch: %v", err)
 	}
 }
 

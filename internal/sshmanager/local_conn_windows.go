@@ -15,8 +15,8 @@ import (
 	"syscall"
 	"unicode/utf16"
 
-	"luminssh-go/internal/localsftp"
-	"luminssh-go/internal/terminalstream"
+	"lumeterm/internal/localsftp"
+	"lumeterm/internal/terminalstream"
 
 	"github.com/UserExistsError/conpty"
 )
@@ -171,7 +171,7 @@ func (m *SSHManager) ConnectLocal(sessionId string, name string, shellPath strin
 		// PowerShell emits OSC 733 markers via the injected prompt hook. Parse them
 		// the same way as WSL. NOTE: RemoteHistoryActive is deliberately NOT set — it
 		// would enable the AI command-execution idle gate (ssh_command_exec.go),
-		// which needs a LUMIN_CMD marker stream PowerShell doesn't have, leaving the
+		// which needs a LUMETERM_CMD marker stream PowerShell doesn't have, leaving the
 		// session stuck "busy". PromptReady stays true so the gate/busy state is
 		// unaffected; CWD still flows through the OSCCwdParser path independently.
 		sd.OSCCwdParser = terminalstream.NewOSCCWDParser()
@@ -230,7 +230,7 @@ func (m *SSHManager) ConnectLocal(sessionId string, name string, shellPath strin
 	}()
 
 	// Pipe output from local pty to WebSocket. For WSL sessions the stream is
-	// run through the terminalstream command parser (same as remote SSH) so LUMIN_CWD markers
+	// run through the terminalstream command parser (same as remote SSH) so LUMETERM_CWD markers
 	// are parsed into CWD changes that drive the file manager follow.
 	m.pipeLocalOutput(sessionId, cptyHandle, stdoutPipe)
 
@@ -258,7 +258,7 @@ func buildCommandLine(shell string) string {
 // shell so it reports its CWD into the PTY stream on every prompt.
 //
 // It emits an OSC 733 sequence: ESC ] 733 ; <base64 of pwd> BEL
-// OSC is used instead of the \x1fLUMIN_CWD\x1f markers that remote SSH uses,
+// OSC is used instead of the \x1fLUMETERM_CWD\x1f markers that remote SSH uses,
 // because Windows ConPTY strips \x1f/\x1e control bytes, while OSC sequences
 // (like the terminal-title OSC 0) pass through intact.
 //
@@ -267,10 +267,10 @@ func buildCommandLine(shell string) string {
 // The hook chains to any pre-existing PROMPT_COMMAND the user's profile set.
 func wslPromptCommandHook() string {
 	// $1 below is the literal PROMPT_COMMAND saved before the user's profile runs;
-	// since this is injected as the env PROMPT_COMMAND, $LUMIN_OLD captures it.
-	return `LUMIN_CWD="$(pwd 2>/dev/null | tr -d '\r\n' | base64 | tr -d '\r\n')"; ` +
-		`[ -n "$LUMIN_CWD" ] && printf '\033]733;%s\007' "$LUMIN_CWD"; ` +
-		`[ -n "${LUMIN_OLD_PROMPT_COMMAND:-}" ] && eval "$LUMIN_OLD_PROMPT_COMMAND"`
+	// since this is injected as the env PROMPT_COMMAND, $LUMETERM_OLD captures it.
+	return `LUMETERM_CWD="$(pwd 2>/dev/null | tr -d '\r\n' | base64 | tr -d '\r\n')"; ` +
+		`[ -n "$LUMETERM_CWD" ] && printf '\033]733;%s\007' "$LUMETERM_CWD"; ` +
+		`[ -n "${LUMETERM_OLD_PROMPT_COMMAND:-}" ] && eval "$LUMETERM_OLD_PROMPT_COMMAND"`
 }
 
 // powershellPromptHookScript returns the PowerShell script that overrides the

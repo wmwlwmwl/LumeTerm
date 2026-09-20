@@ -48,7 +48,7 @@ function getProgramFontStorageKey(target: string): string {
 
 function createProgramFontFaceFamily(fileName: string): string {
   const normalizedName = String(fileName || '').trim().replace(/[^a-zA-Z0-9_-]+/g, '_')
-  return `LuminProgramFont_${normalizedName || 'Custom'}_${Date.now().toString(36)}`
+  return `LumeTermProgramFont_${normalizedName || 'Custom'}_${Date.now().toString(36)}`
 }
 
 function getStoredProgramFontFileName(target: string): string {

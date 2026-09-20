@@ -556,8 +556,8 @@ export function useAIConversationHome({ t, addToast, terminalId, sessionId, work
       return
     }
     const currentTitle = typeof conversationToRename.title === 'string' ? conversationToRename.title.trim() : ''
-    const nextTitle = window?.luminDialog?.prompt
-      ? await window.luminDialog.prompt(
+    const nextTitle = window?.lumeDialog?.prompt
+      ? await window.lumeDialog.prompt(
           t('请输入任务标题'),
           currentTitle,
           t('编辑任务标题'),

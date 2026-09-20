@@ -65,7 +65,7 @@ export default function MCPAccessView({
     const url = mcpInfo.url || 'http://127.0.0.1:5779/mcp';
     const configType = mcpInfo.transport === 'streamable-http' ? 'http' : (mcpInfo.transport || 'http');
     const prefix = t('请帮我配置这个MCP');
-    return `${prefix} "lumin-ssh": {
+    return `${prefix} "lumeterm": {
   "type": "${configType}",
   "url": "${url}",
   "oauth": false,

@@ -53,10 +53,10 @@ func buildShellLaunchCommand(shellPath string, initialPath string) (string, bool
 		return prefix + "exec " + shellQuotePath(trimmedShellPath) + " -il", false
 	}
 
-	hook := `[ -t 0 ] && stty echo 2>/dev/null; case "${TERM:-}" in screen*|tmux*) ;; *) if [ -n "${LUMIN_PROMPT_SEEN:-}" ]; then LUMIN_LAST="$(fc -ln -1 2>/dev/null)"; LUMIN_LAST="${LUMIN_LAST#"${LUMIN_LAST%%[![:space:]]*}"}"; if [ -n "$LUMIN_LAST" ]; then LUMIN_ENCODED="$(printf '%s' "$LUMIN_LAST" | base64 | tr -d '\r\n')"; printf '\037LUMIN_CMD\037%s\036' "$LUMIN_ENCODED"; fi; fi; LUMIN_PROMPT_SEEN=1; LUMIN_CWD="$(pwd 2>/dev/null | base64 | tr -d '\r\n')"; if [ -n "$LUMIN_CWD" ]; then printf '\037LUMIN_CWD\037%s\036' "$LUMIN_CWD"; fi ;; esac; if [ -n "${LUMIN_OLD_PROMPT_COMMAND:-}" ]; then eval "$LUMIN_OLD_PROMPT_COMMAND"; fi`
+	hook := `[ -t 0 ] && stty echo 2>/dev/null; case "${TERM:-}" in screen*|tmux*) ;; *) if [ -n "${LUMETERM_PROMPT_SEEN:-}" ]; then LUMETERM_LAST="$(fc -ln -1 2>/dev/null)"; LUMETERM_LAST="${LUMETERM_LAST#"${LUMETERM_LAST%%[![:space:]]*}"}"; if [ -n "$LUMETERM_LAST" ]; then LUMETERM_ENCODED="$(printf '%s' "$LUMETERM_LAST" | base64 | tr -d '\r\n')"; printf '\037LUMETERM_CMD\037%s\036' "$LUMETERM_ENCODED"; fi; fi; LUMETERM_PROMPT_SEEN=1; LUMETERM_CWD="$(pwd 2>/dev/null | base64 | tr -d '\r\n')"; if [ -n "$LUMETERM_CWD" ]; then printf '\037LUMETERM_CWD\037%s\036' "$LUMETERM_CWD"; fi ;; esac; if [ -n "${LUMETERM_OLD_PROMPT_COMMAND:-}" ]; then eval "$LUMETERM_OLD_PROMPT_COMMAND"; fi`
 
 	command := fmt.Sprintf(
-		"%sexport HISTCONTROL=; export HISTIGNORE=; export LUMIN_OLD_PROMPT_COMMAND=\"$PROMPT_COMMAND\"; export PROMPT_COMMAND=%s; exec %s -il",
+		"%sexport HISTCONTROL=; export HISTIGNORE=; export LUMETERM_OLD_PROMPT_COMMAND=\"$PROMPT_COMMAND\"; export PROMPT_COMMAND=%s; exec %s -il",
 		prefix,
 		shellQuotePath(hook),
 		shellQuotePath(trimmedShellPath),

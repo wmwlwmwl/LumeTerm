@@ -1203,7 +1203,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
   // ── 关闭窗口通用处理 ──────────────────────────────────────────
   const handleCloseWindow = useCallback(async () => {
     if (syncFailed) {
-      const choice = await window.luminDialog?.choice?.(
+      const choice = await window.lumeDialog?.choice?.(
         t('云端同步未完成，确定退出吗？'),
         t('同步未完成'),
         [
@@ -1228,7 +1228,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
     const savedAction = localStorage.getItem('windowCloseAction');
     if (savedAction === 'quit') { AppGo.DoQuit(); return; }
     if (savedAction === 'tray') { AppGo.AckClose(); WindowHide(); return; }
-    const result = await window.luminDialog?.choice?.(
+    const result = await window.lumeDialog?.choice?.(
       t('请选择操作'),
       t('关闭窗口'),
       [
@@ -1293,7 +1293,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
         const { cancelled } = await syncWithRecoveryPassword({
           initialError: data,
           retry: (password) => AppGo.SyncWithRecoveryPassword(password),
-          prompt: ((...args: unknown[]) => window.luminDialog!.prompt!(...args as [string, string?, string?, string?, Record<string, unknown>?])) as unknown as (
+          prompt: ((...args: unknown[]) => window.lumeDialog!.prompt!(...args as [string, string?, string?, string?, Record<string, unknown>?])) as unknown as (
             title: string, placeholder: string, message: string, okLabel?: string, options?: Record<string, unknown>,
           ) => Promise<string | null>,
           t,
@@ -1740,7 +1740,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
     }
     const session = sessionsRef.current.find(s => s.id === sessionId);
     const name = session?.serverName || session?.name || session?.host || sessionId;
-    const result = await window.luminDialog?.confirm(`${t('确定关闭连接')}「${name}」？`, t('操作确认'), t('不再询问'));
+    const result = await window.lumeDialog?.confirm(`${t('确定关闭连接')}「${name}」？`, t('操作确认'), t('不再询问'));
     if (!result || typeof result !== 'object') return;
     if (!result.confirmed) return;
     if (result.checked) localStorage.setItem('skipCloseSessionConfirm', 'true');
@@ -1753,7 +1753,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
     if (all.length === 0) return;
     const skip = localStorage.getItem('skipCloseAllConfirm') === 'true';
     if (!skip) {
-      const result = await window.luminDialog?.confirm(`${t('确定关闭全部')} ${all.length} ${t('个连接')}？`, t('操作确认'), t('不再询问'));
+      const result = await window.lumeDialog?.confirm(`${t('确定关闭全部')} ${all.length} ${t('个连接')}？`, t('操作确认'), t('不再询问'));
       if (!result || typeof result !== 'object') return;
       if (!result.confirmed) return;
       if (result.checked) localStorage.setItem('skipCloseAllConfirm', 'true');
@@ -1913,7 +1913,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
       return;
     }
     const currentLabel = String(targetTerminal.label || '').trim() || t('终端');
-    const nextLabel = await window.luminDialog?.prompt(`${t('标签标题')}: ${currentLabel}`);
+    const nextLabel = await window.lumeDialog?.prompt(`${t('标签标题')}: ${currentLabel}`);
     if (nextLabel === null || nextLabel === undefined) {
       return;
     }

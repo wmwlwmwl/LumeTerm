@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/localsysinfo"
+	"lumeterm/internal/localsysinfo"
 
 	"golang.org/x/crypto/ssh"
 )
 
-// deployProbeScript writes probe.sh to ~/.lumin and /tmp/.lumin on the remote
+// deployProbeScript writes probe.sh to ~/.lumeterm and /tmp/.lumeterm on the remote
 // server via an exec-channel heredoc. 不依赖 SFTP：OpenWrt/Dropbear 未装
 // openssh-sftp-server 时系统监控也必须可用。
 // ponytail: 远程命令可能慢,用 select+timer 兜底 probeDeployTimeout,
@@ -63,17 +63,17 @@ func (m *SSHManager) deployProbeScript(client *ssh.Client, connKey string) error
 	}
 }
 
-// probeDeployCmd 构造把探针脚本写入 ~/.lumin 与 /tmp/.lumin 的 heredoc 命令。
-// 引号定界符（<<'LUMIN_EOF'）确保脚本内容中的 $、反引号等不被远端 shell 展开；
+// probeDeployCmd 构造把探针脚本写入 ~/.lumeterm 与 /tmp/.lumeterm 的 heredoc 命令。
+// 引号定界符（<<'LUMETERM_EOF'）确保脚本内容中的 $、反引号等不被远端 shell 展开；
 // tee 双写两个位置,任一写入成功即可（运行端 buildProbeScriptRunCommand 有双路径回退）。
 // 末尾 [ -f ... ] 作为部署成功的最终校验,避免 tee 半成功时误判。
 func probeDeployCmd() string {
-	return fmt.Sprintf(`mkdir -p ~/.lumin /tmp/.lumin 2>/dev/null
-tee ~/.lumin/probe.sh /tmp/.lumin/probe.sh >/dev/null <<'LUMIN_EOF'
+	return fmt.Sprintf(`mkdir -p ~/.lumeterm /tmp/.lumeterm 2>/dev/null
+tee ~/.lumeterm/probe.sh /tmp/.lumeterm/probe.sh >/dev/null <<'LUMETERM_EOF'
 %s
-LUMIN_EOF
-chmod 755 ~/.lumin/probe.sh /tmp/.lumin/probe.sh 2>/dev/null
-[ -f ~/.lumin/probe.sh ] || [ -f /tmp/.lumin/probe.sh ]`, dynamicProbeScript)
+LUMETERM_EOF
+chmod 755 ~/.lumeterm/probe.sh /tmp/.lumeterm/probe.sh 2>/dev/null
+[ -f ~/.lumeterm/probe.sh ] || [ -f /tmp/.lumeterm/probe.sh ]`, dynamicProbeScript)
 }
 
 // deployProbeScriptIO 通过 exec 通道写入 probe.sh,无超时(由调用方 deployProbeScript 兜底)。
@@ -100,11 +100,11 @@ func wrapShCmd(cmd string) string {
 func buildProbeScriptRunCommand(probeArg string) string {
 	// if/else 而非 &&/||:tee 双写后 home 与 /tmp 两份都常在,&&/|| 会在
 	// home 份非零退出时再跑一遍 /tmp 份——探针双跑、输出拼接、延迟翻倍。
-	return fmt.Sprintf(`sh -c 'f=~/.lumin/probe.sh; if [ -f "$f" ]; then sh "$f"%s; else sh /tmp/.lumin/probe.sh%s; fi'`, probeArg, probeArg)
+	return fmt.Sprintf(`sh -c 'f=~/.lumeterm/probe.sh; if [ -f "$f" ]; then sh "$f"%s; else sh /tmp/.lumeterm/probe.sh%s; fi'`, probeArg, probeArg)
 }
 
 func (m *SSHManager) diagnoseProbeScriptFailure(client *ssh.Client, probeArg string) string {
-	diagCmd := fmt.Sprintf(`sh -c 'f=~/.lumin/probe.sh; alt=/tmp/.lumin/probe.sh; if [ -f "$f" ]; then target="$f"; elif [ -f "$alt" ]; then target="$alt"; else echo "probe script not found"; echo "home candidate:$f"; echo "tmp candidate:$alt"; exit 0; fi; echo "target:$target"; ls -ld "$(dirname "$target")" 2>&1; ls -l "$target" 2>&1; command -v sh 2>&1; sh "$target"%s 2>&1 | head -n 20'`, probeArg)
+	diagCmd := fmt.Sprintf(`sh -c 'f=~/.lumeterm/probe.sh; alt=/tmp/.lumeterm/probe.sh; if [ -f "$f" ]; then target="$f"; elif [ -f "$alt" ]; then target="$alt"; else echo "probe script not found"; echo "home candidate:$f"; echo "tmp candidate:$alt"; exit 0; fi; echo "target:$target"; ls -ld "$(dirname "$target")" 2>&1; ls -l "$target" 2>&1; command -v sh 2>&1; sh "$target"%s 2>&1 | head -n 20'`, probeArg)
 	out, err := m.executeCmdWithClient(client, diagCmd)
 	parts := make([]string, 0, 2)
 	if trimmedOut := strings.TrimSpace(out); trimmedOut != "" {

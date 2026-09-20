@@ -117,7 +117,7 @@ func hashBytes(data []byte) string {
 }
 
 func (m *Manager) tempRoot() (string, error) {
-	root := filepath.Join(os.TempDir(), "lumin-ssh-external-edit")
+	root := filepath.Join(os.TempDir(), "lumeterm-external-edit")
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return "", err
 	}

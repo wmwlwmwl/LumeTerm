@@ -5,7 +5,7 @@ import (
 	"crypto/cipher"
 	"encoding/json"
 	"errors"
-	aitypes "luminssh-go/internal/aitypes"
+	aitypes "lumeterm/internal/aitypes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,6 +19,22 @@ type memoryStorage struct {
 	writeErr error
 	writes   []string
 	deletes  []string
+}
+
+// 备份文件识别兼容：新 .lumeterm2 与旧 .lumin2 并存（品牌改名过渡期）
+func TestIsBackupNameMixedExtensions(t *testing.T) {
+	cases := map[string]bool{
+		"connections_backup_20260101_000000.000_+0000.lumeterm2": true,
+		"connections_backup_20260101_000000.000_+0000.lumin2":    true,
+		"connections_backup_20260101_000000.000_+0000.json":      true,
+		"connections_backup_note.txt":                            false,
+		"lumeterm.png":                                           false,
+	}
+	for name, want := range cases {
+		if got := isBackupName(name); got != want {
+			t.Fatalf("isBackupName(%q)=%v want %v", name, got, want)
+		}
+	}
 }
 
 func (s *memoryStorage) ListFiles() ([]RemoteFile, error) {
@@ -98,7 +114,7 @@ func encryptedSyncSnapshot(t *testing.T, password string, snap *SyncSnapshot) []
 	if err != nil {
 		t.Fatal(err)
 	}
-	encrypted, err := encryptLUMIN2(string(data), password)
+	encrypted, err := encryptLUMETERM2(string(data), password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +571,7 @@ func TestSyncAllProvidersPropagatesDeletionIntoFinal(t *testing.T) {
 	if len(storage.writes) != 1 || result["action"] != "merge" {
 		t.Fatalf("删除传播后的完整 FINAL 应回写旧格式远端：writes=%v result=%v", storage.writes, result)
 	}
-	decrypted, err := decryptLUMIN2(string(storage.files[storage.writes[0]]), "密码")
+	decrypted, err := decryptLUMETERM2(string(storage.files[storage.writes[0]]), "密码")
 	if err != nil {
 		t.Fatal(err)
 	}

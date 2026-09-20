@@ -13,8 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"luminssh-go/internal/mcpserver"
-	"luminssh-go/internal/transfer"
+	"lumeterm/internal/mcpserver"
+	"lumeterm/internal/transfer"
 
 	"github.com/pkg/sftp"
 	"github.com/wailsapp/wails/v2/pkg/runtime"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	pathpkg "path"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 type FileProvider struct {

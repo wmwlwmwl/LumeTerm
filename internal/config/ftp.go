@@ -71,7 +71,7 @@ func (c *ConfigManager) getFTPConfigLocked() *FTPConfig {
 	}
 	conf.Mode = mode
 	if conf.RemoteDir == "" {
-		conf.RemoteDir = "/Lumin/"
+		conf.RemoteDir = "/LumeTerm/"
 	}
 	if conf.Port == 0 {
 		conf.Port = 21
@@ -100,7 +100,7 @@ func (c *ConfigManager) SaveFTPConfig(config map[string]string) error {
 
 	remoteDir := config["remoteDir"]
 	if remoteDir == "" {
-		remoteDir = "/Lumin/"
+		remoteDir = "/LumeTerm/"
 	}
 	if !strings.HasPrefix(remoteDir, "/") {
 		remoteDir = "/" + remoteDir

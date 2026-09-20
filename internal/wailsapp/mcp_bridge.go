@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	mcp "luminssh-go/internal/mcp"
-	"luminssh-go/internal/mcpbridge"
-	"luminssh-go/internal/mcpserver"
+	mcp "lumeterm/internal/mcp"
+	"lumeterm/internal/mcpbridge"
+	"lumeterm/internal/mcpserver"
 )
 
 func (a *App) GetMCPServerInfo() map[string]interface{} {

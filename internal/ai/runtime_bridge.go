@@ -15,7 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -529,7 +529,7 @@ def ensure_parent(target_path):
 
 def acquire_lock(target_path):
     ensure_parent(target_path)
-    lock_path = target_path + ".lumin.lock"
+    lock_path = target_path + ".lumeterm.lock"
     os.mkdir(lock_path)
     return lock_path
 
@@ -568,7 +568,7 @@ def atomic_write(target_path, content):
     parent = os.path.dirname(target_path) or "."
     metadata = preserve_metadata(target_path)
     temp_path = ""
-    fd, temp_path = tempfile.mkstemp(prefix=".lumin_patch_", dir=parent, text=True)
+    fd, temp_path = tempfile.mkstemp(prefix=".lumeterm_patch_", dir=parent, text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
             handle.write(content)
@@ -814,7 +814,7 @@ func (e mcpRemoteEditExecutor) uploadTempTextContext(ctx context.Context, sessio
 	if err != nil {
 		return "", err
 	}
-	path := "/tmp/lumin_mcp_" + newRuntimeToken() + suffix
+	path := "/tmp/lumeterm_mcp_" + newRuntimeToken() + suffix
 	file, err := sftpClient.Create(path)
 	if err != nil {
 		return "", err

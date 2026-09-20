@@ -18,7 +18,7 @@ export function isRecoveryPasswordError(error: unknown): boolean {
   const e = error as RecoveryPasswordErrorLike | null | undefined;
   if (e?.category === 'password' || (e?.reason !== undefined && PASSWORD_REASONS.has(e.reason))) return true;
   const message = String(e?.message ?? error ?? '');
-  return /恢复密码|LUMIN2.*(?:需要密码|解密失败)|密码(?:错误|不正确)/.test(message);
+  return /恢复密码|(?:LUMETERM2|LUMIN2).*(?:需要密码|解密失败)|密码(?:错误|不正确)/.test(message);
 }
 
 export interface SyncWithRecoveryPasswordOptions<TResult> {

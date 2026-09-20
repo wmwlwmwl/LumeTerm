@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	"luminssh-go/internal/localsftp"
+	"lumeterm/internal/localsftp"
 
 	"github.com/creack/pty"
 )

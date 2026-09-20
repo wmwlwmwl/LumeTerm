@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	aitypes "luminssh-go/internal/aitypes"
+	aitypes "lumeterm/internal/aitypes"
 
 	xproxy "golang.org/x/net/proxy"
 )

@@ -170,7 +170,7 @@ export default function Dashboard({
 
   const handleClearRecent = async () => {
     if (!recentServers.length) return;
-    const ok = await window.luminDialog?.confirm?.(t('确定清空最近连接列表吗？'), t('操作确认'));
+    const ok = await window.lumeDialog?.confirm?.(t('确定清空最近连接列表吗？'), t('操作确认'));
     if (!ok) return;
     onClearRecentConnections?.();
   };

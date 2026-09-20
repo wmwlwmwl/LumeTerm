@@ -1,19 +1,19 @@
 {
-  "name": "Lumin",
-  "outputfilename": "Lumin",
+  "name": "LumeTerm",
+  "outputfilename": "LumeTerm",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "Lumin",
+    "name": "LumeTerm",
     "email": "admin@662662.xyz"
   },
   "info": {
-    "companyName": "Lumin",
-    "productName": "Lumin",
+    "companyName": "LumeTerm",
+    "productName": "LumeTerm",
     "productVersion": "1.3.4",
-    "copyright": "Copyright 2026 Lumin",
-    "comments": "Lightweight SSH Client"
+    "copyright": "Copyright 2026 LumeTerm",
+    "comments": "Lightweight Terminal Client"
   }
 }

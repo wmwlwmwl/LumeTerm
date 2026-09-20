@@ -46,7 +46,7 @@ export function useTerminalHistory(deps: {
       if (!(target instanceof Node)) return;
       if (historyPopupRef.current?.contains(target)) return;
       if (historyBtnRef.current?.contains(target)) return;
-      // 全局对话框（luminDialog，如清空确认）打开时，点确认/取消不应收起历史弹窗
+      // 全局对话框（lumeDialog，如清空确认）打开时，点确认/取消不应收起历史弹窗
       if ((target as Element).closest?.('[data-global-dialog-active="true"]')) return;
       setShowHistory(false);
       setHistoryPopupPos(null);

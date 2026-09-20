@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 const aiThemeToolName = "theme_tool"

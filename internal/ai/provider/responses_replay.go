@@ -7,7 +7,7 @@ import (
 
 const (
 	// openAIResponsesReplayKind 标识本适配器私有的紧凑回放信封格式。
-	openAIResponsesReplayKind = "lumin-openai-responses"
+	openAIResponsesReplayKind = "lumeterm-openai-responses"
 	// openAIResponsesReplayVersion 在信封结构发生不兼容变化时递增。
 	// v2: 身份字段由协议标识 provider 改为端点 endpoint。
 	openAIResponsesReplayVersion = 2

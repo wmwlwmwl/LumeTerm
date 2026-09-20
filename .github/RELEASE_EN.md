@@ -34,8 +34,8 @@ Or tell Claude: **发行 1.2.3** (same bump / commit / tag / push flow).
 
 ## After release
 
-1. Actions: https://github.com/wmwlwmwl/Lumin-SSH/actions  
-2. Release page: title `Lumin SSH Client v…`, changelog, 14 assets (with `.sha256`)  
+1. Actions: https://github.com/wmwlwmwl/LumeTerm/actions  
+2. Release page: title `LumeTerm v…`, changelog, 14 assets (with `.sha256`)  
 3. Missing assets fail the job and **stay draft** — incomplete sets never become latest
 
 ## Re-run manually

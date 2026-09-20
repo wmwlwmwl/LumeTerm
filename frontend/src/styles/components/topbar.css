@@ -82,9 +82,8 @@ body.theme-light.has-global-wallpaper .topbar-home-btn.active {
   align-self: flex-end;
 }
 
+/* 尺寸由 JSX 的 w-full h-full 跟随容器（rem 基准）；此处仅定形状，勿写死 px（rem 漂移会溢出裁切） */
 .topbar-logo img {
-  width: 20px;
-  height: 20px;
   border-radius: var(--radius-xs);
 }
 

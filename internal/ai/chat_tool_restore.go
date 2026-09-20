@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"luminssh-go/internal/mcpserver"
+	"lumeterm/internal/mcpserver"
 )
 
 type aiToolRestoreFileSnapshot struct {

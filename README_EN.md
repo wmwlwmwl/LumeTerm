@@ -1,11 +1,11 @@
 <div align="center">
 
-# Lumin
+# LumeTerm
 
-**Lightweight, high-performance, cross-platform SSH client**
+**Lightweight, high-performance, cross-platform terminal client**
 
-[![Release](https://img.shields.io/github/v/release/wmwlwmwl/Lumin-SSH?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/wmwlwmwl/Lumin-SSH/releases)
-[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS%20%7C%20macOS%20%7C%20Linux-0078D6.svg?style=flat-square)](https://github.com/wmwlwmwl/Lumin-SSH/releases)
+[![Release](https://img.shields.io/github/v/release/wmwlwmwl/LumeTerm?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/wmwlwmwl/LumeTerm/releases)
+[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS%20%7C%20macOS%20%7C%20Linux-0078D6.svg?style=flat-square)](https://github.com/wmwlwmwl/LumeTerm/releases)
 [![License](https://img.shields.io/badge/LICENSE-Source%20License%201.1-8CBA00.svg?style=flat-square)](LICENSE)
 
 [English](./README_EN.md) · [简体中文](./README.md)
@@ -18,12 +18,12 @@
 
 > **Android client** (separate repository, independently released): [Lumin-SSH-Android](https://github.com/wmwlwmwl/Lumin-SSH-Android) · [Releases](https://github.com/wmwlwmwl/Lumin-SSH-Android/releases)
 
-Lumin is a desktop SSH client for developers and operations teams. Built on **native Go concurrency + local WebSocket + xterm.js**, it provides a low-latency terminal experience inside a Wails desktop shell. It includes a system resource probe, remote file manager (with built-in/external editors), command history and intelligent completion, per-connection proxies, optional encrypted cloud sync, AI chat, and MCP integration — **with no Agent required on the server**.
+LumeTerm is a desktop terminal client for developers and operations teams. Built on **native Go concurrency + local WebSocket + xterm.js**, it provides a low-latency terminal experience inside a Wails desktop shell. It includes a system resource probe, remote file manager (with built-in/external editors), command history and intelligent completion, per-connection proxies, optional encrypted cloud sync, AI chat, and MCP integration — **with no Agent required on the server**.
 
 <div align="center">
-  <img src="assets/pc_empty_main.png" alt="Lumin main dashboard" width="800" />
+  <img src="assets/pc_empty_main.png" alt="LumeTerm main dashboard" width="800" />
   <br /><br />
-  <img src="assets/pc_connected_session.png" alt="Lumin terminal and resource monitoring" width="800" />
+  <img src="assets/pc_connected_session.png" alt="LumeTerm terminal and resource monitoring" width="800" />
 </div>
 
 ---
@@ -57,7 +57,7 @@ Lumin is a desktop SSH client for developers and operations teams. Built on **na
 ### Server management
 - **Save and connect** — connect immediately after adding a server
 - **Clone servers** — clone the configuration, including passwords, keys, credential references, and proxy settings
-- **Import / export** — export all or selected nodes (including referenced credentials and proxy nodes) as **plaintext JSON** or encrypted **`.lumin2`**; encrypted files can reuse the recovery password or use a custom password; imports automatically detect JSON / `.lumin2`; import templates are provided
+- **Import / export** — export all or selected nodes (including referenced credentials and proxy nodes) as **plaintext JSON** or encrypted **`.lumeterm2`**; encrypted files can reuse the recovery password or use a custom password; imports automatically detect JSON / `.lumeterm2` (legacy `.lumin2` accepted); import templates are provided
 - **Duplicate detection** — blocks duplicates with the same host + port + username
 - **Groups** — organize servers into groups, move servers, and filter by group
 - **Operating-system icons** — automatically recognizes Ubuntu, Debian, CentOS, RHEL, Rocky, Alma, Fedora, Arch, NixOS, Alpine, Kali, Gentoo, openSUSE, openEuler, OpenCloudOS, Anolis, TencentOS, Alibaba, AOSC, Oracle, FreeBSD, Windows, macOS, and more; icon assets are in `frontend/public/`
@@ -66,7 +66,7 @@ Lumin is a desktop SSH client for developers and operations teams. Built on **na
 - **Initial paths** — configure separate initial directories for the terminal and file manager
 
 ### System resource probe
-- **Zero Agent** — deploys monitoring scripts such as `~/.lumin/probe.sh` on demand after connection; no resident service is required
+- **Zero Agent** — deploys monitoring scripts such as `~/.lumeterm/probe.sh` on demand after connection; no resident service is required
 - **Real-time metrics** — per-core CPU, memory, network throughput, disk partitions, and more
 - **GPU / RAID** — additional information when supported by the environment
 - **Process management** — view, search, sort, and signal processes; termination confirmation can be enabled; low-overhead top-N sampling (compatible with OpenWrt and other minimal environments, excluding the sampler's own overhead)
@@ -133,15 +133,15 @@ Lumin is a desktop SSH client for developers and operations teams. Built on **na
 - **Backend** — WebDAV, Cloudflare R2 (S3-compatible), FTP, and SFTP (all **user-hosted/owned** endpoints)
 - **Snapshot contents** — servers, credentials, quick commands, AI providers and global settings, proxy nodes, and deletion tombstones
 - **Encryption strategy**
-  - **Recovery password set** → upload **`.lumin2`** (PBKDF2 + AES-GCM)
+  - **Recovery password set** → upload **`.lumeterm2`** (PBKDF2 + AES-GCM)
   - **Not set** → upload **plaintext `.json`** (easy to migrate, but cloud storage can read sensitive fields; use carefully)
 - **Merge and tombstones** — merge by timestamps and deletion records to reduce cross-device overwrites; auto-sync can be toggled independently, with single-backend or “all” modes
 - **Retention count** — configurable
 
-### Local encryption
-- On first run, generates a **32-byte** `lumin.key` (in the config directory, with permissions tightened as much as possible)
-- Connection passwords, private keys, passphrases, proxy passwords, credentials, recovery passwords, and some cloud-account keys are encrypted with **AES-256-GCM** before being written to local JSON
-- **Note:** AI API keys and some proxy-node files are currently stored as application JSON and are **not all** protected by `lumin.key`; cloud-sync ciphertext depends on the **recovery password**, a separate system from `lumin.key`
+### Local storage
+- Configs are stored in **plaintext**: passwords, private keys, passphrases, proxy passwords, credentials, recovery password, and AI keys are written directly to local JSON (directory permission 0700)
+- **No more local encryption**: a key file stored next to its ciphertext provides no real protection (whoever gets the directory gets the key). Protection is kept only where data actually leaves the machine — cloud sync and export use `LUMETERM2` ciphertext with keys derived from the **recovery password**
+- Encrypted data from older versions is decrypted automatically after upgrade and converted to plaintext on first save
 
 ### Auto-update
 - Checks GitHub Release metadata approximately 2.5 seconds after startup without blocking the first screen
@@ -176,7 +176,7 @@ Lumin is a desktop SSH client for developers and operations teams. Built on **na
 ## Quick start
 
 ### First use
-1. Download the package for the current platform from [Releases](https://github.com/wmwlwmwl/Lumin-SSH/releases) (Windows portable/installer, Linux deb/rpm, macOS dmg, and more)
+1. Download the package for the current platform from [Releases](https://github.com/wmwlwmwl/LumeTerm/releases) (Windows portable/installer, Linux deb/rpm, macOS dmg, and more)
 2. Run the app; the configuration directory is created automatically (see the table below)
 3. Fill in the host information in the left side of the dashboard → **Save** or **Save and connect**
 4. Configure proxy nodes, cloud sync, recovery password, AI providers, and other options in Settings as needed
@@ -194,23 +194,22 @@ Lumin is a desktop SSH client for developers and operations teams. Built on **na
 
 | Platform | Configuration directory |
 |------|----------|
-| Windows | `%APPDATA%\Lumin\config\` |
-| macOS | `~/Library/Application Support/Lumin/config/` |
-| Linux | `~/.config/Lumin/config/` |
+| Windows | `%APPDATA%\LumeTerm\config\` |
+| macOS | `~/Library/Application Support/LumeTerm/config/` |
+| Linux | `~/.config/LumeTerm/config/` |
 
 ### Main files (selection)
 
 | File / directory | Purpose |
 |-------------|------|
-| `lumin.key` | Local AES master key (generated on first run). **Losing it means locally encrypted fields cannot be decrypted; back it up** |
-| `connections.json` | Server list (sensitive fields use AES-GCM) |
+| `connections.json` | Server list (plaintext) |
 | `credentials.json` | Credential store |
-| `webdav.json` etc. | Configuration for each sync backend (account keys and other secrets are encrypted) |
+| `webdav.json` etc. | Configuration for each sync backend (account keys and other secrets in plaintext) |
 | `quick_commands.json` | Quick commands |
 | `param_history.json` | Dynamic-parameter history |
 | `history/` | Command history |
 | `sync_mode.json` / `auto_sync_enabled.json` / `sync_tombstones.json` etc. | Sync mode, auto-sync toggle, timestamps, and deletion tombstones |
-| `recovery_password` | Recovery password (encrypted by `lumin.key`) |
+| `recovery_password` | Recovery password (plaintext, 0600) |
 | `ai_global_settings.json` | AI global settings (including MCP toggle and automatic approval) |
 | `ai_providers.json` | AI provider list (including API keys and other business fields) |
 | `proxy_nodes.json` | Proxy nodes |
@@ -220,13 +219,13 @@ Lumin is a desktop SSH client for developers and operations teams. Built on **na
 | `app_settings.json` | Application preferences (GPU acceleration, runtime environment, theme packages, AI conversation storage path) |
 | `workspace_*.json` | Workspace state, preferences, and session recovery |
 
-> On Windows, the WebView2 user-data directory is fixed at `%APPDATA%\Lumin\`, alongside `config\`; renaming the portable executable does not create multiple browser-data directories.
+> On Windows, the WebView2 user-data directory is fixed at `%APPDATA%\LumeTerm\`, alongside `config\`; renaming the portable executable does not create multiple browser-data directories.
 
 ---
 
 ## Auto-update
 
-1. Fetch GitHub Release metadata for `wmwlwmwl/Lumin-SSH`
+1. Fetch GitHub Release metadata for `wmwlwmwl/LumeTerm`
 2. Match an installer or portable package for the platform
 3. Download over HTTPS (optionally through a mirror) → **`.sha256` verification** → platform installation or hot replacement
 
@@ -262,17 +261,17 @@ Version numbers are based on `wails.json`, `frontend/src/config.ts`, `frontend/p
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
-git clone https://github.com/wmwlwmwl/Lumin-SSH.git
-cd Lumin-SSH
+git clone https://github.com/wmwlwmwl/LumeTerm.git
+cd LumeTerm
 
 wails dev            # Start development mode
 wails build          # Portable/platform-default output
 wails build -nsis    # Windows installer (NSIS required)
 ```
 
-Common output: `build/bin/Lumin` / `Lumin.exe`; installers and deb/rpm/dmg packages are generated by CI or platform-specific local scripts.
+Common output: `build/bin/LumeTerm` / `LumeTerm.exe`; installers and deb/rpm/dmg packages are generated by CI or platform-specific local scripts.
 
-Windows one-click local build (automatically syncs the version, compresses with UPX, and outputs `Lumin-V{version}-portable.exe` and `Lumin-V{version}-amd64-installer.exe`):
+Windows one-click local build (automatically syncs the version, compresses with UPX, and outputs `LumeTerm-V{version}-portable.exe` and `LumeTerm-V{version}-amd64-installer.exe`):
 
 ```powershell
 .\build_release.ps1    # Requires local Go, NSIS, and UPX
@@ -285,7 +284,7 @@ For official releases (tagging, changelog, and multi-platform packages), see [.g
 ## Security and notes
 
 ### Important to know
-- **Back up `lumin.key`** — it is the local AES master key. Losing it means passwords, private keys, recovery passwords, and other encrypted data on **this machine** cannot be decrypted. A cloud `.lumin2` protected by the recovery password or a plaintext export may still allow recovery from another copy, but the local vault itself will be unusable.
+- **Configs are stored in plaintext** — the local config directory contains plaintext passwords/private keys/AI keys (directory permission 0700). Do not hand the config directory to untrusted parties; use **encrypted export** (recovery-password protected) or encrypted cloud sync for external backups.
 - **Recovery password and plaintext sync** — without a recovery password, cloud sync uses **plaintext JSON** containing server passwords, private keys, AI keys, and more. A strong recovery password is strongly recommended for production environments.
 - **Host keys** — verify the fingerprint on the first connection; changes trigger a warning to reduce MITM risk
 - **Terminal WebSocket** — restricted to `127.0.0.1`, with a random port, random token, and Origin restrictions
@@ -302,7 +301,7 @@ For official releases (tagging, changelog, and multi-platform packages), see [.g
 ## FAQ
 
 ### How are passwords stored?
-The local AES-256-GCM key is `lumin.key`. Cloud sync uses a recovery password for `.lumin2`, or plaintext `.json` without one.
+Local configs are stored in **plaintext** (directory 0700). Cloud sync and encrypted export use a recovery-password-derived key to produce `.lumeterm2` ciphertext, or plaintext `.json`.
 
 ### How do I sync across multiple machines?
 Go to Settings → Sync and cloud and configure your own WebDAV/R2/FTP/SFTP endpoint. We recommend setting a recovery password before enabling auto-sync.
@@ -326,7 +325,7 @@ Native builds are available for Windows, macOS, and Linux.
 
 ## Sponsor
 
-If you find Lumin useful, sponsorship is welcome:
+If you find LumeTerm useful, sponsorship is welcome:
 
 <div align="center">
   <table>
@@ -351,14 +350,14 @@ If you find Lumin useful, sponsorship is welcome:
 
 ## Contributing
 
-- Bugs: [Issues](https://github.com/wmwlwmwl/Lumin-SSH/issues/new)
+- Bugs: [Issues](https://github.com/wmwlwmwl/LumeTerm/issues/new)
 - PRs: Fork the repository and submit one; match the existing style where possible; keep I/O and networking non-blocking
 
 ---
 
 ## License
 
-See [LICENSE](LICENSE) (**Lumin SSH Source License 1.1**, part of the same family as the Android license):
+See [LICENSE](LICENSE) (**LumeTerm Source License 1.1**, part of the same family as the Android license):
 
 | | |
 |--|--|

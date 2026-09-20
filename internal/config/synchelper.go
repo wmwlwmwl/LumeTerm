@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	aitypes "luminssh-go/internal/aitypes"
+	aitypes "lumeterm/internal/aitypes"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -104,7 +104,7 @@ func (s *SyncSnapshot) UnmarshalJSON(data []byte) error {
 
 // ─── 共享解密/解析 ─────────────────────────────────────────
 
-// decryptAndParseSnapshot 解析同步备份：先试明文 JSON，失败后用恢复密码解密 LUMIN2。
+// decryptAndParseSnapshot 解析同步备份：先试明文 JSON，失败后用恢复密码解密 LUMETERM2。
 func (c *ConfigManager) decryptAndParseSnapshot(data string, password string) (*SyncSnapshot, error) {
 	// ponytail: 先试明文（新默认），不行再按密文解密
 	var snap SyncSnapshot
@@ -116,15 +116,15 @@ func (c *ConfigManager) decryptAndParseSnapshot(data string, password string) (*
 		return &SyncSnapshot{Connections: conns}, nil
 	}
 	trimmed := strings.TrimSpace(data)
-	if !strings.HasPrefix(trimmed, lumin2Prefix) {
-		return nil, fmt.Errorf("不支持的备份格式：仅支持明文 JSON 与 LUMIN2 密文（.lumin2）")
+	if !hasBackupPrefix(trimmed) {
+		return nil, fmt.Errorf("不支持的备份格式：仅支持明文 JSON 与 LUMETERM2 密文（.lumeterm2/.lumin2）")
 	}
 	if password == "" {
-		return nil, fmt.Errorf("%w：LUMIN2 备份需要恢复密码", errRecoveryPassword)
+		return nil, fmt.Errorf("%w：LUMETERM2 备份需要恢复密码", errRecoveryPassword)
 	}
-	decrypted, err := decryptLUMIN2(trimmed, password)
+	decrypted, err := decryptLUMETERM2(trimmed, password)
 	if err != nil {
-		return nil, fmt.Errorf("LUMIN2 解密失败：%w", err)
+		return nil, fmt.Errorf("LUMETERM2 解密失败：%w", err)
 	}
 	// 尝试新格式（快照）
 	if err := json.Unmarshal([]byte(decrypted), &snap); err == nil && snap.Connections != nil {
@@ -388,8 +388,9 @@ func normalizeSyncAIProxyNodes(nodes []aitypes.AIProxyNode) []aitypes.AIProxyNod
 
 // ─── 共享远端操作 ─────────────────────────────────────────
 
+// isBackupName 识别远端备份文件（.lumin2 为旧扩展名读兼容，退役计划见 config.go legacyLumin2Prefix 注释）
 func isBackupName(name string) bool {
-	return strings.HasPrefix(name, "connections_backup_") && (strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".lumin2"))
+	return strings.HasPrefix(name, "connections_backup_") && (strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".lumeterm2") || strings.HasSuffix(name, ".lumin2"))
 }
 
 func isNoBackupError(err error) bool {
@@ -403,12 +404,12 @@ func isUnreadableBackupContentError(err error) bool {
 		return false
 	}
 	msg := err.Error()
-	return strings.Contains(msg, "LUMIN2 Base64 无效") ||
-		strings.Contains(msg, "LUMIN2 数据长度不足") ||
-		strings.Contains(msg, "缺少 LUMIN2 前缀") ||
-		strings.Contains(msg, "不支持的 LUMIN2 版本") ||
-		strings.Contains(msg, "LUMIN2 迭代次数无效") ||
-		strings.Contains(msg, "解析最新备份") && (strings.Contains(msg, "LUMIN2") || strings.Contains(msg, "invalid") || strings.Contains(msg, "截断"))
+	return strings.Contains(msg, "LUMETERM2 Base64 无效") ||
+		strings.Contains(msg, "LUMETERM2 数据长度不足") ||
+		strings.Contains(msg, "缺少 LUMETERM2 前缀") ||
+		strings.Contains(msg, "不支持的 LUMETERM2 版本") ||
+		strings.Contains(msg, "LUMETERM2 迭代次数无效") ||
+		strings.Contains(msg, "解析最新备份") && (strings.Contains(msg, "LUMETERM2") || strings.Contains(msg, "invalid") || strings.Contains(msg, "截断"))
 }
 
 // fetchLatestBackup 从远端严格下载并解密最新备份，不回退旧文件。
@@ -449,7 +450,7 @@ func (c *ConfigManager) localAIGlobalSettingsForSync() *aitypes.AIGlobalSettings
 }
 
 // backupConnections 上传本地所有可同步数据到远端，同时清理超出 maxBackups 的旧备份。
-// 加密策略（与导出一致）：设置了恢复密码则上传 LUMIN2 .lumin2；否则明文 JSON 上传 .json。
+// 加密策略（与导出一致）：设置了恢复密码则上传 LUMETERM2 .lumeterm2；否则明文 JSON 上传 .json。
 func (c *ConfigManager) backupConnections(s RemoteStorage, maxBackups int) (map[string]interface{}, error) {
 	// 普通备份：上传前并远端墓碑，避免本机空墓碑盖掉云端删除记录
 	return c.uploadSnapshot(s, c.localSyncSnapshot(), c.GetRecoveryPassword(), maxBackups, true)
@@ -537,12 +538,12 @@ func (c *ConfigManager) uploadSnapshot(s RemoteStorage, snap *SyncSnapshot, pass
 	var payload []byte
 	var fileName string
 	if password != "" {
-		encrypted, err := encryptLUMIN2(string(data), password)
+		encrypted, err := encryptLUMETERM2(string(data), password)
 		if err != nil {
 			return nil, fmt.Errorf("加密同步快照失败：%w", err)
 		}
 		payload = []byte(encrypted)
-		fileName = fmt.Sprintf("connections_backup_%s.lumin2", timestamp)
+		fileName = fmt.Sprintf("connections_backup_%s.lumeterm2", timestamp)
 	} else {
 		payload = data
 		fileName = fmt.Sprintf("connections_backup_%s.json", timestamp)
@@ -605,7 +606,7 @@ func (c *ConfigManager) listBackupFiles(s RemoteStorage) ([]map[string]interface
 		if !f.IsDir && isBackupName(f.Name) {
 			// 从文件名解析时间：优先新格式（带时区），fallback 旧格式（无时区用本地时间）
 			timeStr := ""
-			base := strings.TrimSuffix(strings.TrimSuffix(f.Name, ".lumin2"), ".json")
+			base := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(f.Name, ".lumeterm2"), ".lumin2"), ".json")
 			if t, err := time.Parse("connections_backup_20060102_150405.000_-0700", base); err == nil {
 				timeStr = t.Local().Format("2006-01-02 15:04:05 -0700")
 			} else if t, err := time.ParseInLocation("connections_backup_20060102_150405.000", base, time.Local); err == nil {

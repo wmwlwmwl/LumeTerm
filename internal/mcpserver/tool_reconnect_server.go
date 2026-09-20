@@ -5,7 +5,7 @@ import "fmt"
 func reconnectServerToolDefinition() ToolDefinition {
 	return ToolDefinition{
 		Name: "reconnect_server",
-		Description: "Reconnect a disconnected SSH session in Lumin SSH. Use this when another tool reports that the session's server is disconnected, or the session disappeared from list_connected_sessions. Pass the previously used session_id (the parent session id, or a child terminal id of that session). The parent session id survives the reconnect; if child terminal ids changed, the old_to_new mapping in the result lists the replacements. If the reconnect keeps failing, the user is notified automatically.",
+		Description: "Reconnect a disconnected SSH session in LumeTerm. Use this when another tool reports that the session's server is disconnected, or the session disappeared from list_connected_sessions. Pass the previously used session_id (the parent session id, or a child terminal id of that session). The parent session id survives the reconnect; if child terminal ids changed, the old_to_new mapping in the result lists the replacements. If the reconnect keeps failing, the user is notified automatically.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

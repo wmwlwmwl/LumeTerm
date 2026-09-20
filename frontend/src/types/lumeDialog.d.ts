@@ -1,21 +1,21 @@
 /**
- * 全局对话框 API（GlobalDialog 组件挂载到 window.luminDialog）
+ * 全局对话框 API（GlobalDialog 组件挂载到 window.lumeDialog）
  * 类型以 GlobalDialog.jsx 中的实现为准。
  */
 
-export interface LuminDialogPromptOptions {
+export interface LumeDialogPromptOptions {
   inputType?: 'password' | 'text';
   validate?: (value: string) => string | null | undefined | Promise<string | null | undefined>;
   priority?: string;
   [key: string]: unknown;
 }
 
-export interface LuminDialogChoice {
+export interface LumeDialogChoice {
   value: string;
   checked: boolean;
 }
 
-export interface LuminDialogApi {
+export interface LumeDialogApi {
   alert(message: string, title?: string, options?: Record<string, unknown>): Promise<void>;
   confirm(
     message: string,
@@ -28,8 +28,8 @@ export interface LuminDialogApi {
     defaultValue?: string,
     title?: string,
     checkboxLabel?: string,
-    options?: LuminDialogPromptOptions,
-  ): Promise<string | null | LuminDialogChoice>;
+    options?: LumeDialogPromptOptions,
+  ): Promise<string | null | LumeDialogChoice>;
   choice(
     message: string,
     title: string,
@@ -41,7 +41,7 @@ export interface LuminDialogApi {
 
 declare global {
   interface Window {
-    luminDialog?: LuminDialogApi;
+    lumeDialog?: LumeDialogApi;
   }
 }
 

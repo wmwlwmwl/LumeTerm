@@ -66,7 +66,7 @@ func (c *ConfigManager) getSFTPConfigLocked() *SFTPConfig {
 		conf.Port = 22
 	}
 	if conf.RemoteDir == "" {
-		conf.RemoteDir = "/Lumin/"
+		conf.RemoteDir = "/LumeTerm/"
 	}
 	if conf.RemoteDir[len(conf.RemoteDir)-1] != '/' {
 		conf.RemoteDir += "/"
@@ -99,7 +99,7 @@ func (c *ConfigManager) SaveSFTPConfig(config map[string]string) error {
 
 	remoteDir := config["remoteDir"]
 	if remoteDir == "" {
-		remoteDir = "/Lumin/"
+		remoteDir = "/LumeTerm/"
 	}
 	if remoteDir[len(remoteDir)-1] != '/' {
 		remoteDir += "/"

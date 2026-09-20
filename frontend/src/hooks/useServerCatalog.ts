@@ -122,13 +122,13 @@ export default function useServerCatalog({
   }, [addToast, removeRecentConnections, setSelectedServerIds, setServerEditor, setServers, t]);
 
   const handleGroupDelete = useCallback(async (groupName: string, ids: string[]) => {
-    if (await window.luminDialog?.confirm(t('确定删除「{group}」分组的 {count} 个服务器？', { group: groupName, count: ids.length }))) {
+    if (await window.lumeDialog?.confirm(t('确定删除「{group}」分组的 {count} 个服务器？', { group: groupName, count: ids.length }))) {
       await handleBatchDelete(ids);
     }
   }, [handleBatchDelete, t]);
 
   const handleRenameGroup = useCallback(async (groupName: string) => {
-    const next = await window.luminDialog?.prompt(t('请输入新的分组名称'), groupName, t('重命名分组'), '', {
+    const next = await window.lumeDialog?.prompt(t('请输入新的分组名称'), groupName, t('重命名分组'), '', {
       validate: async (value: string) => {
         const trimmed = String(value ?? '').trim();
         if (!trimmed) return t('分组名称不能为空');

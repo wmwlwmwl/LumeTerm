@@ -113,11 +113,11 @@ export default function ProbePanel(props: ProbePanelProps) {
                 <span><Search size={16} /></span>
                 <div>
                   <div>{t('注入监控脚本')}</div>
-                  <small>LuminSSH Probe v2</small>
+                  <small>LumeTerm Probe v2</small>
                 </div>
               </div>
               <div className="probe-confirm-desc">
-                {t('将在服务器写入')} <code>~/.lumin/probe.sh</code>{t('，轻量监控脚本。')}
+                {t('将在服务器写入')} <code>~/.lumeterm/probe.sh</code>{t('，轻量监控脚本。')}
               </div>
               <div className="probe-confirm-list">
                 {[

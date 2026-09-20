@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"luminssh-go/internal/config"
+	"lumeterm/internal/config"
 )
 
 // TestRecordAndLookupDisconnectedSession 验证整机断开后记录可按父/子会话 id 查到。

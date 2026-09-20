@@ -12,7 +12,7 @@ import (
 	"sync"
 	"unicode"
 
-	aiprovider "luminssh-go/internal/ai/provider"
+	aiprovider "lumeterm/internal/ai/provider"
 
 	tiktoken "github.com/pkoukk/tiktoken-go"
 )

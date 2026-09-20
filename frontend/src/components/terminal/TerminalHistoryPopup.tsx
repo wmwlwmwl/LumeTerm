@@ -94,7 +94,7 @@ export function TerminalHistoryPopup({
                   const msg = scope === 'global'
                     ? t('确定要清空全部服务器的历史指令吗？')
                     : t('确定要清空该服务器的历史指令吗？');
-                  const result = await window.luminDialog?.confirm(msg);
+                  const result = await window.lumeDialog?.confirm(msg);
                   const confirmed = typeof result === 'object' ? result?.confirmed : result === true;
                   if (!confirmed) return;
                   try {

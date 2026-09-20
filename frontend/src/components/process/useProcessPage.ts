@@ -206,7 +206,7 @@ export function useProcessPage({ sessionId, addToast, active }: UseProcessPageOp
 
   const confirmKill = async (count: number) => {
     if (localStorage.getItem('skipProcessKillConfirm') === 'true') return true;
-    const result = await window.luminDialog?.confirm(
+    const result = await window.lumeDialog?.confirm(
       t('确定要终止选中的 ') + count + t(' 个进程吗？'),
       t('操作确认'),
       t('不再询问'),

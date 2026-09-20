@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	aiprovider "luminssh-go/internal/ai/provider"
+	aiprovider "lumeterm/internal/ai/provider"
 )
 
 type aiChatCompatibleUsage struct {
