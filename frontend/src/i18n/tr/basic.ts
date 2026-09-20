@@ -913,7 +913,7 @@ export default {
   "Android 客户端": "Android istemcisi",
   "跨端说明": "Çapraz uç talimatları",
   "本产品为桌面端。Android 客户端独立仓库、分开发版，数据可通过云同步互通。": "Bu ürün masaüstü içindir. Android istemcisinin bağımsız bir deposu ve ayrı bir geliştirmesi vardır ve veriler bulut aracılığıyla senkronize edilebilir ve birlikte çalıştırılabilir.",
-  "本 Release 仅 Desktop，Android 端见 Lumin-SSH-Android": "Bu Sürüm yalnızca Masaüstü içindir; Android için Lumin-SSH-Android'e bakın",
+  "本 Release 仅 Desktop，Android 端见 LumeTerm-Android": "Bu Sürüm yalnızca Masaüstü içindir; Android için LumeTerm-Android'e bakın",
   "许可见仓库 LICENSE": "LİSANS lisansı deposuna bakın",
   "打开 Android 仓库": "Android deposunu aç",
   "Android 发行版": "Android dağıtımı",

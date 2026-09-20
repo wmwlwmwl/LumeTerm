@@ -913,7 +913,7 @@ export default {
   "Android 客户端": "Máy khách Android",
   "跨端说明": "Hướng dẫn chéo",
   "本产品为桌面端。Android 客户端独立仓库、分开发版，数据可通过云同步互通。": "Sản phẩm này dành cho máy tính để bàn. Ứng dụng khách Android có kho độc lập và quá trình phát triển riêng biệt, đồng thời dữ liệu có thể được đồng bộ hóa và tương tác thông qua đám mây.",
-  "本 Release 仅 Desktop，Android 端见 Lumin-SSH-Android": "Bản phát hành này chỉ dành cho Máy tính để bàn, xem Lumin-SSH-Android dành cho Android",
+  "本 Release 仅 Desktop，Android 端见 LumeTerm-Android": "Bản phát hành này chỉ dành cho Máy tính để bàn, xem LumeTerm-Android dành cho Android",
   "许可见仓库 LICENSE": "Xem kho lưu trữ giấy phép LICENSE",
   "打开 Android 仓库": "Mở kho lưu trữ Android",
   "Android 发行版": "Phân phối Android",

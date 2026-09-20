@@ -7,7 +7,7 @@
 - Windows 便携绿色版 ([LumeTerm-__VERSION__-windows-amd64-portable.exe](https://github.com/wmwlwmwl/LumeTerm/releases/download/v__VERSION__/LumeTerm-__VERSION__-windows-amd64-portable.exe))：内嵌 WebView2，即下即用
 - Windows 标准安装版 ([LumeTerm-__VERSION__-windows-amd64-installer.exe](https://github.com/wmwlwmwl/LumeTerm/releases/download/v__VERSION__/LumeTerm-__VERSION__-windows-amd64-installer.exe))：NSIS 安装包
 - 每个产物附带 .sha256 校验文件，自动更新时校验 SHA256 确保文件完整性
-- 本 Release **仅 Desktop**，Android 端见 [Lumin-SSH-Android](https://github.com/wmwlwmwl/Lumin-SSH-Android/releases)
+- 本 Release **仅 Desktop**，Android 端见 [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android/releases)
 - 许可见仓库 [LICENSE](LICENSE)
 
 ## 安装/卸载方法

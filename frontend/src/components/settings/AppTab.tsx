@@ -232,7 +232,7 @@ export default function AppTab({ CURRENT_VERSION, BUILD_TIME, updateInfo, checki
           {$t('本产品为桌面端。Android 客户端独立仓库、分开发版，数据可通过云同步互通。')}
         </div>
         <div className="text-sm text-tertiary leading-[1.55]">
-          {$t('本 Release 仅 Desktop，Android 端见 Lumin-SSH-Android')}
+          {$t('本 Release 仅 Desktop，Android 端见 LumeTerm-Android')}
           {' · '}
           {$t('许可见仓库 LICENSE')}
         </div>

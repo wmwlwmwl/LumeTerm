@@ -913,7 +913,7 @@ export default {
   "Android 客户端": "Androidクライアント",
   "跨端说明": "クロスエンド命令",
   "本产品为桌面端。Android 客户端独立仓库、分开发版，数据可通过云同步互通。": "本製品はデスクトップ用です。 Android クライアントには独立したウェアハウスと個別の開発があり、データはクラウドを通じて同期および相互運用できます。",
-  "本 Release 仅 Desktop，Android 端见 Lumin-SSH-Android": "このリリースはデスクトップ専用です。Android については Lumin-SSH-Android を参照してください。",
+  "本 Release 仅 Desktop，Android 端见 LumeTerm-Android": "このリリースはデスクトップ専用です。Android については LumeTerm-Android を参照してください。",
   "许可见仓库 LICENSE": "ライセンスのリポジトリを参照 LICENSE",
   "打开 Android 仓库": "Android リポジトリを開く",
   "Android 发行版": "Androidの配布",

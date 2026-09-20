@@ -1,7 +1,7 @@
 @echo off
 setlocal
 echo ==============================================
-echo        Lumin SSH Automated Builder
+echo        LumeTerm Automated Builder
 echo ==============================================
 
 if "%~1"=="" (
@@ -52,13 +52,13 @@ if "%EXE_PATH%"=="" (
 )
 
 echo [4/4] Renaming output files...
-move /y "build\bin\Lumin.exe" "build\bin\Lumin-V%VER_NUM%-portable.exe" >nul
-move /y "build\bin\Lumin-amd64-installer.exe" "build\bin\Lumin-V%VER_NUM%-amd64-installer.exe" >nul
+move /y "build\bin\LumeTerm.exe" "build\bin\LumeTerm-V%VER_NUM%-windows-amd64-portable.exe" >nul
+move /y "build\bin\LumeTerm-amd64-installer.exe" "build\bin\LumeTerm-V%VER_NUM%-windows-amd64-installer.exe" >nul
 
 echo.
 echo ==============================================
 echo   SUCCESS!
-echo   Installer: %CD%\build\bin\Lumin-V%VER_NUM%-amd64-installer.exe
-echo   Portable:  %CD%\build\bin\Lumin-V%VER_NUM%-portable.exe
+echo   Installer: %CD%\build\bin\LumeTerm-V%VER_NUM%-windows-amd64-installer.exe
+echo   Portable:  %CD%\build\bin\LumeTerm-V%VER_NUM%-windows-amd64-portable.exe
 echo ==============================================
 if "%~1"=="" pause

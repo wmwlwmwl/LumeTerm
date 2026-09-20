@@ -16,7 +16,7 @@
 
 ## Overview
 
-> **Android client** (separate repository, independently released): [Lumin-SSH-Android](https://github.com/wmwlwmwl/Lumin-SSH-Android) · [Releases](https://github.com/wmwlwmwl/Lumin-SSH-Android/releases)
+> **Android client** (separate repository, independently released): [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android) · [Releases](https://github.com/wmwlwmwl/LumeTerm-Android/releases)
 
 LumeTerm is a desktop terminal client for developers and operations teams. Built on **native Go concurrency + local WebSocket + xterm.js**, it provides a low-latency terminal experience inside a Wails desktop shell. It includes a system resource probe, remote file manager (with built-in/external editors), command history and intelligent completion, per-connection proxies, optional encrypted cloud sync, AI chat, and MCP integration — **with no Agent required on the server**.
 
@@ -369,4 +369,4 @@ See [LICENSE](LICENSE) (**LumeTerm Source License 1.1**, part of the same family
 
 This is a custom license, **not formal legal advice**. Consult a lawyer about commercial boundaries.
 
-> The desktop and Android clients are distributed from **separate repositories**; this repository's Releases are **Desktop only**. For Android, see [Lumin-SSH-Android](https://github.com/wmwlwmwl/Lumin-SSH-Android).
+> The desktop and Android clients are distributed from **separate repositories**; this repository's Releases are **Desktop only**. For Android, see [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android).

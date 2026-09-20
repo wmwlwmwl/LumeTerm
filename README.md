@@ -16,7 +16,7 @@
 
 ## 概述
 
-> **Android 客户端**（独立仓库、分开发版）：[Lumin-SSH-Android](https://github.com/wmwlwmwl/Lumin-SSH-Android) · [发行版](https://github.com/wmwlwmwl/Lumin-SSH-Android/releases)
+> **Android 客户端**（独立仓库、分开发版）：[LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android) · [发行版](https://github.com/wmwlwmwl/LumeTerm-Android/releases)
 
 LumeTerm 是一款面向开发者和运维人员的桌面终端客户端。基于 **Go 原生并发 + 本机 WebSocket + xterm.js**，在 Wails 桌面壳中提供低延迟终端体验。内置系统资源探针、远程文件管理器（内置/外置编辑器）、命令历史与智能补全、连接级代理、可选加密云同步、AI 对话与 MCP 集成等能力，**无需在服务器安装 Agent**。
 
@@ -369,4 +369,4 @@ Windows、macOS、Linux 原生构建。
 
 本许可为自定义条款，**非正式法律意见**。涉及商业边界时请自行咨询律师。
 
-> 桌面端与 Android **分仓分发**；本仓库 Release **仅 Desktop**。Android 见 [Lumin-SSH-Android](https://github.com/wmwlwmwl/Lumin-SSH-Android)。
+> 桌面端与 Android **分仓分发**；本仓库 Release **仅 Desktop**。Android 见 [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android)。

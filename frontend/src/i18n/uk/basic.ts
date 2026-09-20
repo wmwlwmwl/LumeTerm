@@ -913,7 +913,7 @@ export default {
   "Android 客户端": "Клієнт Android",
   "跨端说明": "Перехресні інструкції",
   "本产品为桌面端。Android 客户端独立仓库、分开发版，数据可通过云同步互通。": "Цей продукт призначений для робочого столу. Клієнт Android має незалежне сховище та окрему розробку, а дані можна синхронізувати та взаємодіяти через хмару.",
-  "本 Release 仅 Desktop，Android 端见 Lumin-SSH-Android": "Ця версія призначена лише для комп’ютерів, див. Lumin-SSH-Android для Android",
+  "本 Release 仅 Desktop，Android 端见 LumeTerm-Android": "Ця версія призначена лише для комп’ютерів, див. LumeTerm-Android для Android",
   "许可见仓库 LICENSE": "Перегляньте сховище ліцензії LICENSE",
   "打开 Android 仓库": "Відкрийте репозиторій Android",
   "Android 发行版": "Дистрибутив Android",
