@@ -143,7 +143,7 @@ export default function FileManagerPreferencesSection({
         <SettingRow
           definition={fmSettings.fields.maxEditSize}
           description={$t('双击或用编辑器打开文件时的最大文件大小，超过将拒绝打开以避免卡顿或内存溢出。范围 1-50，默认 5')}
-          action={<input id="fm-max-edit-size" name="fm-max-edit-size" className="input w-40 text-right" type="number" min={1} max={50} autoComplete="off" value={fileManagerMaxEditSizeMB} onChange={onFileManagerMaxEditSizeChange} />}
+          action={<div className="w-40"><input id="fm-max-edit-size" name="fm-max-edit-size" className="input w-full text-right" type="number" min={1} max={50} autoComplete="off" value={fileManagerMaxEditSizeMB} onChange={onFileManagerMaxEditSizeChange} /></div>}
         />
         <SettingsDivider />
         <div data-settings-field-id={fmSettings.fields.uncompressConflict.id} className="flex flex-col gap-2">
