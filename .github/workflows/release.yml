@@ -313,7 +313,8 @@ jobs:
       - name: Build Wails (binary + NSIS installer)
         run: |
           $env:PATH = "$env:USERPROFILE\go\bin;C:\Program Files (x86)\NSIS;" + $env:PATH
-          wails build -clean -o LumeTerm.exe --nsis -ldflags "-s -w" -upx
+          # 不加 -upx：安装包内放未压缩 exe，由 project.nsi 的 LZMA solid 压缩，体积更小；便携版在打包步骤单独 UPX
+          wails build -clean -o LumeTerm.exe --nsis -ldflags "-s -w" -trimpath
 
       - name: Package portable & installer
         shell: bash
@@ -336,6 +337,8 @@ jobs:
             fi
           }
           cp build/bin/LumeTerm.exe "build/LumeTerm-${VERSION}-windows-amd64-portable.exe"
+          # 便携版单独 UPX（--best 对齐本地 build_release.ps1），压缩后再算哈希
+          upx --best "build/LumeTerm-${VERSION}-windows-amd64-portable.exe" >/dev/null
           sha256_file "build/LumeTerm-${VERSION}-windows-amd64-portable.exe" > "build/LumeTerm-${VERSION}-windows-amd64-portable.exe.sha256"
           installer=$(ls build/bin/*-installer.exe | head -1)
           cp "${installer}" "build/LumeTerm-${VERSION}-windows-amd64-installer.exe"
