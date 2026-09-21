@@ -1,5 +1,5 @@
 // 全局配置文件
-export const APP_VERSION = '1.3.4';
+export const APP_VERSION = '1.3.5';
 export const APP_BUILD_TIME = typeof __APP_BUILD_TIME__ === 'string' ? __APP_BUILD_TIME__ : '';
 export const APP_GITHUB_REPO_URL = 'https://github.com/wmwlwmwl/LumeTerm';
 export const APP_GITHUB_ISSUES_URL = `${APP_GITHUB_REPO_URL}/issues/new`;
