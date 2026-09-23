@@ -448,6 +448,58 @@ export function normalizeTerminalPasteText(text: string) {
 }
 
 /**
+ * 多行粘贴“逐行 + 提示符回归门控”发送器。
+ * 一次性灌入多行时，上一行 \r 执行后远端 readline 尚未就绪，紧跟的行首
+ * 字符可能被吞(实测丢 1~2 字符；行首补空格可规避，侧面证实)。逐行发送并
+ * 等待 ssh-command-finished(提示符回归)事件确认上一行执行完，再发下一行，
+ * 与远端时序无关，字节零丢失。timeoutMs 兜底防提示符识别失效卡死；
+ * send 返回 false(断连等)即中止；返回的 cancel 用于清除未完成链。
+ */
+export function createGatedLineSender(opts: {
+  send: (chunk: string) => boolean;
+  armCommandFinish: () => void;
+  timeoutMs?: number;
+}): (lines: string[]) => () => void {
+  const timeoutMs = opts.timeoutMs ?? 2500;
+  let queue: string[] = [];
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let listener: (() => void) | null = null;
+
+  const releaseGate = () => {
+    if (timer !== null) { clearTimeout(timer); timer = null; }
+    if (listener !== null) { window.removeEventListener('ssh-command-finished', listener); listener = null; }
+  };
+  const cancel = () => {
+    stopped = true;
+    queue = [];
+    releaseGate();
+  };
+  const sendNext = () => {
+    if (stopped) return;
+    releaseGate();
+    const line = queue.shift();
+    if (line === undefined) return;
+    if (!opts.send(line + '\r')) { stopped = true; return; }
+    opts.armCommandFinish();
+    timer = setTimeout(sendNext, timeoutMs);
+    const onFinished = () => {
+      releaseGate();
+      sendNext();
+    };
+    listener = onFinished;
+    window.addEventListener('ssh-command-finished', onFinished);
+  };
+  return (lines: string[]) => {
+    cancel();
+    stopped = false;
+    queue = lines.filter((l) => l !== '');
+    sendNext();
+    return cancel;
+  };
+}
+
+/**
  * 读取剪贴板文本：优先走 Wails 原生剪贴板接口，绕开 navigator.clipboard.readText()
  * 在 macOS WKWebView 下弹出的 "Paste" 提示气泡（issue #263）；非 Wails 运行时
  * （浏览器 dev）调用绑定会抛错，此时回退 Clipboard API。

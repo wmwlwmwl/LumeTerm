@@ -14,6 +14,7 @@ import type { I18nKey } from '../../i18n.ts';
 import {
   DEFAULT_TERMINAL_SHORTCUTS,
   extractCommandFromBufferLine,
+  createGatedLineSender,
   formatTerminalTimestamp,
   getTerminalBufferSnapshotText,
   isInteractivePromptText,
@@ -109,6 +110,8 @@ export function useTerminalSession(deps: {
   const userPinnedRef = useRef(false);
   const lastSentPTYSizeRef = useRef<{ cols: number; rows: number }>({ cols: 0, rows: 0 });
   const ptyResizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 多行粘贴逐行发送链的取消句柄(新输入/卸载时取消,防陈旧分片后发)
+  const cancelPacedPasteRef = useRef<() => void>(() => {});
 
   const scheduleDebouncedPTYResize = useCallback((cols: number, rows: number, immediate = false) => {
     const MIN_COLS = 20;
@@ -414,6 +417,7 @@ export function useTerminalSession(deps: {
       shortcutsRef,
       wsRef,
       pendingCmdRef,
+      awaitingCommandFinishRef,
       termRef,
       termSearchInputRef,
       setShowTermSearch,
@@ -520,6 +524,15 @@ export function useTerminalSession(deps: {
     let localInputLength = 0; // 用于保护提示符，防止退格越界
     let pendingCmdReliable = true;
 
+    // 多行粘贴逐行 + 提示符回归门控(与远端时序无关)；2.5s 超时兜底防卡死
+    const gatedLineSender = createGatedLineSender({
+      send: (chunk) => {
+        if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
+        wsRef.current.send(textEncoder.encode(chunk));
+        return true;
+      },
+      armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
+    });
     term.onData((data) => {
       if ((statusRef.current === 'closed' || statusRef.current === 'error') && (data.includes('\r') || data.includes('\n'))) {
         window.dispatchEvent(new CustomEvent('ssh-reconnect-trigger', { detail: sessionId }));
@@ -535,7 +548,13 @@ export function useTerminalSession(deps: {
       userPinnedRef.current = false;
 
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(textEncoder.encode(out));
+        cancelPacedPasteRef.current?.();
+        if (out.length > 1 && out.includes('\r')) {
+          // 多行粘贴：逐行发送 + 提示符回归门控，与远端时序无关(实现见上方)
+          cancelPacedPasteRef.current = gatedLineSender(out.split('\r'));
+        } else {
+          wsRef.current.send(textEncoder.encode(out));
+        }
       }
 
       // ── 命令记录：优先读取终端可见缓冲区的当前行（屏幕上实际渲染、
@@ -679,6 +698,7 @@ export function useTerminalSession(deps: {
         clearTimeout(ptyResizeTimerRef.current);
         ptyResizeTimerRef.current = null;
       }
+      cancelPacedPasteRef.current?.();
       if (vpEl) vpEl.removeEventListener('scroll', onTermScroll);
       // 移除 wheel 监听器，避免内存泄漏
       containerRef.current?.removeEventListener('wheel', wheelHandler);

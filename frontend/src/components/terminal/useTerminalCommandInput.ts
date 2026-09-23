@@ -4,7 +4,7 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
 import { extractQuickCommandParams } from '../../utils/quickCommandParams.ts';
-import { buildWrappedMultiLineCommand, getTextareaAutocompletePopupPosition, isInteractivePromptText } from '../../utils/terminalHelpers.ts';
+import { buildWrappedMultiLineCommand, createGatedLineSender, getTextareaAutocompletePopupPosition, isInteractivePromptText } from '../../utils/terminalHelpers.ts';
 import { warnDev } from '../../utils/devLog';
 import {
   buildPathAutocompleteContext,
@@ -53,6 +53,24 @@ export function useTerminalCommandInput(deps: {
 
   const [cmdInput, setCmdInput]               = useState('');
   const cmdInputRef                           = useRef<HTMLTextAreaElement | null>(null);
+  // 多行直接会话执行的逐行发送链取消句柄(新提交时取消,防陈旧分片后发)
+  const cancelPacedPasteRef                   = useRef<() => void>(() => {});
+  // 多行直接会话执行：逐行 + 提示符回归门控发送器(单例，重渲染不重建)
+  const gatedLineSenderRef                    = useRef<((lines: string[]) => () => void) | null>(null);
+  const gatedLineSender = (() => {
+    if (!gatedLineSenderRef.current) {
+      gatedLineSenderRef.current = createGatedLineSender({
+        send: (chunk) => {
+          AppGo.WriteTerminal(sessionId, chunk).catch((err) => {
+            warnDev('WriteTerminal failed:', err);
+          });
+          return true;
+        },
+        armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
+      });
+    }
+    return gatedLineSenderRef.current;
+  })();
   const [terminalCwd, setTerminalCwd]         = useState('/');
   const [commandAutocomplete, setCommandAutocomplete] = useState(createCommandAutocompleteState());
   // 命令输入快捷键提示浮层开关（F1 切换；关闭持久化到 localStorage）
@@ -108,15 +126,24 @@ export function useTerminalCommandInput(deps: {
     const text = normalizedText.trim();
     const isBlankSubmit = !text;
     const lineCount = normalizedText.split('\n').length;
-    const finalPayload = isBlankSubmit
-      ? '\r'
-      : (multiLineWrapEnabled && lineCount > 1
-        ? buildWrappedMultiLineCommand(normalizedText)
-        : text + '\r');
     prepareScreenScrollbackRef.current(text);
-    AppGo.WriteTerminal(sessionId, finalPayload).catch((err) => {
-      warnDev('WriteTerminal failed:', err);
-    });
+    if (isBlankSubmit) {
+      AppGo.WriteTerminal(sessionId, '\r').catch((err) => {
+        warnDev('WriteTerminal failed:', err);
+      });
+    } else if (multiLineWrapEnabled && lineCount > 1) {
+      AppGo.WriteTerminal(sessionId, buildWrappedMultiLineCommand(normalizedText)).catch((err) => {
+        warnDev('WriteTerminal failed:', err);
+      });
+    } else if (lineCount > 1) {
+      // 多行直接会话执行：逐行 + 提示符回归门控，与远端时序无关
+      cancelPacedPasteRef.current?.();
+      cancelPacedPasteRef.current = gatedLineSender(text.split('\n'));
+    } else {
+      AppGo.WriteTerminal(sessionId, text + '\r').catch((err) => {
+        warnDev('WriteTerminal failed:', err);
+      });
+    }
     termRef.current?.scrollToBottom();
     if (!isBlankSubmit && text.length > 1 && !/^\d+$/.test(text) && !isInteractivePromptText(text) && !awaitingPasswordRef.current) {
       window.dispatchEvent(new CustomEvent('ssh-command-history', {

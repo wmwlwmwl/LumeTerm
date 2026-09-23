@@ -3,7 +3,7 @@ import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import type { IBufferRange } from '@xterm/xterm';
 import type { I18nKey } from '../../i18n.ts';
-import { normalizeTerminalPasteText, readClipboardText, textEncoder } from '../../utils/terminalHelpers.ts';
+import { createGatedLineSender, normalizeTerminalPasteText, readClipboardText, textEncoder } from '../../utils/terminalHelpers.ts';
 import { warnDev } from '../../utils/devLog';
 
 type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
@@ -15,6 +15,7 @@ export function useTerminalClipboard(deps: {
   containerRef: React.RefObject<HTMLDivElement | null>;
   wsRef: React.RefObject<WebSocket | null>;
   pendingCmdRef: React.RefObject<string>;
+  awaitingCommandFinishRef: React.RefObject<boolean>;
   terminalRightClickPasteOnEmptyRef: React.RefObject<boolean>;
   terminalRightClickPasteModeRef: React.RefObject<string>;
   terminalLeftClickCopyOnSelectionRef: React.RefObject<boolean>;
@@ -22,11 +23,28 @@ export function useTerminalClipboard(deps: {
   t: LooseT;
 }) {
   const {
-    termRef, containerRef, wsRef, pendingCmdRef,
+    termRef, containerRef, wsRef, pendingCmdRef, awaitingCommandFinishRef,
     terminalLeftClickCopyOnSelectionRef, terminalLeftClickCopyOnSelectionModeRef,
     t,
   } = deps;
   const terminalMouseDownSelectionRef = useRef<{ mode: 'mouseup' | 'click'; startClientX: number; startClientY: number; text?: string } | null>(null);
+  // 多行粘贴逐行发送链的取消句柄(新粘贴/卸载时取消,防陈旧分片后发)
+  const cancelPacedPasteRef = useRef<() => void>(() => {});
+  // 多行粘贴逐行 + 提示符回归门控发送器(单例，重渲染不重建，避免旧链孤悬)
+  const gatedLineSenderRef = useRef<((lines: string[]) => () => void) | null>(null);
+  const gatedLineSender = (() => {
+    if (!gatedLineSenderRef.current) {
+      gatedLineSenderRef.current = createGatedLineSender({
+        send: (chunk) => {
+          if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
+          wsRef.current.send(textEncoder.encode(chunk));
+          return true;
+        },
+        armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
+      });
+    }
+    return gatedLineSenderRef.current;
+  })();
   const isTerminalPointerDownRef = useRef(false);
   // macOS WKWebView / 系统手势可能吞掉 mouseup，导致 xterm 拖选状态机卡死（此后划动指针 = 持续划选）。
   // 主动向 document 派发合成 mouseup 闭合状态机：xterm 的选区收尾监听挂在 document 上且不校验 isTrusted；
@@ -106,7 +124,8 @@ export function useTerminalClipboard(deps: {
       const payload = normalizeTerminalPasteText(text);
       if (payload && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         pendingCmdRef.current += payload.replace(/[\x00-\x1F\x7F]/g, '');
-        wsRef.current.send(textEncoder.encode(payload));
+        cancelPacedPasteRef.current?.();
+        cancelPacedPasteRef.current = gatedLineSender(payload.split('\r'));
       }
       termRef.current?.focus();
     }).catch((err) => {
@@ -143,7 +162,8 @@ export function useTerminalClipboard(deps: {
     const payload = normalizeTerminalPasteText(selectedText);
     if (payload && wsRef.current?.readyState === WebSocket.OPEN) {
       pendingCmdRef.current += payload.replace(/[\x00-\x1F\x7F]/g, '');
-      wsRef.current.send(textEncoder.encode(payload));
+      cancelPacedPasteRef.current?.();
+      cancelPacedPasteRef.current = gatedLineSender(payload.split('\r'));
       term.clearSelection();
     }
     term.focus();

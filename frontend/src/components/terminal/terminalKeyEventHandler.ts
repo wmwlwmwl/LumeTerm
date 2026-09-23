@@ -2,7 +2,7 @@ import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { getModKey, buildCombo, isMac } from '../../utils/platform.ts';
 import { warnDev } from '../../utils/devLog';
-import { DEFAULT_TERMINAL_SHORTCUTS, TERMINAL_SIGNAL_BYTES, normalizeTerminalPasteText, readClipboardText, textEncoder } from '../../utils/terminalHelpers.ts';
+import { createGatedLineSender, DEFAULT_TERMINAL_SHORTCUTS, TERMINAL_SIGNAL_BYTES, normalizeTerminalPasteText, readClipboardText, textEncoder } from '../../utils/terminalHelpers.ts';
 
 // 自定义快捷键处理器工厂：attachCustomKeyEventHandler 回调体从 Terminal.tsx 原样搬移。
 // 修饰键策略：macOS 上 ⌘ = UI 动作（复制/粘贴/清屏/查找），物理 ⌃ = 终端控制信号
@@ -13,6 +13,7 @@ export function createTerminalKeyEventHandler(deps: {
   shortcutsRef: React.RefObject<Record<string, string> | null>;
   wsRef: React.RefObject<WebSocket | null>;
   pendingCmdRef: React.RefObject<string>;
+  awaitingCommandFinishRef: React.RefObject<boolean>;
   termRef: React.RefObject<XTerm | null>;
   termSearchInputRef: React.RefObject<HTMLInputElement | null>;
   setShowTermSearch: React.Dispatch<React.SetStateAction<boolean>>;
@@ -20,9 +21,18 @@ export function createTerminalKeyEventHandler(deps: {
   pasteTerminalSelectionToTerminal: () => void | Promise<void>;
 }) {
   const {
-    term, shortcutsRef, wsRef, pendingCmdRef, termRef, termSearchInputRef,
+    term, shortcutsRef, wsRef, pendingCmdRef, awaitingCommandFinishRef, termRef, termSearchInputRef,
     setShowTermSearch, setTermSearchQuery, pasteTerminalSelectionToTerminal,
   } = deps;
+  let lastPasteCancel: (() => void) | null = null;
+  const gatedLineSender = createGatedLineSender({
+    send: (chunk) => {
+      if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
+      wsRef.current.send(textEncoder.encode(chunk));
+      return true;
+    },
+    armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
+  });
 
   return (e: KeyboardEvent) => {
     if (e.type !== 'keydown') return true;
@@ -74,7 +84,12 @@ export function createTerminalKeyEventHandler(deps: {
         const payload = normalizeTerminalPasteText(text);
         if (payload && wsRef.current?.readyState === WebSocket.OPEN) {
           pendingCmdRef.current += payload.replace(/[\x00-\x1F\x7F]/g, '');
-          wsRef.current.send(textEncoder.encode(payload));
+          if (payload.includes('\r')) {
+            lastPasteCancel?.();
+            lastPasteCancel = gatedLineSender(payload.split('\r'));
+          } else {
+            wsRef.current.send(textEncoder.encode(payload));
+          }
         }
       }).catch((err) => {
         warnDev('Clipboard read failed:', err);
