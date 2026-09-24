@@ -1,0 +1,128 @@
+name: 问题反馈（Bug）
+description: 提交桌面端（Windows / macOS / Linux）的功能异常、崩溃或显示错误
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 提交前请先确认：
+        > 1. 已在 [Releases](https://github.com/wmwlwmwl/LumeTerm/releases) 检查是否为最新版
+        > 2. 已搜索 [现有 Issues](https://github.com/wmwlwmwl/LumeTerm/issues?q=is%3Aissue) 避免重复
+        >
+        > ⚠️ **请勿直接粘贴本机配置文件内容**：`connections.json`、`credentials.json`、`ai_providers.json` 等为明文存储，含密码、私钥、AI Key。贴日志前请务必脱敏（主机、用户名、IP、路径均可替换为 `example.com`、`user` 等占位符）。
+        >
+        > Android 端问题请到 [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android/issues/new/choose) 提交。
+
+  - type: input
+    id: version
+    attributes:
+      label: 客户端版本
+      description: 设置 → 关于 中显示的版本号（如 1.3.1）
+      placeholder: 1.3.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 操作系统
+      options:
+        - Windows
+        - macOS
+        - Linux（deb / rpm / AppImage）
+        - 其他（请在补充说明中写明发行版）
+    validations:
+      required: true
+
+  - type: input
+    id: platform-version
+    attributes:
+      label: 操作系统版本
+      description: 如 Windows 11 23H2、macOS 15.3、Ubuntu 24.04
+    validations:
+      required: false
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 所属模块
+      options:
+        - SSH 连接 / 会话
+        - 终端（回显、编码、命令块、快捷键）
+        - 本地 Shell / WSL / 串口
+        - 系统资源探针 / 进程 / 网络
+        - 远程文件管理器 / 编辑器 / 传输
+        - 仪表盘 / 服务器管理 / 分组
+        - 凭据 / 代理节点 / 端口转发
+        - 命令历史 / 补全 / 快捷指令
+        - AI 对话 / MCP
+        - 云同步 / 导入导出
+        - 主题 / 字体 / 外观 / 布局
+        - 自动更新
+        - 其他 / 不确定
+    validations:
+      required: true
+
+  - type: input
+    id: server-os
+    attributes:
+      label: 远端服务器系统（如涉及）
+      description: 仅在 SSH / 文件管理器 / 探针相关问题时填写；不确定可运行 `cat /etc/os-release`
+      placeholder: Ubuntu 22.04 / CentOS 7 / 不涉及
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请按序号写明每一步操作，便于复现
+      placeholder: |
+        1. 在仪表盘新建服务器，认证方式选择「私钥」
+        2. 点击「保存并连接」
+        3. 终端建立后立即断开，状态栏显示 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际表现
+      description: 说明实际发生了什么（崩溃、报错、显示异常等）；可在此粘贴已脱敏的报错信息，或标注「见截图」
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 报错信息
+      description: 崩溃或卡死时请附上相关日志。请逐行检查并删除密码、密钥内容、真实主机地址后再粘贴。
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: frequency
+    attributes:
+      label: 复现频率
+      options:
+        - label: 每次都复现
+        - label: 偶尔出现（有随机性）
+        - label: 仅出现一次
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 我已确认（提交前请自行核对）
+      options:
+        - label: 已升级到最新版本仍复现
+        - label: 日志与截图中的敏感信息已脱敏
+        - label: 该问题与 Android 端无关（桌面端单独复现）
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充说明
+      description: 截图可直接拖拽到下方输入框
+    validations:
+      required: false

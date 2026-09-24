@@ -1,0 +1,76 @@
+name: 功能建议
+description: 为桌面端（Windows / macOS / Linux）提出新功能或改进建议
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 提交前请先搜索 [现有 Issues](https://github.com/wmwlwmwl/LumeTerm/issues?q=is%3Aissue)，避免重复提议。
+        >
+        > 若已有人提出相同或相近需求，请直接在原 Issue 下补充使用场景，而不是新建。
+        >
+        > Android 端需求请到 [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android/issues/new/choose) 提交。
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 所属模块
+      options:
+        - SSH 连接 / 会话
+        - 终端（回显、编码、命令块、快捷键）
+        - 本地 Shell / WSL / 串口
+        - 系统资源探针 / 进程 / 网络
+        - 远程文件管理器 / 编辑器 / 传输
+        - 仪表盘 / 服务器管理 / 分组
+        - 凭据 / 代理节点 / 端口转发
+        - 命令历史 / 补全 / 快捷指令
+        - AI 对话 / MCP
+        - 云同步 / 导入导出
+        - 主题 / 字体 / 外观 / 布局
+        - 其他 / 新模块
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决的问题
+      description: 描述当前遇到的困境或低效之处，说明「为什么」需要它
+      placeholder: 管理上百台服务器时，现有分组只有一层，无法按业务线再细分 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的方案
+      description: 你希望它如何工作？越具体越好（可附草图或截图）
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 已尝试的替代方案
+      description: 现在是如何绕过的？为什么不够用？
+    validations:
+      required: false
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: 影响范围
+      options:
+        - 只影响我个人
+        - 部分用户需要
+        - 大多数终端用户都会受益
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充说明
+      description: 同类软件参考实现、成本/风险提醒等
+    validations:
+      required: false

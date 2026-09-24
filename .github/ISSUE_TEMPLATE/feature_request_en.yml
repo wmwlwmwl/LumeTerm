@@ -1,0 +1,76 @@
+name: Feature Request (English)
+description: Suggest a new feature or improvement for LumeTerm desktop
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > Please search [existing issues](https://github.com/wmwlwmwl/LumeTerm/issues?q=is%3Aissue) first to avoid duplicates.
+        >
+        > If someone already asked for the same thing, add your use case to that issue instead of opening a new one.
+        >
+        > Android requests go to the [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android/issues/new/choose) repository.
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected module
+      options:
+        - SSH connection / session
+        - Terminal (echo, encoding, command blocks, shortcuts)
+        - Local shell / WSL / serial
+        - Resource probe / processes / network
+        - Remote file manager / editor / transfer
+        - Dashboard / server list / groups
+        - Credentials / proxy nodes / port forwarding
+        - Command history / completion / quick commands
+        - AI chat / MCP
+        - Cloud sync / import & export
+        - Theme / fonts / appearance / layout
+        - Other / new module
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem you want to solve
+      description: Describe the pain point and *why* you need this
+      placeholder: With hundreds of servers, single-level groups are not enough to split by business line ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Desired solution
+      description: How should it work? Be specific (sketches and screenshots welcome)
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you tried
+      description: How do you work around it today, and why isn't that enough?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Who benefits?
+      options:
+        - Only me
+        - Some users
+        - Most desktop users
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Reference implementations in other tools, potential risks or costs
+    validations:
+      required: false

@@ -1,0 +1,128 @@
+name: Bug Report (English)
+description: Report a bug, crash or UI error in LumeTerm desktop (Windows / macOS / Linux)
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > Before submitting, please make sure:
+        > 1. You are on the [latest release](https://github.com/wmwlwmwl/LumeTerm/releases)
+        > 2. You searched [existing issues](https://github.com/wmwlwmwl/LumeTerm/issues?q=is%3Aissue) for duplicates
+        >
+        > ⚠️ **Never paste raw local config files.** (`connections.json`, `credentials.json`, `ai_providers.json`, …) are stored in plaintext and contain passwords, private keys and AI API keys. Redact them before posting: replace hosts, usernames, IPs and paths with placeholders such as `example.com` / `user`.
+        >
+        > Android issues go to the [LumeTerm-Android](https://github.com/wmwlwmwl/LumeTerm-Android/issues/new/choose) repository.
+
+  - type: input
+    id: version
+    attributes:
+      label: Client version
+      description: Shown in Settings → About
+      placeholder: 1.3.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux (deb / rpm / AppImage)
+        - Other (distro in the notes below)
+    validations:
+      required: true
+
+  - type: input
+    id: platform-version
+    attributes:
+      label: OS version
+      description: e.g. Windows 11 23H2, macOS 15.3, Ubuntu 24.04
+    validations:
+      required: false
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected module
+      options:
+        - SSH connection / session
+        - Terminal (echo, encoding, command blocks, shortcuts)
+        - Local shell / WSL / serial
+        - Resource probe / processes / network
+        - Remote file manager / editor / transfer
+        - Dashboard / server list / groups
+        - Credentials / proxy nodes / port forwarding
+        - Command history / completion / quick commands
+        - AI chat / MCP
+        - Cloud sync / import & export
+        - Theme / fonts / appearance / layout
+        - Auto update
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: server-os
+    attributes:
+      label: Remote server OS (if relevant)
+      description: For SSH / file manager / probe issues. Run `cat /etc/os-release` if unsure.
+      placeholder: Ubuntu 22.04 / CentOS 7 / N/A
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Number every step so it can be reproduced
+      placeholder: |
+        1. Create a new server on the dashboard with key-based auth
+        2. Click "Save and connect"
+        3. The session drops immediately, status bar shows ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: What actually happened (crash, error, glitch). Paste redacted errors here, or write "see screenshot".
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error output
+      description: For crashes and freezes. Check every line and remove credentials, keys and real hostnames before pasting.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - label: Always
+        - label: Sometimes (random)
+        - label: Only once
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist (please verify yourself)
+      options:
+        - label: Still reproduces on the latest version
+        - label: Logs and screenshots are redacted
+        - label: Desktop-only issue (not reproducible on Android)
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Drag and drop screenshots into this field
+    validations:
+      required: false
