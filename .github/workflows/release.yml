@@ -13,8 +13,6 @@ on:
 
 env:
   NODE_VERSION: '24'
-  WAILS_VERSION: 'v2.15.0'
-  GO_VERSION: '1.26'
 
 permissions:
   contents: write
@@ -118,7 +116,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
 
       - uses: actions/setup-node@v7
         with:
@@ -127,7 +125,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+        # 版本跟随 go.mod：CLI 必须与库版本一致，免手工维护
+        run: |
+          set -euo pipefail
+          WAILS_VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+          echo "wails ${WAILS_VERSION}"
+          go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
 
       - name: Install frontend dependencies
         run: npm install
@@ -237,7 +240,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
 
       - uses: actions/setup-node@v7
         with:
@@ -246,7 +249,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+        # 版本跟随 go.mod：CLI 必须与库版本一致，免手工维护
+        run: |
+          set -euo pipefail
+          WAILS_VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+          echo "wails ${WAILS_VERSION}"
+          go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
 
       - name: Install frontend dependencies
         run: npm install
@@ -292,7 +300,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
 
       - uses: actions/setup-node@v7
         with:
@@ -301,7 +309,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+        # 版本跟随 go.mod：CLI 必须与库版本一致，免手工维护
+        shell: bash
+        run: |
+          set -euo pipefail
+          WAILS_VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+          echo "wails ${WAILS_VERSION}"
+          go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
 
       - name: Install NSIS & UPX
         run: choco install nsis upx -y

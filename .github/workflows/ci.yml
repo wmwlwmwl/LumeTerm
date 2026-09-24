@@ -13,8 +13,6 @@ on:
 
 env:
   NODE_VERSION: '24'
-  GO_VERSION: '1.26'
-  WAILS_VERSION: 'v2.15.0'
 
 jobs:
   check:
@@ -31,7 +29,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
 
       - uses: actions/setup-node@v7
         with:
@@ -40,7 +38,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: 安装 Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+        # 版本跟随 go.mod：CLI 必须与库版本一致，免手工维护（dependabot 升级后自动跟随）
+        run: |
+          set -euo pipefail
+          WAILS_VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+          echo "wails ${WAILS_VERSION}"
+          go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
 
       - name: 安装前端依赖
         # runner 全局默认走腾讯云 npm 镜像且可能超时；GitHub runner 上用官方源更稳，
