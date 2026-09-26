@@ -70,6 +70,9 @@ Operational interpretation:
 type ServiceSettings struct {
 	Enabled           bool
 	AllowBrowserCalls bool
+	// FollowLatestTerminal 开启后,外部 AI 对某服务器的会话解析自动重定向到
+	// 该服务器最新打开的终端,避免命令继续打进旧终端标签。
+	FollowLatestTerminal bool
 }
 
 func StartServer(host Host, settings ServiceSettings) {
@@ -86,6 +89,7 @@ func StartServer(host Host, settings ServiceSettings) {
 	}
 	appendMCPLog("starting MCP server")
 	service := mcpserver.NewService(NewSessionProvider(host))
+	service.SetFollowLatestTerminal(settings.FollowLatestTerminal)
 	catalog := mcpserver.NewCatalog(service, NewFileProvider(host), NewCommandProvider(host), NewRemoteEditExecutor(host), NewTransferProvider(host))
 	if carrier, ok := host.(ActivityReporterCarrier); ok {
 		catalog.SetReporter(carrier.MCPActivityReporter())
@@ -109,7 +113,7 @@ func StartServer(host Host, settings ServiceSettings) {
 			Version:     "0.1.0",
 			Description: "MCP server for connected LumeTerm terminal sessions",
 		},
-		Instructions: "Call list_connected_sessions first and use the returned session_id for subsequent SSH-scoped tools. If a tool reports that the session's server is disconnected, call reconnect_server with that session_id to restore the connection, then retry.",
+		Instructions: "Call list_connected_sessions first and use the returned session_id for subsequent SSH-scoped tools. When a server has several terminal tabs, prefer the session marked is_latest_terminal: requests targeting an older terminal of the same server automatically run in its latest terminal. If a tool reports that the session's server is disconnected, call reconnect_server with that session_id to restore the connection, then retry.",
 			Logger:       appendMCPLog,
 		},
 		catalog,
@@ -165,7 +169,7 @@ func GetServerInfo(host Host, settings ServiceSettings) map[string]interface{} {
 		URL:          server.URL(),
 		Transport:    "streamable-http",
 		Endpoint:     "/mcp",
-		Instructions: "Call list_connected_sessions first, then use the returned session_id for subsequent tools. If a tool reports that the session's server is disconnected, call reconnect_server with that session_id, then retry.",
+		Instructions: "Call list_connected_sessions first, then use the returned session_id for subsequent tools. When a server has several terminal tabs, prefer the session marked is_latest_terminal: requests targeting an older terminal of the same server automatically run in its latest terminal. If a tool reports that the session's server is disconnected, call reconnect_server with that session_id, then retry.",
 		Logs:         getMCPLogText(),
 		Tools:        tools,
 	}

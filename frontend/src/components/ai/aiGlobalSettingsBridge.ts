@@ -48,6 +48,7 @@ export type AIGlobalSettings = {
   mcpAllowBrowserCalls: boolean
   mcpRequireApproval: boolean
   mcpActivityVisible: boolean
+  mcpTerminalFollowLatest: boolean
   terminalIsolation: boolean
   confirmDelete: boolean
   continueAfterToolRejection: boolean
@@ -96,6 +97,7 @@ const DEFAULT_AI_GLOBAL_SETTINGS: AIGlobalSettings = {
   mcpAllowBrowserCalls: false,
   mcpRequireApproval: false,
   mcpActivityVisible: false,
+  mcpTerminalFollowLatest: true,
   terminalIsolation: true,
   confirmDelete: true,
   continueAfterToolRejection: true,
@@ -354,6 +356,7 @@ export function normalizeAIGlobalSettings(settings: unknown): AIGlobalSettings {
     mcpAllowBrowserCalls: Boolean(s.mcpAllowBrowserCalls),
     mcpRequireApproval: Boolean(s.mcpRequireApproval),
     mcpActivityVisible: Boolean(s.mcpActivityVisible),
+    mcpTerminalFollowLatest: s.mcpTerminalFollowLatest !== false,
     terminalIsolation: s.terminalIsolation !== false,
     confirmDelete: s.confirmDelete !== false,
     continueAfterToolRejection: s.continueAfterToolRejection !== false,

@@ -33,10 +33,12 @@ interface MCPAccessViewProps {
   mcpAllowBrowserCalls?: boolean;
   mcpRequireApproval?: boolean;
   mcpActivityVisible?: boolean;
+  mcpTerminalFollowLatest?: boolean;
   onToggleMcpEnabled: () => void;
   onToggleMcpAllowBrowserCalls: () => void;
   onToggleMcpRequireApproval: () => void;
   onToggleMcpActivityVisible: () => void;
+  onToggleMcpTerminalFollowLatest: () => void;
 }
 
 export default function MCPAccessView({
@@ -51,10 +53,12 @@ export default function MCPAccessView({
   mcpAllowBrowserCalls = false,
   mcpRequireApproval = false,
   mcpActivityVisible = false,
+  mcpTerminalFollowLatest = true,
   onToggleMcpEnabled,
   onToggleMcpAllowBrowserCalls,
   onToggleMcpRequireApproval,
   onToggleMcpActivityVisible,
+  onToggleMcpTerminalFollowLatest,
 }: MCPAccessViewProps) {
   const { t, lang } = useTranslation();
 
@@ -112,6 +116,13 @@ export default function MCPAccessView({
             <div className="text-tertiary text-sm leading-[1.6]">{t('允许带 Origin 的浏览器请求访问本地 MCP 服务。关闭后仅允许无 Origin 的本机客户端调用')}</div>
           </div>
           <ToggleSwitch checked={mcpAllowBrowserCalls} onChange={onToggleMcpAllowBrowserCalls} disabled={!mcpEnabled} />
+        </div>
+        <div className={`p-3.5 rounded-[var(--radius-md)] bg-canvas border border-line flex justify-between items-center gap-4 ${mcpEnabled ? 'opacity-100' : 'opacity-65'}`}>
+          <div className="min-w-0">
+            <div className="text-primary text-base font-bold">{t('MCP 终端跟随最新')}</div>
+            <div className="text-tertiary text-sm leading-[1.6]">{t('默认开启。同一服务器新开终端后，外部 AI 的命令自动改到最新打开的终端执行，不再滞留旧终端')}</div>
+          </div>
+          <ToggleSwitch checked={mcpTerminalFollowLatest} onChange={onToggleMcpTerminalFollowLatest} disabled={!mcpEnabled} />
         </div>
         <div className={`p-3.5 rounded-[var(--radius-md)] bg-canvas border border-line flex justify-between items-center gap-4 ${mcpEnabled ? 'opacity-100' : 'opacity-65'}`}>
           <div className="min-w-0">
