@@ -9,8 +9,9 @@ import (
 func LoadServiceSettings(configDir string) mcp.ServiceSettings {
 	settings := ai.LoadAIGlobalSettings(configDir)
 	return mcp.ServiceSettings{
-		Enabled:           settings.MCPEnabled,
-		AllowBrowserCalls: settings.MCPAllowBrowserCalls,
+		Enabled:              settings.MCPEnabled,
+		AllowBrowserCalls:    settings.MCPAllowBrowserCalls,
+		FollowLatestTerminal: settings.MCPTerminalFollowLatest,
 	}
 }
 

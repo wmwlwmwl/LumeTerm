@@ -9,6 +9,8 @@ type SessionDescriptor struct {
 	Address string
 	Tags []string
 	SFTPAvailable bool
+	// IsLatestTerminal 表示该会话是其所在服务器上最新打开且仍存活的终端。
+	IsLatestTerminal bool
 }
 
 type ConnectedSession struct {
@@ -21,6 +23,8 @@ type ConnectedSession struct {
 	Tags []string `json:"tags,omitempty"`
 	SFTPAvailable bool `json:"sftp_available"`
 	IsChildTerminal bool `json:"is_child_terminal"`
+	// IsLatestTerminal 表示该终端是同服务器上最新打开的，外部 AI 应优先使用。
+	IsLatestTerminal bool `json:"is_latest_terminal"`
 }
 
 type SessionProvider interface {

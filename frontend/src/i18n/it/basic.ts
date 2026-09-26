@@ -1057,6 +1057,8 @@ export default {
   "允许浏览器调用": "Consenti al browser di chiamare",
   "允许带 Origin 的浏览器请求访问本地 MCP 服务。关闭后仅允许无 Origin 的本机客户端调用": "Consente alle richieste del browser con Origin di accedere ai servizi MCP locali. Dopo la chiusura sono consentite solo le chiamate client nativi senza Origin",
   "外部 MCP 操作弹窗": "Popup attività MCP esterna",
+  "MCP 终端跟随最新": "MCP segue il terminale più recente",
+  "默认开启。同一服务器新开终端后，外部 AI 的命令自动改到最新打开的终端执行，不再滞留旧终端": "Attivo per impostazione predefinita. Quando viene aperto un nuovo terminale per lo stesso server, i comandi dell'IA esterna vengono eseguiti automaticamente nel terminale più recente invece di rimanere in quello vecchio",
   "默认关闭。开启后弹出 MCP 活动弹窗，实时显示外部客户端（如 Claude Code）的操作痕迹：服务器、命令、状态、输出": "Disattivato per impostazione predefinita. Se attivato, un popup di attività MCP mostra in tempo reale le operazioni dei client esterni (es. Claude Code): server, comando, stato, output",
   "外部 MCP 写操作需审批": "Le operazioni di scrittura MCP esterne richiedono approvazione",
   "开启后，外部客户端的写操作（is_mutating）需在活动弹窗中手动批准才执行（会同时开启活动弹窗）。关闭则自动执行。": "Se attivato, le operazioni di scrittura (is_mutating) dei client esterni richiedono approvazione manuale nel popup attività (che viene attivato anch'esso). Se disattivato, vengono eseguite automaticamente.",

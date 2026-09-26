@@ -111,7 +111,7 @@ func requireSessionArgument(service *Service, arguments map[string]any) (Connect
 	session, err := service.GetConnectedSession(sessionID)
 	if err != nil {
 		if errors.Is(err, ErrSessionNotFound) {
-			return ConnectedSession{}, fmt.Errorf("session %q not found among connected sessions; call list_connected_sessions to get valid session ids, or reconnect_server if the server was disconnected", sessionID)
+			return ConnectedSession{}, fmt.Errorf("session %q not found among connected sessions; call list_connected_sessions to get valid session ids (prefer the entry marked is_latest_terminal), or reconnect_server if the server was disconnected", sessionID)
 		}
 		return ConnectedSession{}, err
 	}

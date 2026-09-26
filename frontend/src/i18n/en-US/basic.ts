@@ -1057,6 +1057,8 @@ export default {
   "允许浏览器调用": "Allow Browser Calls",
   "允许带 Origin 的浏览器请求访问本地 MCP 服务。关闭后仅允许无 Origin 的本机客户端调用": "Allow browser requests with an Origin header to access the local MCP service. When disabled, only local clients without an Origin header are allowed.",
   "外部 MCP 操作弹窗": "External MCP Activity Popup",
+  "MCP 终端跟随最新": "MCP Follows Latest Terminal",
+  "默认开启。同一服务器新开终端后，外部 AI 的命令自动改到最新打开的终端执行，不再滞留旧终端": "Enabled by default. When a new terminal is opened for the same server, external AI commands automatically run in the newest terminal instead of lingering in the old one",
   "默认关闭。开启后弹出 MCP 活动弹窗，实时显示外部客户端（如 Claude Code）的操作痕迹：服务器、命令、状态、输出": "Off by default. When enabled, an MCP activity popup appears and shows external clients' (e.g. Claude Code) operations in real time: server, command, status, output",
   "外部 MCP 写操作需审批": "External MCP write ops require approval",
   "开启后，外部客户端的写操作（is_mutating）需在活动弹窗中手动批准才执行（会同时开启活动弹窗）。关闭则自动执行。": "When enabled, write operations (is_mutating) from external clients must be approved in the activity popup before running (this also turns on the popup). When disabled, they run automatically.",

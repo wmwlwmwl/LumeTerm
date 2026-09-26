@@ -119,6 +119,7 @@ func (h Host) ListSessionDescriptors() ([]mcpserver.SessionDescriptor, error) {
 		return []mcpserver.SessionDescriptor{}, nil
 	}
 	sessionMap, sftpAvail := h.sshMgr.SnapshotSessionsAndSftpAvailability()
+	latestTerminalByConnKey := h.sshMgr.LatestTerminalIDsByConnKey()
 
 	connectionMap := make(map[string]config.Connection)
 	if h.configMgr != nil {
@@ -140,6 +141,9 @@ func (h Host) ListSessionDescriptors() ([]mcpserver.SessionDescriptor, error) {
 			GroupSessionID: sessionData.GroupSessionId,
 			ConnectionRef:  sessionData.ConnKey,
 			ConnectionID:   sessionData.ConnKey,
+			// IsLatestTerminal 标记同服务器上最新打开的终端,外部 AI 优先使用它;
+			// 开启「终端跟随最新」后,指向旧终端的请求也会自动重定向到这里。
+			IsLatestTerminal: latestTerminalByConnKey[sessionData.ConnKey] == sessionID,
 		}
 		if sftpAvail[sessionData.ConnKey] {
 			descriptor.SFTPAvailable = true

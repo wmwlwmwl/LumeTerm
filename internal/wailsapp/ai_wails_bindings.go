@@ -367,7 +367,8 @@ func (b *AIBindings) SaveAIGlobalSettings(jsonStr string) error {
 		return err
 	}
 	current := b.runtime().GetAIGlobalSettings()
-	if previous.MCPEnabled != current.MCPEnabled || previous.MCPAllowBrowserCalls != current.MCPAllowBrowserCalls {
+	if previous.MCPEnabled != current.MCPEnabled || previous.MCPAllowBrowserCalls != current.MCPAllowBrowserCalls ||
+		previous.MCPTerminalFollowLatest != current.MCPTerminalFollowLatest {
 		mcpbridge.ApplyServiceState(b.app.configManager.GetConfigDir(), newMCPHost(b.app))
 	}
 	if previous.MCPActivityVisible != current.MCPActivityVisible {

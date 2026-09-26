@@ -360,6 +360,24 @@ func (m *SSHManager) SnapshotSessionsAndSftpAvailability() (map[string]*SessionD
 	return sessions, sftpAvail
 }
 
+// LatestTerminalIDsByConnKey 返回每个连接(connKey)上最新打开且仍存活的终端 id。
+// connTerminals 按 setupSession/OpenTerminal 顺序追加、移除时保序，末尾即最新；
+// 供外部 MCP 的「终端跟随最新」能力标记与重定向使用。
+func (m *SSHManager) LatestTerminalIDsByConnKey() map[string]string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	latest := make(map[string]string, len(m.connTerminals))
+	for connKey, terminals := range m.connTerminals {
+		for i := len(terminals) - 1; i >= 0; i-- {
+			if id := terminals[i]; id != "" && m.sessions[id] != nil {
+				latest[connKey] = id
+				break
+			}
+		}
+	}
+	return latest
+}
+
 func isTransientNetError(err error) bool {
 	if err == nil {
 		return false

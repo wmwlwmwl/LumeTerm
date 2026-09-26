@@ -22,6 +22,7 @@ interface GlobalAISettingsLike {
   mcpAllowBrowserCalls?: boolean;
   mcpRequireApproval?: boolean;
   mcpActivityVisible?: boolean;
+  mcpTerminalFollowLatest?: boolean;
   continueAfterToolRejection?: boolean;
   proxyNodes?: Array<{ id?: string; name?: string; type?: string; host?: string; port?: string | number }>;
   aiRequestProxyId?: string;
@@ -265,6 +266,7 @@ export default function AIPanelSettingsOverlay({
   const mcpAllowBrowserCalls = Boolean(globalAISettings?.mcpAllowBrowserCalls);
   const mcpRequireApproval = Boolean(globalAISettings?.mcpRequireApproval);
   const mcpActivityVisible = Boolean(globalAISettings?.mcpActivityVisible);
+  const mcpTerminalFollowLatest = globalAISettings?.mcpTerminalFollowLatest !== false;
   const continueAfterToolRejection = globalAISettings?.continueAfterToolRejection !== false;
   const proxyNodes = Array.isArray(globalAISettings?.proxyNodes) ? globalAISettings.proxyNodes : [];
   const aiRequestProxyId = typeof globalAISettings?.aiRequestProxyId === 'string' ? globalAISettings.aiRequestProxyId : '';
@@ -350,12 +352,14 @@ export default function AIPanelSettingsOverlay({
                 mcpAllowBrowserCalls={mcpAllowBrowserCalls}
                 mcpRequireApproval={mcpRequireApproval}
                 mcpActivityVisible={mcpActivityVisible}
+                mcpTerminalFollowLatest={mcpTerminalFollowLatest}
                 onToggleMcpEnabled={() => onSaveGlobalAISettings?.({ mcpEnabled: !mcpEnabled })}
                 onToggleMcpAllowBrowserCalls={() => onSaveGlobalAISettings?.({ mcpAllowBrowserCalls: !mcpAllowBrowserCalls })}
                 onToggleMcpRequireApproval={() => onSaveGlobalAISettings?.(mcpRequireApproval
                   ? { mcpRequireApproval: false }
                   : { mcpRequireApproval: true, mcpActivityVisible: true })}
                 onToggleMcpActivityVisible={() => onSaveGlobalAISettings?.({ mcpActivityVisible: !mcpActivityVisible })}
+                onToggleMcpTerminalFollowLatest={() => onSaveGlobalAISettings?.({ mcpTerminalFollowLatest: !mcpTerminalFollowLatest })}
               />
             )}
             {activeTab === 'mcp-servers' ? (

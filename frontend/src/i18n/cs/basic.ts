@@ -1057,6 +1057,8 @@ export default {
   "允许浏览器调用": "Povolit prohlížeči volání",
   "允许带 Origin 的浏览器请求访问本地 MCP 服务。关闭后仅允许无 Origin 的本机客户端调用": "Umožňuje požadavkům prohlížeče s Origin přístup k místním službám MCP. Po uzavření jsou povolena pouze volání nativních klientů bez původu",
   "外部 MCP 操作弹窗": "Vyskakovací okno aktivity externího MCP",
+  "MCP 终端跟随最新": "MCP následuje nejnovější terminál",
+  "默认开启。同一服务器新开终端后，外部 AI 的命令自动改到最新打开的终端执行，不再滞留旧终端": "Ve výchozím nastavení zapnuto. Když se na stejném serveru otevře nový terminál, příkazy externí AI se automaticky spouštějí v nejnovějším terminálu místo setrvávání ve starém",
   "默认关闭。开启后弹出 MCP 活动弹窗，实时显示外部客户端（如 Claude Code）的操作痕迹：服务器、命令、状态、输出": "Ve výchozím nastavení vypnuto. Po zapnutí se zobrazí okno aktivity MCP s operacemi externích klientů (např. Claude Code) v reálném čase: server, příkaz, stav, výstup",
   "外部 MCP 写操作需审批": "Operace zápisu externího MCP vyžadují schválení",
   "开启后，外部客户端的写操作（is_mutating）需在活动弹窗中手动批准才执行（会同时开启活动弹窗）。关闭则自动执行。": "Po zapnutí vyžadují operace zápisu (is_mutating) externích klientů ruční schválení v okně aktivity (to se zároveň zapne). Vypnuto — provádějí se automaticky.",

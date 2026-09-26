@@ -1057,6 +1057,8 @@ export default {
   "允许浏览器调用": "Permite browserului să apeleze",
   "允许带 Origin 的浏览器请求访问本地 MCP 服务。关闭后仅允许无 Origin 的本机客户端调用": "Permite solicitărilor de browser cu Origin să acceseze serviciile MCP locale. După închidere sunt permise numai apelurile clientului nativ fără Origin",
   "外部 MCP 操作弹窗": "Fereastră popup pentru activitatea MCP externă",
+  "MCP 终端跟随最新": "MCP urmează cel mai recent terminal",
+  "默认开启。同一服务器新开终端后，外部 AI 的命令自动改到最新打开的终端执行，不再滞留旧终端": "Activ în mod implicit. Când se deschide un terminal nou pentru același server, comenzile AI-ului extern rulează automat în cel mai recent terminal în loc să rămână în cel vechi",
   "默认关闭。开启后弹出 MCP 活动弹窗，实时显示外部客户端（如 Claude Code）的操作痕迹：服务器、命令、状态、输出": "Implicit dezactivat. Când este activat, apare un popup de activitate MCP care afișează în timp real operațiunile clienților externi (ex. Claude Code): server, comandă, stare, ieșire",
   "外部 MCP 写操作需审批": "Operațiile de scriere MCP externe necesită aprobare",
   "开启后，外部客户端的写操作（is_mutating）需在活动弹窗中手动批准才执行（会同时开启活动弹窗）。关闭则自动执行。": "Când este activat, operațiunile de scriere (is_mutating) ale clienților externi necesită aprobare manuală în popup-ul de activitate (care se activează și el). Dezactivat, se execută automat.",

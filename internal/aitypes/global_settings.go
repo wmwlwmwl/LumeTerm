@@ -67,6 +67,9 @@ type AIGlobalSettings struct {
 	MCPAllowBrowserCalls                 bool                          `json:"mcpAllowBrowserCalls"`
 	MCPRequireApproval                   bool                          `json:"mcpRequireApproval"`
 	MCPActivityVisible                   bool                          `json:"mcpActivityVisible"`
+	// MCPTerminalFollowLatest 控制外部 MCP 会话解析是否自动跟随同服务器最新终端。
+	// 旧配置缺少该键时,LoadAIGlobalSettings 会保留默认值(true),即默认跟随。
+	MCPTerminalFollowLatest              bool                          `json:"mcpTerminalFollowLatest"`
 	TerminalIsolation                    bool                          `json:"terminalIsolation"`
 	ConfirmDelete                        bool                          `json:"confirmDelete"`
 	ContinueAfterToolRejection           bool                          `json:"continueAfterToolRejection"`
@@ -104,6 +107,7 @@ func DefaultAIGlobalSettings() AIGlobalSettings {
 		MCPAllowBrowserCalls:                 false,
 		MCPRequireApproval:                   false,
 		MCPActivityVisible:                   false,
+		MCPTerminalFollowLatest:              true,
 		TerminalIsolation:                    true,
 		ConfirmDelete:                        true,
 		ContinueAfterToolRejection:           true,

@@ -1057,6 +1057,8 @@ export default {
   "允许浏览器调用": "Cho phép trình duyệt gọi",
   "允许带 Origin 的浏览器请求访问本地 MCP 服务。关闭后仅允许无 Origin 的本机客户端调用": "Cho phép các yêu cầu trình duyệt có Origin truy cập các dịch vụ MCP cục bộ. Chỉ cho phép các cuộc gọi của khách hàng gốc không có Origin sau khi đóng",
   "外部 MCP 操作弹窗": "Cửa sổ hoạt động MCP ngoài",
+  "MCP 终端跟随最新": "MCP theo terminal mới nhất",
+  "默认开启。同一服务器新开终端后，外部 AI 的命令自动改到最新打开的终端执行，不再滞留旧终端": "Bật theo mặc định. Khi mở terminal mới cho cùng máy chủ, lệnh của AI bên ngoài sẽ tự động chạy trong terminal mới nhất thay vì còn lại ở terminal cũ",
   "默认关闭。开启后弹出 MCP 活动弹窗，实时显示外部客户端（如 Claude Code）的操作痕迹：服务器、命令、状态、输出": "Mặc định tắt. Khi bật, cửa sổ hoạt động MCP sẽ hiện thị hoạt động của client ngoài (vd. Claude Code) theo thời gian thực: máy chủ, lệnh, trạng thái, đầu ra",
   "外部 MCP 写操作需审批": "Thao tác ghi MCP bên ngoài cần được phê duyệt",
   "开启后，外部客户端的写操作（is_mutating）需在活动弹窗中手动批准才执行（会同时开启活动弹窗）。关闭则自动执行。": "Khi bật, thao tác ghi (is_mutating) từ client ngoài cần được phê duyệt thủ công trong cửa sổ hoạt động (cửa sổ cũng được bật theo). Khi tắt sẽ tự động chạy.",
