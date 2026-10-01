@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
+import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import {
   ArrowLeftRight,
   BarChart3,
@@ -15,6 +17,8 @@ import {
   Card,
   CoreHeatGrid,
   CpuBar,
+  MemoryBreakdownDonut,
+  type MemoryBreakdownItem,
   MemDonut,
   MetricCard,
   PartRow,
@@ -117,26 +121,122 @@ export function CpuSection({
 
 export function MemorySection({
   t,
+  sessionId,
+  active,
   info,
   memPct,
   dragHandleProps,
 }: {
   t: (key: I18nKey) => string;
+  sessionId: string;
+  active: boolean;
   info: ProbeInfo;
   memPct: number;
   dragHandleProps?: DragHandleProps | null;
 }) {
+  const [mode, setMode] = useState<'overview' | 'detail'>('overview');
+  const [detailProcesses, setDetailProcesses] = useState<Array<{ pid: string; cmd: string; mem: number; cpu: number }>>([]);
+  const [hoveredDetailItem, setHoveredDetailItem] = useState<MemoryBreakdownItem | null>(null);
+  const detailRequestRef = useRef(0);
+  useEffect(() => {
+    if (mode !== 'detail' || !active || !sessionId) return undefined;
+    let stopped = false;
+    const requestId = ++detailRequestRef.current;
+    setDetailProcesses([]);
+    const refresh = async () => {
+      try {
+        const list = await AppGo.GetFullProcessList(sessionId);
+        if (stopped || detailRequestRef.current !== requestId) return;
+        const next = (Array.isArray(list) ? list : [])
+          .map((item) => ({
+            pid: String(item?.pid || ''),
+            cmd: String(item?.cmd || item?.name || ''),
+            mem: Math.max(Number(item?.mem) || 0, 0),
+            cpu: Math.max(Number(item?.cpu) || 0, 0),
+          }))
+          .sort((a, b) => b.mem - a.mem)
+          .slice(0, 5);
+        setDetailProcesses(next);
+      } catch {
+        if (!stopped && detailRequestRef.current === requestId) setDetailProcesses([]);
+      }
+    };
+    void refresh();
+    const intervalSeconds = Math.max(parseInt(localStorage.getItem('probeInterval') || '3', 10) || 3, 1);
+    const timer = window.setInterval(() => { void refresh(); }, intervalSeconds * 1000);
+    return () => {
+      stopped = true;
+      ++detailRequestRef.current;
+      window.clearInterval(timer);
+      setHoveredDetailItem(null);
+    };
+  }, [active, mode, sessionId]);
   const memItems = [
-    { dot: 'var(--danger)', label: t('已用'), val: fmem(info.memUsed || 0) },
-    { dot: 'var(--warning)', label: t('缓存'), val: fmem(info.memCache || 0) },
-    { dot: 'var(--success)', label: t('空闲'), val: fmem(info.memFree || 0) },
+    { id: 'used', dot: 'var(--danger)', label: t('已用'), val: fmem(info.memUsed || 0) },
+    { id: 'cache', dot: 'var(--warning)', label: t('缓存'), val: fmem(info.memCache || 0) },
+    { id: 'free', dot: 'var(--success)', label: t('空闲'), val: fmem(info.memFree || 0) },
   ];
+  const detailItems = useMemo(() => {
+    const total = Math.max(info.memTotal || 0, 0);
+    const used = Math.min(Math.max(info.memUsed || 0, 0), total);
+    let remainingUsed = used;
+    const topProcesses = detailProcesses.map((process, index) => {
+      const value = Math.min(Math.max(process.mem || 0, 0), remainingUsed);
+      remainingUsed -= value;
+      return {
+        id: process.pid ? `process-${process.pid}` : `process-index-${index}`,
+        label: process.cmd || `${t('进程')} ${index + 1}`,
+        value,
+        color: ['var(--accent)', 'var(--info)', 'var(--danger)', 'var(--warning)', 'var(--success)'][index],
+        cpu: process.cpu,
+        description: process.pid ? `PID ${process.pid}` : undefined,
+      };
+    }).filter((item) => item.value > 0);
+    const reclaimable = Math.min(Math.max(total - used - (info.memFree || 0), 0), Math.max(total - used, 0));
+    const free = Math.max(total - used - reclaimable, 0);
+    return [
+      ...topProcesses,
+      { id: 'remaining', label: '其余进程与内核', value: remainingUsed, color: 'var(--warning)', description: '未进入前五名的进程 RSS，以及内核不可回收内存。' },
+      { id: 'reclaimable', label: t('缓存'), value: reclaimable, color: 'var(--success)', description: '文件缓存、缓冲区和可回收 Slab。' },
+      { id: 'free', label: t('空闲'), value: free, color: 'var(--text-tertiary)', description: '当前未被使用的物理内存。' },
+    ].filter((item) => item.value > 0);
+  }, [detailProcesses, info.memFree, info.memTotal, info.memUsed, t]);
   const swapPct = (info.swapTotal || 0) > 0 ? clampPct(((info.swapUsed || 0) / (info.swapTotal || 1)) * 100) : 0;
   return (
     <Card>
-      <SectionHeader icon={<MemoryStick size={14} />} title={t('内存')} badge={fmem(info.memTotal || 0)} dragHandleProps={dragHandleProps} />
+      <SectionHeader
+        icon={<MemoryStick size={14} />}
+        title={t('内存')}
+        badge={fmem(info.memTotal || 0)}
+        action={(
+          <div className="probe-memory-mode" role="group" aria-label={t('内存')}>
+            <button type="button" className={mode === 'overview' ? 'active' : ''} onClick={() => setMode('overview')}>{t('概览')}</button>
+            <button type="button" className={mode === 'detail' ? 'active' : ''} onClick={() => setMode('detail')}>{t('查看详情')}</button>
+          </div>
+        )}
+        dragHandleProps={dragHandleProps}
+      />
       <div className="probe-memory-layout">
-        <MemDonut used={info.memUsed || 0} free={info.memFree || 0} total={info.memTotal || 0} />
+        {mode === 'detail'
+          ? (
+            <div className="probe-memory-donut-wrap">
+              <MemoryBreakdownDonut items={detailItems} total={info.memTotal || 0} onItemHover={setHoveredDetailItem} />
+              {hoveredDetailItem ? (
+                <div className="probe-memory-hovercard" role="status">
+                  <div className="probe-memory-hovercard-head">
+                    <span className="probe-dot" style={{ background: hoveredDetailItem.color }} />
+                    <span title={hoveredDetailItem.label}>{hoveredDetailItem.label}</span>
+                  </div>
+                  <b>{fmem(hoveredDetailItem.value)} · {((hoveredDetailItem.value / Math.max(info.memTotal || 0, 1)) * 100).toFixed(1)}%</b>
+                  <div className="probe-memory-hovercard-detail">
+                    {typeof hoveredDetailItem.cpu === 'number' ? <span>CPU {hoveredDetailItem.cpu.toFixed(1)}%</span> : null}
+                    {hoveredDetailItem.description ? <span>{hoveredDetailItem.description}</span> : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )
+          : <MemDonut used={info.memUsed || 0} free={info.memFree || 0} total={info.memTotal || 0} />}
         <div className="probe-memory-main">
           <div className="probe-memory-total">
             <span>{t('使用率')}</span>
@@ -144,8 +244,8 @@ export function MemorySection({
           </div>
           <ProgressBar value={memPct} color={pctColor(memPct, 60, 85)} />
           <div className="probe-legend-list">
-            {memItems.map(({ dot, label, val }) => (
-              <div key={label} className="probe-legend-row">
+            {(mode === 'detail' ? detailItems.map(({ id, color, label, value }) => ({ id, dot: color, label, val: fmem(value) })) : memItems).map(({ id, dot, label, val }) => (
+              <div key={id} className="probe-legend-row">
                 <span className="probe-dot" style={{ background: dot }} />
                 <span>{label}</span>
                 <b>{val}</b>

@@ -26,6 +26,7 @@ export function useTerminalSettingsEvents(deps: {
   setCommandBlocksVisible: React.Dispatch<React.SetStateAction<boolean>>;
   setTerminalDefaultMouseCursorEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   setAltOpenHistoryEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  setAltOpenHistoryScope: React.Dispatch<React.SetStateAction<'global' | 'input'>>;
   cbExpandAllCollapsed: (term: XTerm | null) => boolean;
   cbClear: () => void;
   scheduleGutterSync: () => void;
@@ -36,7 +37,8 @@ export function useTerminalSettingsEvents(deps: {
     terminalRightClickPasteOnEmptyRef, terminalRightClickPasteModeRef,
     terminalLeftClickCopyOnSelectionRef, terminalLeftClickCopyOnSelectionModeRef,
     keywordHighlightEnabledRef, hlDecoderRef, hlStateRef,
-    setTimestampsVisible, setCommandBlocksVisible, setTerminalDefaultMouseCursorEnabled, setAltOpenHistoryEnabled,
+    setTimestampsVisible, setCommandBlocksVisible, setTerminalDefaultMouseCursorEnabled,
+    setAltOpenHistoryEnabled, setAltOpenHistoryScope,
     cbExpandAllCollapsed, cbClear, scheduleGutterSync,
   } = deps;
 
@@ -119,7 +121,11 @@ export function useTerminalSettingsEvents(deps: {
     const handleAltOpenHistoryChange = (e: Event) => {
       setAltOpenHistoryEnabled((e as CustomEvent<unknown>).detail !== false);
     };
+    const handleAltOpenHistoryScopeChange = (e: Event) => {
+      setAltOpenHistoryScope((e as CustomEvent<unknown>).detail === 'global' ? 'global' : 'input');
+    };
     window.addEventListener('alt-open-history-changed', handleAltOpenHistoryChange);
+    window.addEventListener('alt-open-history-scope-changed', handleAltOpenHistoryScopeChange);
     window.addEventListener('app-shortcuts-changed', handleShortcutsChange);
     window.addEventListener('terminal-local-echo-changed', handleLocalEchoChange);
     window.addEventListener('terminal-timestamps-changed', handleTimestampsChange);
@@ -134,6 +140,7 @@ export function useTerminalSettingsEvents(deps: {
     window.addEventListener('program-font-settings-changed', handleProgramFontSettingsChange);
     return () => {
       window.removeEventListener('alt-open-history-changed', handleAltOpenHistoryChange);
+      window.removeEventListener('alt-open-history-scope-changed', handleAltOpenHistoryScopeChange);
       window.removeEventListener('app-shortcuts-changed', handleShortcutsChange);
       window.removeEventListener('terminal-local-echo-changed', handleLocalEchoChange);
       window.removeEventListener('terminal-timestamps-changed', handleTimestampsChange);

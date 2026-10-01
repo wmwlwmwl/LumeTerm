@@ -479,6 +479,7 @@ export default {
   "终端颜色主题": "Chủ đề màu thiết bị đầu cuối",
   "注：部分快捷键行为受终端内的 Shell 设置影响。": "Lưu ý: Một số hành vi của phím tắt bị ảnh hưởng bởi cài đặt Shell trong thiết bị đầu cuối.",
   "注：macOS 上 ⌘ 为主快捷键，物理 ⌃C/⌃D 等组合始终作为终端控制信号发送。": "Lưu ý: Trên macOS, ⌘ là phím bổ trợ chính của tổ hợp phím; các tổ hợp Ctrl vật lý (ví dụ ⌃C/⌃D) luôn được gửi dưới dạng tín hiệu điều khiển terminal.",
+  "仅聚焦命令输入框时": "Only when command input is focused",
   "Alt 打开历史指令": "Mở lịch sử lệnh bằng Alt",
   "云端同步": "Đồng bộ đám mây",
   "自动同步": "Tự động đồng bộ hóa",

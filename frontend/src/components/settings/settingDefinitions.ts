@@ -411,6 +411,7 @@ const settingsTreeSource = rootNode(
         fieldNode('shortcuts.eof', 'eof', '结束终端会话 (EOF)', '', { control: 'shortcut' }),
         fieldNode('shortcuts.suspend', 'suspend', '后台挂起进程 (SIGTSTP)', '', { control: 'shortcut' }),
         fieldNode('shortcuts.clear-line', 'clearLine', '清空当前输入行', '', { control: 'shortcut' }),
+        fieldNode('shortcuts.alt-open-history-scope', 'altOpenHistoryScope', 'Alt 打开历史指令', '', { control: 'button-group' }),
         actionNode('shortcuts.reset-shortcuts', 'resetShortcuts', '恢复默认', '', { actionKey: 'resetShortcuts' }),
       ]),
     ], { targetId: 'shortcuts.copy' }),

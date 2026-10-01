@@ -479,6 +479,7 @@ export default {
   "终端颜色主题": "Terminal renk teması",
   "注：部分快捷键行为受终端内的 Shell 设置影响。": "Not: Bazı kısayol tuşu davranışları terminaldeki Kabuk ayarlarından etkilenir.",
   "注：macOS 上 ⌘ 为主快捷键，物理 ⌃C/⌃D 等组合始终作为终端控制信号发送。": "Not: macOS üzerinde ⌘ birincil kısayol değiştiricisidir; fiziksel Ctrl kombinasyonları (örn. ⌃C/⌃D) her zaman terminal kontrol sinyalleri olarak gönderilir.",
+  "仅聚焦命令输入框时": "Only when command input is focused",
   "Alt 打开历史指令": "Alt ile komut geçmişini aç",
   "云端同步": "Bulut senkronizasyonu",
   "自动同步": "Otomatik senkronizasyon",

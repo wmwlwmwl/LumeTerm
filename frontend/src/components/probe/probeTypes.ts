@@ -94,7 +94,7 @@ export interface ProbeSidebarState {
 export const PROBE_SIDEBAR_STATE_PREFIX = 'lumin.probe.sidebar.';
 export const PROBE_CARD_ORDER_KEY = 'probePanelCardOrder';
 export const PROBE_CARD_ORDER_CHANGED_EVENT = 'probeCardOrderChanged';
-export const DEFAULT_PROBE_CARD_ORDER = ['overview', 'cpu', 'memory', 'network', 'disk', 'process', 'portforward'];
+export const DEFAULT_PROBE_CARD_ORDER = ['overview', 'portforward', 'cpu', 'memory', 'network', 'disk', 'process'];
 export const PROBE_HIDE_IP_KEY = 'probeHideIP';
 export const PROBE_HIDE_IP_CHANGED_EVENT = 'probeHideIPChanged';
 

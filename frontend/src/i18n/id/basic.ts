@@ -479,6 +479,7 @@ export default {
   "终端颜色主题": "Tema warna terminal",
   "注：部分快捷键行为受终端内的 Shell 设置影响。": "Catatan: Beberapa perilaku tombol pintas dipengaruhi oleh pengaturan Shell di terminal.",
   "注：macOS 上 ⌘ 为主快捷键，物理 ⌃C/⌃D 等组合始终作为终端控制信号发送。": "Catatan: Di macOS, ⌘ adalah pengubah pintasan utama; kombinasi Ctrl fisik (mis. ⌃C/⌃D) selalu dikirim sebagai sinyal kontrol terminal.",
+  "仅聚焦命令输入框时": "Only when command input is focused",
   "Alt 打开历史指令": "Buka riwayat perintah dengan Alt",
   "云端同步": "Sinkronisasi awan",
   "自动同步": "Sinkronisasi otomatis",

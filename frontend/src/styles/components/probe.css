@@ -1210,12 +1210,27 @@
 
 .probe-memory-layout { display: flex; gap: 10px; align-items: center; }
 .probe-mem-donut { flex-shrink: 0; }
+.probe-memory-donut-wrap { position: relative; display: flex; flex: 0 0 88px; }
+.probe-mem-donut-detail { filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--text-primary) 10%, transparent)); }
+.probe-memory-detail-segment { cursor: pointer; outline: none; transition: opacity 120ms, filter 120ms; }
+.probe-memory-detail-segment:hover, .probe-memory-detail-segment:focus { filter: brightness(1.12); }
+.probe-memory-detail-segment:focus-visible { opacity: 0.9; }
+.probe-memory-mode { display: inline-flex; padding: 2px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-sunken); }
+.probe-memory-mode button { border: 0; border-radius: 3px; padding: 2px 5px; background: transparent; color: var(--probe-detail); font-size: 10px; line-height: 16px; cursor: pointer; transition: background-color 120ms, color 120ms; }
+.probe-memory-mode button:hover { color: var(--text-primary); background: var(--surface-hover); }
+.probe-memory-mode button.active { color: var(--text-primary); background: var(--surface-raised); box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 12%, transparent); }
 .probe-memory-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .probe-memory-total { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--probe-detail); }
 .probe-memory-total b { font-size: 14px; font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); }
 .probe-legend-list { display: flex; flex-direction: column; gap: 3px; }
 .probe-legend-row { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--probe-detail); min-width: 0; }
-.probe-legend-row b { margin-left: auto; font-size: 12px; font-family: var(--font-mono); color: var(--text-primary); font-weight: 600; }
+.probe-legend-row > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.probe-legend-row b { margin-left: auto; flex-shrink: 0; font-size: 12px; font-family: var(--font-mono); color: var(--text-primary); font-weight: 600; }
+.probe-memory-hovercard { position: absolute; z-index: 2; left: calc(100% + 7px); top: 50%; width: max-content; max-width: 190px; padding: 6px 8px; transform: translateY(-50%); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-overlay); box-shadow: var(--shadow-md); color: var(--text-primary); font-size: 11px; line-height: 1.35; pointer-events: none; }
+.probe-memory-hovercard-head { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.probe-memory-hovercard-head > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.probe-memory-hovercard > b { display: block; margin-top: 3px; padding-left: 11px; font-family: var(--font-mono); font-weight: 600; }
+.probe-memory-hovercard-detail { display: flex; gap: 8px; margin-top: 3px; padding-left: 11px; color: var(--probe-detail); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .probe-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .probe-swap-box { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); }
 .probe-swap-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-size: 11px; color: var(--probe-detail); }

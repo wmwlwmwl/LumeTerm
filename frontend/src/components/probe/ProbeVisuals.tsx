@@ -223,3 +223,68 @@ export const MemDonut = React.memo(function MemDonut({
     </svg>
   );
 });
+
+export interface MemoryBreakdownItem {
+  id: string;
+  label: string;
+  value: number;
+  color: string;
+  cpu?: number;
+  description?: string;
+}
+
+export const MemoryBreakdownDonut = React.memo(function MemoryBreakdownDonut({
+  items,
+  total,
+  onItemHover,
+}: {
+  items: MemoryBreakdownItem[];
+  total: number;
+  onItemHover?: (item: MemoryBreakdownItem | null) => void;
+}) {
+  const r = 33;
+  const cx = 44;
+  const cy = 44;
+  const circ = 2 * Math.PI * r;
+  const usableTotal = Math.max(total, 1);
+  const strokeWidth = 7;
+  const gap = 4;
+  const visibleItems = items.filter((item) => item.value / usableTotal > 0.005);
+  const drawableLength = Math.max(circ - visibleItems.length * gap, 0);
+  let cursor = 0;
+  return (
+    <svg width={88} height={88} viewBox="0 0 88 88" className="probe-mem-donut probe-mem-donut-detail" role="img" aria-label="Memory breakdown">
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--surface-raised)" strokeWidth={strokeWidth} />
+      <circle cx={cx} cy={cy} r={r - 8} fill="var(--surface-sunken)" />
+      {visibleItems.map((item) => {
+        const fraction = Math.min(Math.max(item.value / usableTotal, 0), 1);
+        // `round` 端点各占半个线宽；从 dash 中扣除它们，使可见弧长仍严格按原始占比。
+        const visibleLength = fraction * drawableLength;
+        const dashLength = Math.max(visibleLength - strokeWidth, 0);
+        const start = (cursor + strokeWidth / 2) / circ;
+        cursor += visibleLength + gap;
+        return (
+          <circle
+            key={item.id}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke={item.color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${dashLength} ${circ}`}
+            strokeLinecap="round"
+            transform={`rotate(${-90 + start * 360} ${cx} ${cy})`}
+            className="probe-memory-detail-segment"
+            tabIndex={0}
+            aria-label={`${item.label}: ${formatCapacity(item.value, 1)}`}
+            onMouseEnter={() => onItemHover?.(item)}
+            onMouseLeave={() => onItemHover?.(null)}
+            onFocus={() => onItemHover?.(item)}
+            onBlur={() => onItemHover?.(null)}
+          />
+        );
+      })}
+    </svg>
+  );
+});
