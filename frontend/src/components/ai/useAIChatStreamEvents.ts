@@ -1134,11 +1134,44 @@ export function useAIChatStreamEvents({
               },
             }
           })
+        // 自动恢复等收尾流程会先清掉当前 assistant 气泡（activeAssistantMessageId 置空），
+        // 错误事件到达时已找不到可挂载 errorText 的消息。此时若静默收尾，面板表现就是
+        // 「AI 不回话、任务被暂停」却看不到任何失败原因。这里兜底追加一张独立错误卡；
+        // 该卡只存在于 messages，不写入 apiMessages，不会污染后续请求上下文。
+        let visibleMessages = nextMessages
+        if (!nextMessages.some((message) => message.id === assistantMessageId && message.kind === 'assistant')) {
+          const normalizedErrorText = finalErrorText.trim()
+          const lastIndex = nextMessages.length - 1
+          const lastMessage = lastIndex >= 0 ? nextMessages[lastIndex] : null
+          const lastErrorText = lastMessage?.kind === 'assistant' && typeof lastMessage.extra?.errorText === 'string'
+            ? lastMessage.extra.errorText.trim()
+            : ''
+          if (lastMessage?.kind === 'assistant' && lastErrorText && lastErrorText === normalizedErrorText) {
+            // 「继续任务」等重试导致的连续同文错误：刷新时间而不是堆叠重复错误卡
+            visibleMessages = nextMessages.map((message, index) => (
+              index === lastIndex ? { ...message, time: formatMessageTime() } : message
+            ))
+          } else {
+            visibleMessages = [...nextMessages, {
+              id: `${assistantMessageId}-error`,
+              turnId: assistantMessageId,
+              kind: 'assistant',
+              text: '',
+              time: formatMessageTime(),
+              metrics: [],
+              streaming: false,
+              extra: {
+                requestStatusLive: false,
+                errorText: finalErrorText,
+              },
+            }]
+          }
+        }
         const nextConversation = {
           ...conversation,
           updatedAt: Date.now(),
           status: 'error',
-          messages: nextMessages,
+          messages: visibleMessages,
           apiMessages: freshPanel.apiMessages,
         }
 
@@ -1153,7 +1186,7 @@ export function useAIChatStreamEvents({
           skipNextAutomaticRequest: false,
           isCondensingContext: false,
           conversation: nextConversation,
-          messages: nextMessages,
+          messages: visibleMessages,
           apiMessages: freshPanel.apiMessages,
           recoverableToolStopReason: '',
           collaborationLocked: false,
