@@ -479,6 +479,7 @@ export default {
   "终端颜色主题": "Terminal-Farbthema",
   "注：部分快捷键行为受终端内的 Shell 设置影响。": "Hinweis: Einige Verhaltensweisen von Tastenkombinationen werden durch die Shell-Einstellungen im Terminal beeinflusst.",
   "注：macOS 上 ⌘ 为主快捷键，物理 ⌃C/⌃D 等组合始终作为终端控制信号发送。": "Hinweis: Unter macOS ist ⌘ der primäre Modifikator für Tastenkürzel; physische Ctrl-Kombinationen (z. B. ⌃C/⌃D) werden immer als Terminal-Kontrollsignale gesendet.",
+  "仅聚焦命令输入框时": "Only when command input is focused",
   "Alt 打开历史指令": "Befehlsverlauf mit Alt öffnen",
   "云端同步": "Cloud-Synchronisierung",
   "自动同步": "Automatische Synchronisierung",

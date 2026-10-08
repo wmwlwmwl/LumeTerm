@@ -480,6 +480,7 @@ export default {
   "注：部分快捷键行为受终端内的 Shell 设置影响。": "Note: Some shortcut behaviors are affected by the terminal Shell settings.",
   "注：macOS 上 ⌘ 为主快捷键，物理 ⌃C/⌃D 等组合始终作为终端控制信号发送。": "Note: On macOS, ⌘ is the primary shortcut modifier; physical Ctrl combos (e.g. ⌃C/⌃D) are always sent as terminal control signals.",
   "Alt 打开历史指令": "Open command history with Alt",
+  "仅聚焦命令输入框时": "Only when command input is focused",
   "云端同步": "Cloud Sync",
   "自动同步": "Auto Sync",
   "已开启": "Enabled",

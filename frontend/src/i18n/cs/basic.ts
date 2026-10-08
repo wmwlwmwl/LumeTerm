@@ -479,6 +479,7 @@ export default {
   "终端颜色主题": "Barevný motiv terminálu",
   "注：部分快捷键行为受终端内的 Shell 设置影响。": "Poznámka: Některá chování klávesových zkratek jsou ovlivněna nastavením prostředí v terminálu.",
   "注：macOS 上 ⌘ 为主快捷键，物理 ⌃C/⌃D 等组合始终作为终端控制信号发送。": "Poznámka: Na macOS je ⌘ hlavním modifikačním klávesem zkratek; fyzické kombinace s Ctrl (např. ⌃C/⌃D) se vždy odesílají jako řídicí signály terminálu.",
+  "仅聚焦命令输入框时": "Only when command input is focused",
   "Alt 打开历史指令": "Otevřít historii příkazů klávesou Alt",
   "云端同步": "Cloudová synchronizace",
   "自动同步": "Automatická synchronizace",

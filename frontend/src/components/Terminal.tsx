@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { SearchAddon } from '@xterm/addon-search';
@@ -63,6 +63,9 @@ export default function Terminal({
   const [showHistory, setShowHistory]         = useState(false);
   const [historyPopupPos, setHistoryPopupPos] = useState<{ left: number; bottom: number } | null>(null);
   const [altOpenHistoryEnabled, setAltOpenHistoryEnabled] = useState(localStorage.getItem('altOpenHistory') !== 'false');
+  const [altOpenHistoryScope, setAltOpenHistoryScope] = useState<'global' | 'input'>(
+    localStorage.getItem('altOpenHistoryScope') === 'global' ? 'global' : 'input',
+  );
   const [showTermSearch, setShowTermSearch]   = useState(false);
   const [termSearchQuery, setTermSearchQuery] = useState('');
   const [termSearchCaseSensitive, setTermSearchCaseSensitive] = useState(false);
@@ -114,7 +117,8 @@ export default function Terminal({
     terminalRightClickPasteOnEmptyRef, terminalRightClickPasteModeRef,
     terminalLeftClickCopyOnSelectionRef, terminalLeftClickCopyOnSelectionModeRef,
     keywordHighlightEnabledRef, hlDecoderRef, hlStateRef,
-    setTimestampsVisible, setCommandBlocksVisible, setTerminalDefaultMouseCursorEnabled, setAltOpenHistoryEnabled,
+    setTimestampsVisible, setCommandBlocksVisible, setTerminalDefaultMouseCursorEnabled,
+    setAltOpenHistoryEnabled, setAltOpenHistoryScope,
   });
 
   // ── 剪贴板 / 选区手势 ──
@@ -188,6 +192,20 @@ export default function Terminal({
     showHistory, setShowHistory, setHistoryPopupPos, historyServerId, serverId, showCommands,
     onQuickCommandsOpenChange, quickCmdsRef, setCmdInput, cmdInputRef,
   });
+
+  // 全局模式由当前活动终端独占响应；仅指令框模式仍由输入框自身处理 Alt。
+  useEffect(() => {
+    if (!isActive || !altOpenHistoryEnabled || altOpenHistoryScope !== 'global') return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.key !== 'Alt' || event.ctrlKey || event.shiftKey || event.metaKey || event.repeat) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeCommandAutocomplete();
+      openHistoryAndFocusSearch();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [altOpenHistoryEnabled, altOpenHistoryScope, closeCommandAutocomplete, isActive, openHistoryAndFocusSearch]);
 
   // ── 终端缓冲区查找 ──
   const { openTermSearch, closeTermSearch, findTermNext, findTermPrevious } = useTerminalSearch({

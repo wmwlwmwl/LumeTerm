@@ -479,6 +479,7 @@ export default {
   "终端颜色主题": "Terminalkleurenthema",
   "注：部分快捷键行为受终端内的 Shell 设置影响。": "Opmerking: Sommige gedragingen van sneltoetsen worden beïnvloed door Shell-instellingen in de terminal.",
   "注：macOS 上 ⌘ 为主快捷键，物理 ⌃C/⌃D 等组合始终作为终端控制信号发送。": "Opmerking: op macOS is ⌘ de primaire modificator voor sneltoetsen; fysieke Ctrl-combinaties (bijv. ⌃C/⌃D) worden altijd verzonden als besturingssignalen van de terminal.",
+  "仅聚焦命令输入框时": "Only when command input is focused",
   "Alt 打开历史指令": "Open de opdrachtgeschiedenis met Alt",
   "云端同步": "Cloudsynchronisatie",
   "自动同步": "Automatische synchronisatie",
