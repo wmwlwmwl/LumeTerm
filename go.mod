@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/jlaffaye/ftp v0.2.4
 	github.com/minio/minio-go/v7 v7.4.1
-	github.com/pkg/sftp v1.13.11
+	github.com/pkg/sftp v1.13.12
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/studio-b12/gowebdav v0.13.0
 	github.com/wailsapp/wails/v2 v2.17.0
