@@ -145,6 +145,10 @@ func (b transferBackend) ExecuteCommand(ctx context.Context, client *ssh.Client,
 	return b.manager.ExecuteCmdWithClientContext(ctx, client, command)
 }
 
+func (b transferBackend) ExecuteLongCommand(ctx context.Context, client *ssh.Client, command string) (string, error) {
+	return b.manager.ExecuteLongCmdWithClientContext(ctx, client, command)
+}
+
 func (b transferBackend) DeleteRemote(ctx context.Context, sessionID string, remotePath string, isDir bool) error {
 	return b.manager.DeleteItemContext(ctx, sessionID, remotePath, isDir)
 }
@@ -248,9 +252,9 @@ type SSHManager struct {
 	// recentClosed 已关闭终端 id → 关闭现场记录(所属 connKey/时间),带 TTL 与容量
 	// 上限,由 mu 保护。供外部 MCP「终端跟随最新」把已关闭标签的失效 session_id
 	// 兜底解析到同服务器最新终端,未记录的 id 不会路由到任何连接。
-	recentClosed     map[string]closedTerminalRecord
-	mu               sync.RWMutex
-	pendingMu        sync.Mutex
+	recentClosed map[string]closedTerminalRecord
+	mu           sync.RWMutex
+	pendingMu    sync.Mutex
 	// connectLocks 按 connKey 串行化 Connect 的拨号流程:防止前端手动/自动重连与
 	// MCP reconnect_server 并发对同一服务器各建一条 transport(重复连接泄漏)。
 	// connectLocksMu 保护 connectLocks 表本身;表随服务器数量增长,量级很小(数百以内)。
@@ -266,6 +270,9 @@ type SSHManager struct {
 	// apart two local/serial sessions that reused the same sessionId (fast
 	// reconnect). Guarded by mu.
 	nextGen uint64
+	// fileOps 是「右键压缩/解压/预览、递归 chmod、删除大目录」等同步等待型
+	// 远端长操作的取消注册表（opID → cancel），由 Wails binding 传入 opID。
+	fileOps *fileOperationRegistry
 }
 
 // dialAddr 拼接 host:port，自动处理 IPv6 地址
@@ -313,6 +320,7 @@ func NewSSHManager() *SSHManager {
 		reconnectLocks:   make(map[string]*sync.Mutex),
 		portForwards:     make(map[string]*managedPortForward),
 		recentClosed:     make(map[string]closedTerminalRecord),
+		fileOps:          newFileOperationRegistry(),
 		bufPool: sync.Pool{
 			New: func() any {
 				buf := make([]byte, 32768)
@@ -1293,6 +1301,9 @@ func (m *SSHManager) disconnect(sessionId string, expected *SessionData) bool {
 	disconnected = true
 	connKey := s.ConnKey
 	delete(m.sessions, sessionId)
+	// 会话关闭时取消该会话绑定的文件操作（压缩/解压/删除等），
+	// 避免远端 shell 命令继续占用失效连接。
+	m.abortSessionFileOperations(sessionId)
 	m.rememberClosedTerminal(sessionId, connKey)
 	isLocal := s.IsLocal
 	isSerial := s.IsSerial
@@ -1475,6 +1486,16 @@ func (m *SSHManager) executeCmdWithClient(client *ssh.Client, cmd string) (strin
 	return m.ExecuteCmdWithClientContext(context.Background(), client, cmd)
 }
 
+// executeLongCmdWithClient 执行已知可能超过 30s 的远端命令（压缩/解压/递归删除/git 等）。
+func (m *SSHManager) executeLongCmdWithClient(client *ssh.Client, cmd string) (string, error) {
+	return m.ExecuteCmdWithClientContextTimeout(context.Background(), client, cmd, remoteCmdLongTimeout)
+}
+
+// executeLongCmdWithClientContext 同上，但保留 ctx 取消能力（用户点取消立即关 session）。
+func (m *SSHManager) executeLongCmdWithClientContext(ctx context.Context, client *ssh.Client, cmd string) (string, error) {
+	return m.ExecuteCmdWithClientContextTimeout(ctx, client, cmd, remoteCmdLongTimeout)
+}
+
 func (m *SSHManager) waitForCommandChannel(ctx context.Context, client *ssh.Client) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -1505,14 +1526,105 @@ func (m *SSHManager) waitForCommandChannel(ctx context.Context, client *ssh.Clie
 	}
 }
 
-func (m *SSHManager) ExecuteCmdWithClientContext(ctx context.Context, client *ssh.Client, cmd string) (string, error) {
-	session, err := client.NewSession()
-	if err != nil {
-		return "", err
-	}
-	defer session.Close()
+// remoteCmdShortTimeout 是「秒级短命令」的兜底超时：stat/ls/mkdir/探测脚本这类命令
+// 30s 仍未返回基本可判定链路卡死。压缩/解压/递归删除/git 等合法长耗时操作不要用
+// 这个默认值，改走 ExecuteLongCmdWithClientContext（remoteCmdLongTimeout）。
+const remoteCmdShortTimeout = 30 * time.Second
 
-	return runCommandWithSessionContext(ctx, session, cmd, 30*time.Second)
+// remoteCmdCancelGrace 是取消/超时后等待远端进程退出的上限。
+//
+// 为什么需要：Session.Close() 只是发一个 SSH_MSG_CHANNEL_CLOSE（x/crypto 的
+// channel.Close() 是 fire-and-forget，不等对端确认），而 OpenSSH 的
+// session_close_by_channel() 在「子进程还活着」时只 detach、不 kill。也就是说
+// 无 PTY 的 exec 会话里，tar/rm/unzip 这些进程在关闭 channel 后会继续跑。
+// RFC 4254 §6.9 的 signal 请求在 OpenSSH 上是 killpg(pid, sig)，能带走整组
+// 子孙进程，所以取消时先发 SIGTERM，再等这么久让它真正退出；进程不响应
+// （非 OpenSSH 服务端、Windows cmd/PowerShell、ForceCommand 受限会话等）时
+// 才退回关闭 channel，行为与旧实现一致。
+const remoteCmdCancelGrace = time.Second
+
+// terminateRemoteCommand 尽力终止远端命令所在的进程组，并在 grace 内等待其退出。
+//
+// 这是 best-effort：Signal 以 wantReply=false 发送，拿不到服务端是否执行的确认；
+// ForceCommand/subsystem 会话会被 sshd 直接拒绝；调用方仍应把它当作「可能没停住」
+// 处理（返回的仍应是 ctx 错误，而不是命令执行结果）。
+func terminateRemoteCommand(session *ssh.Session, exited <-chan error) {
+	if session == nil {
+		return
+	}
+	_ = session.Signal(ssh.SIGTERM)
+	timer := time.NewTimer(remoteCmdCancelGrace)
+	defer timer.Stop()
+	select {
+	case <-exited:
+	case <-timer.C:
+	}
+}
+
+func (m *SSHManager) ExecuteCmdWithClientContext(ctx context.Context, client *ssh.Client, cmd string) (string, error) {
+	return m.ExecuteCmdWithClientContextTimeout(ctx, client, cmd, remoteCmdShortTimeout)
+}
+
+// ExecuteLongCmdWithClientContext 用长超时执行可能很耗时的远端命令。
+// 仍然受 ctx 取消约束：ctx 结束时立刻关闭 session，不会把远端任务留到超时。
+func (m *SSHManager) ExecuteLongCmdWithClientContext(ctx context.Context, client *ssh.Client, cmd string) (string, error) {
+	return m.ExecuteCmdWithClientContextTimeout(ctx, client, cmd, remoteCmdLongTimeout)
+}
+
+// ExecuteCmdWithClientContextTimeout 在 client 上新开 session 执行命令，
+// 以 timeout 兜底（<=0 时回落到短命令默认超时），并响应 ctx 取消。
+func (m *SSHManager) ExecuteCmdWithClientContextTimeout(ctx context.Context, client *ssh.Client, cmd string, timeout time.Duration) (string, error) {
+	if client == nil {
+		return "", fmt.Errorf("ssh client unavailable")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if timeout <= 0 {
+		timeout = remoteCmdShortTimeout
+	}
+	deadline := time.Now().Add(timeout)
+
+	type sessionResult struct {
+		session *ssh.Session
+		err     error
+	}
+	// client.NewSession() 走 SSH channel open，库本身不接受 ctx、也没有超时：
+	// 服务器卡住或 MaxSessions 打满时会永久阻塞。放到 goroutine 里，让超时/取消
+	// 能先返回；事后才打开的 session 由发送方负责关闭，避免泄漏。
+	sessionCh := make(chan sessionResult)
+	abandon := make(chan struct{})
+	go func() {
+		session, err := client.NewSession()
+		select {
+		case sessionCh <- sessionResult{session: session, err: err}:
+		case <-abandon:
+			if session != nil {
+				_ = session.Close()
+			}
+		}
+	}()
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case res := <-sessionCh:
+		if res.err != nil {
+			return "", res.err
+		}
+		if res.session == nil {
+			return "", fmt.Errorf("ssh session unavailable")
+		}
+		defer res.session.Close()
+		return runCommandWithSessionDeadline(ctx, res.session, cmd, timeout, deadline)
+	case <-ctx.Done():
+		close(abandon)
+		return "", ctx.Err()
+	case <-timer.C:
+		close(abandon)
+		return "", fmt.Errorf("command timed out after %v", timeout)
+	}
 }
 
 // runCommandWithSession 在 session 上执行命令，带超时控制
@@ -1521,6 +1633,13 @@ func runCommandWithSession(session *ssh.Session, cmd string, timeout time.Durati
 }
 
 func runCommandWithSessionContext(ctx context.Context, session *ssh.Session, cmd string, timeout time.Duration) (string, error) {
+	return runCommandWithSessionDeadline(ctx, session, cmd, timeout, time.Now().Add(timeout))
+}
+
+// runCommandWithSessionDeadline 与 runCommandWithSessionContext 相同，但使用调用方
+// 给定的绝对截止时间：这样「打开 session + 执行命令」共享同一份超时预算，
+// 又能在错误信息里保留原始 timeout。
+func runCommandWithSessionDeadline(ctx context.Context, session *ssh.Session, cmd string, timeout time.Duration, deadline time.Time) (string, error) {
 	var stdoutBuf bytes.Buffer
 	var stderrBuf bytes.Buffer
 	session.Stdout = &stdoutBuf
@@ -1536,7 +1655,13 @@ func runCommandWithSessionContext(ctx context.Context, session *ssh.Session, cmd
 		errCh <- session.Run(cmd)
 	}()
 
-	timer := time.NewTimer(timeout)
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		terminateRemoteCommand(session, errCh)
+		go session.Close()
+		return "", fmt.Errorf("command timed out after %v", timeout)
+	}
+	timer := time.NewTimer(remaining)
 	defer timer.Stop()
 
 	var ctxDone <-chan struct{}
@@ -1546,6 +1671,11 @@ func runCommandWithSessionContext(ctx context.Context, session *ssh.Session, cmd
 
 	select {
 	case err := <-errCh:
+		// 取消与命令结束可能同时就绪：优先按取消返回，避免前端把
+		// 「用户已终止」误判成 EOF/连接错误。
+		if ctx != nil && ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		stdout := stdoutBuf.String()
 		stderr := strings.TrimSpace(stderrBuf.String())
 		if err != nil && stderr != "" {
@@ -1553,9 +1683,11 @@ func runCommandWithSessionContext(ctx context.Context, session *ssh.Session, cmd
 		}
 		return stdout, err
 	case <-ctxDone:
+		terminateRemoteCommand(session, errCh)
 		go session.Close()
 		return "", ctx.Err()
 	case <-timer.C:
+		terminateRemoteCommand(session, errCh)
 		go session.Close()
 		return "", fmt.Errorf("command timed out after %v", timeout)
 	}

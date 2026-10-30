@@ -392,7 +392,10 @@ func (m *SSHManager) ExecuteGitCommand(sessionID string, repoPath string, args [
 	var output string
 	var commandErr error
 	for attempt := 0; attempt < 3; attempt++ {
-		output, commandErr = m.ExecuteCmdWithClientContext(context.Background(), client, command)
+		// git 可能很慢（clone/fetch），但仍需要一个明确上限：之前误用 30s 会打断
+		// 大仓库操作，30min 又会让 index.lock/凭据等待把 UI 挂太久。用 5min 折中
+		// （与交互式 git 终端一致）。
+		output, commandErr = m.ExecuteCmdWithClientContextTimeout(context.Background(), client, command, 5*time.Minute)
 		if commandErr == nil || !isRetryableGitChannelOpenError(commandErr) {
 			break
 		}

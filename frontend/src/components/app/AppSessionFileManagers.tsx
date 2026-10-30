@@ -8,6 +8,7 @@ export interface AppSessionFileManagersProps {
   activeSessionId: string | null;
   activeTerminalId: string | null;
   addToast: (message: string | Error, type?: string, duration?: number) => number;
+  removeToast?: (id: number) => void;
   getEffectiveTerminals: (s: SessionLike) => Array<{ id: string; label?: string }>;
 }
 
@@ -17,6 +18,7 @@ export default function AppSessionFileManagers({
   activeSessionId,
   activeTerminalId,
   addToast,
+  removeToast,
   getEffectiveTerminals,
 }: AppSessionFileManagersProps) {
   return (
@@ -30,6 +32,7 @@ export default function AppSessionFileManagers({
               sessionId={String(term.id ?? '')}
               sessionGroupId={String(session.id ?? '')}
               addToast={addToast}
+              removeToast={removeToast}
               isActive={isActive}
               initialPath={serverConfig?.fileManagerInitPath || ''}
             />

@@ -8,19 +8,31 @@ import (
 	pathpkg "path"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
+// uploadChunkStallTimeout 是单个分片写入的最长等待时间。
+// SFTP 的 WriteAt 没有超时参数，服务端活着但传输卡死时会永久阻塞前端上传请求；
+// 超时后关闭该池 client 可让阻塞的写返回错误，并把该 client 标记为丢弃不再复用。
+// 取 5min 而不是 120s：默认分片 256KiB、可配置到更大，慢链路（<40KB/s）下
+// 单分片也可能超过 2 分钟，避免把「慢但正常」误判成卡死。
+const uploadChunkStallTimeout = 5 * time.Minute
+
 type sftpUploadPool struct {
-	sshClient      *ssh.Client
-	maxClients     int
-	tuning         Tuning
-	mu             sync.Mutex
-	cond           *sync.Cond
-	idleClients    []*sftp.Client
+	sshClient   *ssh.Client
+	maxClients  int
+	tuning      Tuning
+	mu          sync.Mutex
+	cond        *sync.Cond
+	idleClients []*sftp.Client
+	// closeFns 保存每个池 client 的「先关 SSH session、再关 sftp client」关闭函数。
+	// 上传卡死时只有关闭 session 才能唤醒阻塞的 WriteAt；sftp.Client 自身拿不到
+	// 底层 session，所以必须在创建时把 closeFn 一起存下来。
+	closeFns       map[*sftp.Client]func()
 	created        int
 	closed         bool
 	onChannelDelta func(int)
@@ -58,15 +70,28 @@ func buildTunedSFTPOptions(tuning Tuning) []sftp.ClientOption {
 }
 
 func NewSFTPClient(sshClient *ssh.Client, tuning Tuning) (*sftp.Client, error) {
+	client, _, err := newPoolSFTPClient(sshClient, tuning)
+	return client, err
+}
+
+// newPoolSFTPClient 与 NewSFTPClient 行为一致，但额外返回关闭函数（先关 session
+// 再关 sftp client）。上传池必须持有它，否则卡死时 sftp.Client.Close() 会阻塞在
+// 等待 recv goroutine 上，无法唤醒阻塞中的 WriteAt。
+func newPoolSFTPClient(sshClient *ssh.Client, tuning Tuning) (*sftp.Client, func(), error) {
 	tuning = NormalizeTuning(tuning)
-	client, err := sftp.NewClient(sshClient, buildTunedSFTPOptions(tuning)...)
+	client, closeFn, err := openDedicatedSFTPClientWithOptions(sshClient, buildTunedSFTPOptions(tuning))
 	if err == nil {
-		return client, nil
+		return client, closeFn, nil
 	}
 	if tuning.MaxPacketKiB <= minMaxPacketKiB {
-		return nil, err
+		return nil, nil, err
 	}
-	return sftp.NewClient(sshClient)
+	// 与旧行为一致：服务器不接受调优包长时退回默认选项。
+	client, closeFn, fallbackErr := openDedicatedSFTPClientWithOptions(sshClient, nil)
+	if fallbackErr != nil {
+		return nil, nil, fmt.Errorf("%v; fallback: %w", err, fallbackErr)
+	}
+	return client, closeFn, nil
 }
 
 func newSFTPUploadPool(sshClient *ssh.Client, maxClients int, tuning Tuning) *sftpUploadPool {
@@ -77,6 +102,7 @@ func newSFTPUploadPool(sshClient *ssh.Client, maxClients int, tuning Tuning) *sf
 		sshClient:  sshClient,
 		maxClients: maxClients,
 		tuning:     NormalizeTuning(tuning),
+		closeFns:   make(map[*sftp.Client]func()),
 	}
 	pool.cond = sync.NewCond(&pool.mu)
 	return pool
@@ -101,13 +127,16 @@ func (p *sftpUploadPool) Acquire() (*sftp.Client, error) {
 		p.created++
 		p.mu.Unlock()
 		p.notifyChannelDelta(1)
-		client, err := NewSFTPClient(p.sshClient, p.tuning)
+		client, closeFn, err := newPoolSFTPClient(p.sshClient, p.tuning)
 		if err == nil {
 			p.mu.Lock()
 			closed := p.closed
+			if !closed {
+				p.closeFns[client] = closeFn
+			}
 			p.mu.Unlock()
 			if closed {
-				_ = client.Close()
+				closeFn()
 				return nil, fmt.Errorf("upload pool closed")
 			}
 			return client, nil
@@ -149,6 +178,24 @@ func (p *sftpUploadPool) notifyChannelDelta(delta int) {
 	}
 }
 
+// closeClient 关闭池 client：优先用创建时保存的 closeFn（先关 SSH session，
+// 让卡死的 WriteAt/Read 立刻返回），且不阻塞调用方。
+func (p *sftpUploadPool) closeClient(client *sftp.Client) {
+	if client == nil {
+		return
+	}
+	p.mu.Lock()
+	closeFn := p.closeFns[client]
+	delete(p.closeFns, client)
+	p.mu.Unlock()
+	if closeFn != nil {
+		closeFn()
+		return
+	}
+	// 理论上不会走到这里；兜底也不要同步 Close，避免卡死调用方。
+	go func() { _ = client.Close() }()
+}
+
 func (p *sftpUploadPool) releaseClient(client *sftp.Client, broken bool) {
 	if client == nil {
 		return
@@ -161,7 +208,7 @@ func (p *sftpUploadPool) releaseClient(client *sftp.Client, broken bool) {
 		}
 		p.cond.Broadcast()
 		p.mu.Unlock()
-		_ = client.Close()
+		p.closeClient(client)
 		if released {
 			p.notifyChannelDelta(-1)
 		}
@@ -181,11 +228,24 @@ func (p *sftpUploadPool) Close() {
 	p.closed = true
 	idleClients := append([]*sftp.Client(nil), p.idleClients...)
 	p.idleClients = nil
+	// 只清理 idle client 的 closeFn；仍被借出的 client 保留映射，
+	// 等调用方 Discard/Release 时仍能走「先关 session」的正确路径。
+	idleCloseFns := make(map[*sftp.Client]func(), len(idleClients))
+	for _, client := range idleClients {
+		if closeFn, ok := p.closeFns[client]; ok {
+			idleCloseFns[client] = closeFn
+			delete(p.closeFns, client)
+		}
+	}
 	releasedCount := p.created
 	p.created = 0
 	p.mu.Unlock()
 	for _, client := range idleClients {
-		_ = client.Close()
+		if closeFn := idleCloseFns[client]; closeFn != nil {
+			closeFn()
+			continue
+		}
+		go func(c *sftp.Client) { _ = c.Close() }(client)
 	}
 	p.cond.Broadcast()
 	if releasedCount > 0 {
@@ -361,8 +421,22 @@ func (s *Service) UploadChunkBase64(taskID string, fileID string, chunkIndex int
 		return err
 	}
 	clientBroken := false
+	var stalled atomic.Bool
+	stallFired := make(chan struct{})
+	stallTimer := time.AfterFunc(uploadChunkStallTimeout, func() {
+		defer close(stallFired)
+		stalled.Store(true)
+		// 先关 SSH session 再关 sftp client，唤醒阻塞中的 WriteAt/Close；
+		// 该 client 不再复用。
+		task.pool.closeClient(client)
+	})
 	defer func() {
-		if clientBroken {
+		// Stop 返回 false 说明回调已触发或正在触发；等它把 stalled 置位，
+		// 避免把「即将被关闭」的 client 放回 idle 池。
+		if !stallTimer.Stop() {
+			<-stallFired
+		}
+		if clientBroken || stalled.Load() {
 			task.pool.Discard(client)
 			return
 		}
@@ -371,10 +445,17 @@ func (s *Service) UploadChunkBase64(taskID string, fileID string, chunkIndex int
 	fileHandle, err := client.OpenFile(fileState.tempPath, os.O_CREATE|os.O_WRONLY)
 	if err != nil {
 		clientBroken = true
+		if stalled.Load() {
+			return fmt.Errorf("upload chunk stalled for %s", uploadChunkStallTimeout)
+		}
 		return err
 	}
 	written, writeErr := fileHandle.WriteAt(content, offset)
 	closeErr := fileHandle.Close()
+	if stalled.Load() {
+		clientBroken = true
+		return fmt.Errorf("upload chunk stalled for %s", uploadChunkStallTimeout)
+	}
 	if writeErr != nil {
 		clientBroken = true
 		return writeErr

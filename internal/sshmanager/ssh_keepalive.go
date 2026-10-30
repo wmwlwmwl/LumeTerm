@@ -152,6 +152,10 @@ func (m *SSHManager) cleanupClientTransport(connKey string, client *ssh.Client, 
 	delete(m.probeRunFailed, connKey)
 	delete(m.remoteFeatures, connKey)
 	m.mu.Unlock()
+	// 连接级清理：取消该连接下所有终端的在途文件操作（压缩/解压/删除等）。
+	for _, terminalId := range terminalIds {
+		m.abortSessionFileOperations(terminalId)
+	}
 	globalSSHChannelUsage.forget(connKey)
 	if netConn != nil {
 		_ = netConn.Close()

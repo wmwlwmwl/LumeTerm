@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +16,19 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+)
+
+const (
+	// R2 各操作按「预期耗时可不同」分别设置上限：List 在多对象/跨区高延迟时
+	// 明显更慢，Read/Write 是配置小文件，Delete 只发一个请求。
+	r2ListTimeout   = 60 * time.Second
+	r2ReadTimeout   = 60 * time.Second
+	r2WriteTimeout  = 60 * time.Second
+	r2DeleteTimeout = 30 * time.Second
+	// r2RetryBackoff 是幂等操作（List/Read）失败后的单次重试间隔。
+	r2RetryBackoff = 500 * time.Millisecond
+	// r2SlowOpThreshold 超过该耗时打慢日志，便于定位「同步偶发失败」类反馈。
+	r2SlowOpThreshold = 5 * time.Second
 )
 
 type R2Config struct {
@@ -161,10 +178,70 @@ type r2Storage struct {
 
 func (s *r2Storage) MaxBackups() int { return s.maxBackups }
 
+// runR2WithRetry 对幂等 R2 操作做一次快速重试，覆盖偶发 5xx/429/408/网络超时；
+// 业务错误（403/404 等）与 ctx 取消不重试。
+func runR2WithRetry(op string, attempt func() error) error {
+	var lastErr error
+	for i := 0; i < 2; i++ {
+		if err := attempt(); err != nil {
+			lastErr = err
+			if !isRetryableR2Error(err) || i == 1 {
+				break
+			}
+			log.Printf("[r2] %s failed (attempt %d), retrying in %v: %v", op, i+1, r2RetryBackoff, err)
+			time.Sleep(r2RetryBackoff)
+			continue
+		}
+		return nil
+	}
+	return lastErr
+}
+
+func isRetryableR2Error(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	var apiErr minio.ErrorResponse
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == 408 || apiErr.StatusCode == 429 || apiErr.StatusCode >= 500
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return netErr.Timeout()
+	}
+	return errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF)
+}
+
+func logSlowR2Op(op string, started time.Time) {
+	if elapsed := time.Since(started); elapsed >= r2SlowOpThreshold {
+		log.Printf("[r2] slow op=%s elapsed=%v", op, elapsed)
+	}
+}
+
 func (s *r2Storage) ListFiles() ([]RemoteFile, error) {
-	// R2 操作加 30s 超时，避免网络挂起时永久阻塞
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	started := time.Now()
+	var result []RemoteFile
+	err := runR2WithRetry("list", func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), r2ListTimeout)
+		defer cancel()
+		files, listErr := s.listFilesOnce(ctx)
+		if listErr != nil {
+			return listErr
+		}
+		result = files
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	logSlowR2Op("list", started)
+	return result, nil
+}
+
+func (s *r2Storage) listFilesOnce(ctx context.Context) ([]RemoteFile, error) {
 	objects := s.cli.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{Prefix: s.prefix})
 	var result []RemoteFile
 	var firstErr error
@@ -192,22 +269,34 @@ func (s *r2Storage) ListFiles() ([]RemoteFile, error) {
 }
 
 func (s *r2Storage) ReadFile(name string) ([]byte, error) {
-	// R2 操作加 30s 超时，避免网络挂起时永久阻塞
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	obj, err := s.cli.GetObject(ctx, s.bucket, s.prefix+name, minio.GetObjectOptions{})
+	started := time.Now()
+	var data []byte
+	err := runR2WithRetry("read", func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), r2ReadTimeout)
+		defer cancel()
+		obj, getErr := s.cli.GetObject(ctx, s.bucket, s.prefix+name, minio.GetObjectOptions{})
+		if getErr != nil {
+			return getErr
+		}
+		defer obj.Close()
+		buf := new(bytes.Buffer)
+		if _, readErr := buf.ReadFrom(obj); readErr != nil {
+			return readErr
+		}
+		data = buf.Bytes()
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer obj.Close()
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(obj)
-	return buf.Bytes(), err
+	logSlowR2Op("read "+name, started)
+	return data, nil
 }
 
 func (s *r2Storage) WriteFile(name string, data []byte) error {
-	// R2 操作加 30s 超时，避免网络挂起时永久阻塞
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	started := time.Now()
+	defer func() { logSlowR2Op("write "+name, started) }()
+	ctx, cancel := context.WithTimeout(context.Background(), r2WriteTimeout)
 	defer cancel()
 	objectKey := s.prefix + name
 	_, err := s.cli.PutObject(ctx, s.bucket, objectKey, bytes.NewReader(data), int64(len(data)), minio.PutObjectOptions{
@@ -217,8 +306,9 @@ func (s *r2Storage) WriteFile(name string, data []byte) error {
 }
 
 func (s *r2Storage) DeleteFile(name string) error {
-	// R2 操作加 30s 超时，避免网络挂起时永久阻塞
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	started := time.Now()
+	defer func() { logSlowR2Op("delete "+name, started) }()
+	ctx, cancel := context.WithTimeout(context.Background(), r2DeleteTimeout)
 	defer cancel()
 	return s.cli.RemoveObject(ctx, s.bucket, s.prefix+name, minio.RemoveObjectOptions{})
 }

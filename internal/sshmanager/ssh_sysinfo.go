@@ -1,6 +1,8 @@
 package sshmanager
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -16,13 +18,25 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	// probeRunTimeout 是探针脚本运行（双采样 + /proc 遍历）的上限。
+	// 30s 对低配/高负载服务器偏紧，会出现「偶发采集失败」，这里放宽到 45s。
+	probeRunTimeout = 45 * time.Second
+	// probeDiagnoseTimeout 是失败诊断（重跑探针 + 环境检查）的预算；诊断只是
+	// 给错误信息补充细节，不能把总耗时继续拉长。
+	probeDiagnoseTimeout = 10 * time.Second
+	// probeTotalBudget 是一次采集（部署 + 运行 + 诊断）的总预算。
+	// 必须明显小于前端等待上限（ProbePanel/BigScreen 均为 90s），否则前端会先放弃，
+	// 后端还在空转。
+	probeTotalBudget = 70 * time.Second
+)
+
 // deployProbeScript writes probe.sh to ~/.lumeterm and /tmp/.lumeterm on the remote
 // server via an exec-channel heredoc. 不依赖 SFTP：OpenWrt/Dropbear 未装
 // openssh-sftp-server 时系统监控也必须可用。
-// ponytail: 远程命令可能慢,用 select+timer 兜底 probeDeployTimeout,
-// 避免服务器慢时永久阻塞 getSystemInfo 致前端定时器链断裂(数据不刷新)。
-// 超时后 goroutine 仍在后台等待 IO,随 keepalive 关连时退出(可接受临时泄漏)。
-func (m *SSHManager) deployProbeScript(client *ssh.Client, connKey string) error {
+// 部署超时/ctx 取消会真正关闭远端 session（不再留下后台 IO goroutine），
+// 由 probeDeployTimeout 兜底，避免服务器慢时永久阻塞 getSystemInfo 致前端定时器链断裂。
+func (m *SSHManager) deployProbeScript(ctx context.Context, client *ssh.Client, connKey string) error {
 	if client == nil {
 		return fmt.Errorf("PROBE_CLIENT_UNAVAILABLE")
 	}
@@ -37,14 +51,21 @@ func (m *SSHManager) deployProbeScript(client *ssh.Client, connKey string) error
 		return fmt.Errorf("PROBE_DEPLOY_GIVEUP|%d", failCount)
 	}
 
-	done := make(chan error, 1)
-	go func() { done <- m.deployProbeScriptIO(client) }()
+	deployCtx, cancel := context.WithTimeout(ctx, probeDeployTimeout)
+	defer cancel()
 
-	timer := time.NewTimer(probeDeployTimeout)
-	defer timer.Stop()
+	done := make(chan error, 1)
+	go func() { done <- m.deployProbeScriptIO(deployCtx, client) }()
 
 	select {
 	case err := <-done:
+		// 超时与 done 可能同时就绪；优先按「部署超时」上报，保持前端依赖的错误码。
+		if deployCtx.Err() != nil {
+			if errors.Is(deployCtx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("PROBE_DEPLOY_TIMEOUT|%v", probeDeployTimeout)
+			}
+			return deployCtx.Err()
+		}
 		if err != nil {
 			m.mu.Lock()
 			m.probeFailed[connKey]++
@@ -56,10 +77,13 @@ func (m *SSHManager) deployProbeScript(client *ssh.Client, connKey string) error
 		delete(m.probeFailed, connKey) // 成功后重置失败计数，避免历史累计误判永久禁用
 		m.mu.Unlock()
 		return nil
-	case <-timer.C:
-		// ponytail: 超时多因服务器慢而非部署逻辑错误,不在此自增 probeFailed:
+	case <-deployCtx.Done():
+		// 超时多因服务器慢而非部署逻辑错误,不在此自增 probeFailed:
 		// 自增会快速触达 ≥3 永久放弃,反而失去恢复机会。下次重试仍走部署。
-		return fmt.Errorf("PROBE_DEPLOY_TIMEOUT|%v", probeDeployTimeout)
+		if errors.Is(deployCtx.Err(), context.DeadlineExceeded) {
+			return fmt.Errorf("PROBE_DEPLOY_TIMEOUT|%v", probeDeployTimeout)
+		}
+		return deployCtx.Err()
 	}
 }
 
@@ -76,11 +100,11 @@ chmod 755 ~/.lumeterm/probe.sh /tmp/.lumeterm/probe.sh 2>/dev/null
 [ -f ~/.lumeterm/probe.sh ] || [ -f /tmp/.lumeterm/probe.sh ]`, dynamicProbeScript)
 }
 
-// deployProbeScriptIO 通过 exec 通道写入 probe.sh,无超时(由调用方 deployProbeScript 兜底)。
+// deployProbeScriptIO 通过 exec 通道写入 probe.sh；超时/取消由 ctx 关闭 session。
 // 命令包在 sh -c 中执行:远端登录 shell 可能是 fish/csh 等不支持 heredoc 的
 // shell,强制走 POSIX sh 保证部署命令语义一致(与运行端 buildProbeScriptRunCommand 同理)。
-func (m *SSHManager) deployProbeScriptIO(client *ssh.Client) error {
-	_, err := m.executeCmdWithClient(client, wrapShCmd(probeDeployCmd()))
+func (m *SSHManager) deployProbeScriptIO(ctx context.Context, client *ssh.Client) error {
+	_, err := m.ExecuteCmdWithClientContext(ctx, client, wrapShCmd(probeDeployCmd()))
 	if err != nil {
 		return fmt.Errorf("PROBE_DEPLOY_IO|%v", err)
 	}
@@ -103,9 +127,11 @@ func buildProbeScriptRunCommand(probeArg string) string {
 	return fmt.Sprintf(`sh -c 'f=~/.lumeterm/probe.sh; if [ -f "$f" ]; then sh "$f"%s; else sh /tmp/.lumeterm/probe.sh%s; fi'`, probeArg, probeArg)
 }
 
-func (m *SSHManager) diagnoseProbeScriptFailure(client *ssh.Client, probeArg string) string {
+func (m *SSHManager) diagnoseProbeScriptFailure(ctx context.Context, client *ssh.Client, probeArg string) string {
 	diagCmd := fmt.Sprintf(`sh -c 'f=~/.lumeterm/probe.sh; alt=/tmp/.lumeterm/probe.sh; if [ -f "$f" ]; then target="$f"; elif [ -f "$alt" ]; then target="$alt"; else echo "probe script not found"; echo "home candidate:$f"; echo "tmp candidate:$alt"; exit 0; fi; echo "target:$target"; ls -ld "$(dirname "$target")" 2>&1; ls -l "$target" 2>&1; command -v sh 2>&1; sh "$target"%s 2>&1 | head -n 20'`, probeArg)
-	out, err := m.executeCmdWithClient(client, diagCmd)
+	diagCtx, cancel := context.WithTimeout(ctx, probeDiagnoseTimeout)
+	defer cancel()
+	out, err := m.ExecuteCmdWithClientContextTimeout(diagCtx, client, diagCmd, probeDiagnoseTimeout)
 	parts := make([]string, 0, 2)
 	if trimmedOut := strings.TrimSpace(out); trimmedOut != "" {
 		parts = append(parts, trimmedOut)
@@ -215,7 +241,12 @@ func (m *SSHManager) getSystemInfoWithMode(sessionId string, includeNetworkConne
 	connKey := s.ConnKey
 	m.mu.RUnlock()
 
-	if err := m.deployProbeScript(client, connKey); err != nil {
+	// 一次采集（部署 + 运行 + 诊断）共享总预算：保证后端最坏耗时明显小于前端
+	// 等待上限（ProbePanel/BigScreen 90s），避免前端先放弃、后端还在空转。
+	probeCtx, cancelProbe := context.WithTimeout(context.Background(), probeTotalBudget)
+	defer cancelProbe()
+
+	if err := m.deployProbeScript(probeCtx, client, connKey); err != nil {
 		return nil, err
 	}
 
@@ -228,9 +259,9 @@ func (m *SSHManager) getSystemInfoWithMode(sessionId string, includeNetworkConne
 		// GetSystemInfo 需要 top 进程；GetNetworkInfo(NetworkPage) 不需要进程列表
 		probeArg = " procs"
 	}
-	out, err := m.executeCmdWithClient(client, buildProbeScriptRunCommand(probeArg))
+	out, err := m.ExecuteCmdWithClientContextTimeout(probeCtx, client, buildProbeScriptRunCommand(probeArg), probeRunTimeout)
 	if err != nil || len(strings.TrimSpace(out)) == 0 {
-		// ponytail: 偶发失败(服务器慢/30s 超时)不立即删 probeDeployed 重走部署,
+		// ponytail: 偶发失败(服务器慢/运行超时)不立即删 probeDeployed 重走部署,
 		// 避免每次重试都重新 heredoc 传输探针脚本。连续失败 3 次才怀疑脚本损坏,强制重新部署。
 		m.mu.Lock()
 		m.probeRunFailed[connKey]++
@@ -246,7 +277,7 @@ func (m *SSHManager) getSystemInfoWithMode(sessionId string, includeNetworkConne
 		if trimmedOut := strings.TrimSpace(out); trimmedOut != "" {
 			detailParts = append(detailParts, "stdout: "+trimmedOut)
 		}
-		if diagnostic := m.diagnoseProbeScriptFailure(client, probeArg); diagnostic != "" {
+		if diagnostic := m.diagnoseProbeScriptFailure(probeCtx, client, probeArg); diagnostic != "" {
 			detailParts = append(detailParts, "diagnostics: "+diagnostic)
 		}
 		if len(detailParts) == 0 {

@@ -912,19 +912,58 @@ func (a *App) WriteFile(sessionId string, path string, content string) error {
 	return a.sshManager.WriteFile(sessionId, path, content)
 }
 
+// appFileOperationSeq 为未传 operationId 的调用生成兜底 id（老前端兼容）。
+var appFileOperationSeq atomic.Uint64
+
+// beginFileOperation 为「同步等待型远端长操作」注册可取消 ctx。
+// 前端每次操作生成 operationId 并随 binding 传入，取消时调用 AbortFileOperation。
+func (a *App) beginFileOperation(sessionId string, operationId string) (context.Context, func(), error) {
+	if a == nil || a.sshManager == nil {
+		return nil, nil, fmt.Errorf("ssh manager unavailable")
+	}
+	opID := strings.TrimSpace(operationId)
+	if opID == "" {
+		opID = fmt.Sprintf("fileop-%d-%d", time.Now().UnixNano(), appFileOperationSeq.Add(1))
+	}
+	return a.sshManager.BeginFileOperation(sessionId, opID)
+}
+
+// AbortFileOperation 取消指定 operationId 的文件操作（压缩/解压/预览/chmod/删除）。
+func (a *App) AbortFileOperation(operationId string) error {
+	if a == nil || a.sshManager == nil {
+		return fmt.Errorf("ssh manager unavailable")
+	}
+	return a.sshManager.AbortFileOperation(strings.TrimSpace(operationId))
+}
+
 // DeleteItem deletes a file or directory via SFTP
-func (a *App) DeleteItem(sessionId string, path string, isDir bool) error {
-	return a.sshManager.DeleteItem(sessionId, path, isDir)
+func (a *App) DeleteItem(sessionId string, path string, isDir bool, operationId string) error {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return a.sshManager.DeleteItemContext(ctx, sessionId, path, isDir)
 }
 
 // DeleteItemShell 用 rm -rf 删除
-func (a *App) DeleteItemShell(sessionId string, path string) error {
-	return a.sshManager.DeleteItemShell(sessionId, path)
+func (a *App) DeleteItemShell(sessionId string, path string, operationId string) error {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return a.sshManager.DeleteItemShellContext(ctx, sessionId, path)
 }
 
 // BatchDeleteItemShell 用一条rm -rf path1 path2 ... 批量删除
-func (a *App) BatchDeleteItemShell(sessionId string, paths []string) error {
-	return a.sshManager.BatchDeleteItemShell(sessionId, paths)
+func (a *App) BatchDeleteItemShell(sessionId string, paths []string, operationId string) error {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return a.sshManager.BatchDeleteItemShellContext(ctx, sessionId, paths)
 }
 
 // Mkdir creates a directory via SFTP
@@ -997,32 +1036,57 @@ func (a *App) ResolveDirectoryPath(sessionId string, path string) (string, error
 	return a.sshManager.ResolveDirectoryPath(sessionId, path)
 }
 
-func (a *App) ChownFile(sessionId string, path string, owner string, group string, recursive bool) error {
-	return a.sshManager.ChownFile(sessionId, path, owner, group, recursive)
+func (a *App) ChownFile(sessionId string, path string, owner string, group string, recursive bool, operationId string) error {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return a.sshManager.ChownFileContext(ctx, sessionId, path, owner, group, recursive)
 }
 
 // ChmodFile changes file permissions via SFTP or recursively via chmod -R
-func (a *App) ChmodFile(sessionId string, path string, mode string, recursive bool) error {
-	return a.sshManager.ChmodFile(sessionId, path, mode, recursive)
+func (a *App) ChmodFile(sessionId string, path string, mode string, recursive bool, operationId string) error {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return a.sshManager.ChmodFileContext(ctx, sessionId, path, mode, recursive)
 }
 
 // CompressItem archives a file or directory on the remote server
-func (a *App) CompressItem(sessionId string, remotePath string) error {
-	return a.sshManager.CompressItem(sessionId, remotePath)
+func (a *App) CompressItem(sessionId string, remotePath string, operationId string) error {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return a.sshManager.CompressItemContext(ctx, sessionId, remotePath)
 }
 
 // PreviewSmartUncompressItem previews smart extract destination without modifying files.
-func (a *App) PreviewSmartUncompressItem(sessionId string, remotePath string) (map[string]interface{}, error) {
-	return a.sshManager.PreviewSmartUncompressItem(sessionId, remotePath)
+func (a *App) PreviewSmartUncompressItem(sessionId string, remotePath string, operationId string) (map[string]interface{}, error) {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
+	return a.sshManager.PreviewSmartUncompressItemContext(ctx, sessionId, remotePath)
 }
 
 // UncompressItemWithStrategy extracts an archive on the remote server using a caller-provided conflict strategy.
-func (a *App) UncompressItemWithStrategy(sessionId string, remotePath string, strategy string) error {
-	return a.sshManager.UncompressItemWithStrategy(sessionId, remotePath, strategy)
+func (a *App) UncompressItemWithStrategy(sessionId string, remotePath string, strategy string, operationId string) error {
+	ctx, done, err := a.beginFileOperation(sessionId, operationId)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return a.sshManager.UncompressItemWithStrategyContext(ctx, sessionId, remotePath, strategy)
 }
 
 // UncompressItem extracts an archive on the remote server using the saved smart extract strategy.
-func (a *App) UncompressItem(sessionId string, remotePath string) error {
+func (a *App) UncompressItem(sessionId string, remotePath string, operationId string) error {
 	strategy := "auto_rename"
 	if a != nil && a.configManager != nil {
 		settings := a.configManager.GetFileManagerSettings()
@@ -1030,7 +1094,7 @@ func (a *App) UncompressItem(sessionId string, remotePath string) error {
 			strategy = config.NormalizeFileManagerSmartUncompressConflictStrategy(configuredStrategy)
 		}
 	}
-	return a.sshManager.UncompressItemWithStrategy(sessionId, remotePath, strategy)
+	return a.UncompressItemWithStrategy(sessionId, remotePath, strategy, operationId)
 }
 
 func (a *App) InstallUnzip(sessionId string) error {

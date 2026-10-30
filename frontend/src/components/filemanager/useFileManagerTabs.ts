@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
+import { createFileOperationId } from '../../utils/fileOperations.ts';
 import {
   FILE_MANAGER_LAYOUT_MODE_SIDEBAR_DUAL,
   FILE_MANAGER_NEW_TAB_PATH_MODE_INHERIT_CURRENT,
@@ -659,7 +660,7 @@ export function useFileManagerTabs(deps: ReturnType<typeof useFileManagerCore> &
     }
     const parentPath = getParentPath(normalizedTargetPath);
     try {
-      await AppGo.DeleteItemShell(sessionId, normalizedTargetPath);
+      await AppGo.DeleteItemShell(sessionId, normalizedTargetPath, createFileOperationId('tab-delete'));
       addToast?.(`${t('已删除')}: ${displayName}`, 'success');
       updateFileManagerTabPath(tabId, parentPath, { resetSelection: true, clearCache: true });
       if (tabId === activeFileManagerTabIdRef.current) {

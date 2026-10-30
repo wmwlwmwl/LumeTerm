@@ -3,8 +3,10 @@ package sshmanager
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	pathpkg "path"
 	"sort"
@@ -14,7 +16,46 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
+
+	"lumeterm/internal/stallguard"
+	"lumeterm/internal/transfer"
 )
+
+// openFileReadSFTP 优先为单次文件读取打开专用 SFTP 通道：共享 client 的 Read
+// 没有超时参数，服务端活着但传输卡死时会永久阻塞；专用通道可配合看门狗关闭，
+// 且不会误伤终端/其它传输。拿不到专用通道（本地 session、通道数超限）时
+// 回退共享 client（无看门狗，保持旧行为）。
+func (m *SSHManager) openFileReadSFTP(sessionId string) (*sftp.Client, *stallguard.Guard, func(), error) {
+	var shared *sftp.Client
+	if client, sftpClient, err := m.GetClientEntry(sessionId); err == nil {
+		shared = sftpClient
+		if client != nil {
+			dedicated, closeFn, openErr := transfer.OpenDedicatedSFTPClient(client, transfer.DefaultTuning())
+			if openErr == nil {
+				guard := stallguard.New(stallguard.DefaultIdleLimit, stallguard.DefaultInterval, closeFn)
+				return dedicated, guard, closeFn, nil
+			}
+			log.Printf("[file] dedicated sftp unavailable, fallback to shared: %v", openErr)
+		}
+	}
+	if shared == nil {
+		var err error
+		shared, err = m.GetSFTPClient(sessionId)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	return shared, nil, func() {}, nil
+}
+
+// wrapSFTPReadStall 把看门狗已触发的信息补进读错误。
+func wrapSFTPReadStall(guard *stallguard.Guard, err error) error {
+	if err == nil || guard == nil || !guard.Stalled() {
+		return err
+	}
+	return fmt.Errorf("%w (last error: %v)", guard.Err(), err)
+}
 
 func normalizeRemotePath(input string) string {
 	trimmed := strings.TrimSpace(strings.ReplaceAll(input, "\\", "/"))
@@ -43,6 +84,15 @@ func remoteParentPath(input string) string {
 func isRemotePathNotFound(err error) bool {
 	if err == nil {
 		return false
+	}
+	// 优先看错误码：SFTP 的 SSH_FX_NO_SUCH_FILE 才是权威信号，文本只作兜底
+	// （不同服务端/语言环境的文案不一样，例如 Windows sftp-server 会返回中文）。
+	if errors.Is(err, os.ErrNotExist) {
+		return true
+	}
+	var statusErr *sftp.StatusError
+	if errors.As(err, &statusErr) && statusErr.Code == 2 { // SSH_FX_NO_SUCH_FILE
+		return true
 	}
 	lower := strings.ToLower(err.Error())
 	return strings.Contains(lower, "no such file") || strings.Contains(lower, "not found") || strings.Contains(lower, "does not exist")
@@ -374,6 +424,11 @@ func (m *SSHManager) GetPathOwnership(sessionId string, path string) (PathOwners
 }
 
 func (m *SSHManager) ChownFile(sessionId string, path string, owner string, group string, recursive bool) error {
+	return m.ChownFileContext(context.Background(), sessionId, path, owner, group, recursive)
+}
+
+// ChownFileContext 与 ChownFile 相同，但递归 chown 走可取消的 ctx 通道。
+func (m *SSHManager) ChownFileContext(ctx context.Context, sessionId string, path string, owner string, group string, recursive bool) error {
 	spec := buildChownSpec(owner, group)
 	if spec == "" {
 		return nil
@@ -382,14 +437,22 @@ func (m *SSHManager) ChownFile(sessionId string, path string, owner string, grou
 	if recursive {
 		prefix = "-R "
 	}
-	return m.execRemoteCmdLong(context.Background(), sessionId, fmt.Sprintf("chown %s-- %s %s", prefix, shellQuotePath(spec), shellQuotePath(path)))
+	return m.execRemoteCmdLong(ctx, sessionId, fmt.Sprintf("chown %s-- %s %s", prefix, shellQuotePath(spec), shellQuotePath(path)))
 }
 
 func (m *SSHManager) ChmodFile(sessionId string, path string, modeStr string, recursive bool) error {
+	return m.ChmodFileContext(context.Background(), sessionId, path, modeStr, recursive)
+}
+
+// ChmodFileContext 与 ChmodFile 相同，但递归 chmod 走可取消的 ctx 通道。
+func (m *SSHManager) ChmodFileContext(ctx context.Context, sessionId string, path string, modeStr string, recursive bool) error {
 	modeValue := strings.TrimSpace(modeStr)
 	modeInt, err := strconv.ParseInt(modeValue, 8, 32)
 	if err != nil {
 		return fmt.Errorf("invalid mode: %w", err)
+	}
+	if err := ensureContextActive(ctx); err != nil {
+		return err
 	}
 	if !recursive {
 		sftpClient, err := m.GetSFTPClient(sessionId)
@@ -402,7 +465,7 @@ func (m *SSHManager) ChmodFile(sessionId string, path string, modeStr string, re
 	if err != nil {
 		return err
 	}
-	_, err = m.executeCmdWithClient(client, "chmod -R "+modeValue+" -- "+shellQuotePath(path))
+	_, err = m.executeLongCmdWithClientContext(ctx, client, "chmod -R "+modeValue+" -- "+shellQuotePath(path))
 	return err
 }
 
@@ -414,20 +477,24 @@ func (m *SSHManager) ReadFileContext(ctx context.Context, sessionId string, path
 	if err := ensureContextActive(ctx); err != nil {
 		return "", err
 	}
-	sftpClient, err := m.GetSFTPClient(sessionId)
+	sftpClient, stall, closeSFTP, err := m.openFileReadSFTP(sessionId)
 	if err != nil {
 		return "", err
+	}
+	defer closeSFTP()
+	if stall != nil {
+		defer stall.Stop()
 	}
 
 	f, err := sftpClient.Open(path)
 	if err != nil {
-		return "", err
+		return "", wrapSFTPReadStall(stall, err)
 	}
 	defer f.Close()
 
 	stat, err := f.Stat()
 	if err != nil {
-		return "", err
+		return "", wrapSFTPReadStall(stall, err)
 	}
 
 	const maxFileSize = 50 * 1024 * 1024
@@ -442,6 +509,9 @@ func (m *SSHManager) ReadFileContext(ctx context.Context, sessionId string, path
 		if err := ensureContextActive(ctx); err != nil {
 			return "", err
 		}
+		if stall != nil {
+			stall.Touch()
+		}
 		n, readErr := f.Read(buf)
 		if n > 0 {
 			b.Write(buf[:n])
@@ -450,7 +520,7 @@ func (m *SSHManager) ReadFileContext(ctx context.Context, sessionId string, path
 			break
 		}
 		if readErr != nil {
-			return "", readErr
+			return "", wrapSFTPReadStall(stall, readErr)
 		}
 	}
 	return b.String(), nil
@@ -468,20 +538,24 @@ func (m *SSHManager) ReadFileBytesContext(ctx context.Context, sessionId string,
 	if err := ensureContextActive(ctx); err != nil {
 		return nil, err
 	}
-	sftpClient, err := m.GetSFTPClient(sessionId)
+	sftpClient, stall, closeSFTP, err := m.openFileReadSFTP(sessionId)
 	if err != nil {
 		return nil, err
+	}
+	defer closeSFTP()
+	if stall != nil {
+		defer stall.Stop()
 	}
 
 	f, err := sftpClient.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, wrapSFTPReadStall(stall, err)
 	}
 	defer f.Close()
 
 	stat, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, wrapSFTPReadStall(stall, err)
 	}
 
 	const maxFileSize = 50 * 1024 * 1024
@@ -496,6 +570,9 @@ func (m *SSHManager) ReadFileBytesContext(ctx context.Context, sessionId string,
 		if err := ensureContextActive(ctx); err != nil {
 			return nil, err
 		}
+		if stall != nil {
+			stall.Touch()
+		}
 		n, readErr := f.Read(buf)
 		if n > 0 {
 			b.Write(buf[:n])
@@ -504,7 +581,7 @@ func (m *SSHManager) ReadFileBytesContext(ctx context.Context, sessionId string,
 			break
 		}
 		if readErr != nil {
-			return nil, readErr
+			return nil, wrapSFTPReadStall(stall, readErr)
 		}
 	}
 	return b.Bytes(), nil
@@ -578,8 +655,9 @@ func rmRfCmd(path string) string {
 	return "rm -rf " + shellQuotePath(path)
 }
 
-// remoteCmdLongTimeout 是文件复制/移动这类可能很耗时操作（大文件 cp/mv）的超时上限。
-// executeCmdWithClientContext 固定 30 秒，对大文件 cp 会过早超时，故这里使用更长上限。
+// remoteCmdLongTimeout 是「合法但可能很耗时」的远端操作统一超时上限：
+// 大文件 cp/mv、tar 压缩/解压、rm -rf 大目录、git clone/fetch 等。
+// 这类操作走 ExecuteLongCmdWithClientContext；executeCmdWithClient 的 30s 只用于短命令。
 const remoteCmdLongTimeout = 30 * time.Minute
 
 const (
@@ -597,6 +675,9 @@ type smartUncompressPlan struct {
 	TargetPath   string
 	TargetKind   string
 	TargetExists bool
+	// RootName 是 direct 模式解压后在 remoteDir 下产生的顶层名字
+	// （single_file 的文件名 / single_root_dir 的目录名），用于取消时清理新产生的输出。
+	RootName string
 }
 
 func normalizeSmartUncompressConflictStrategy(value string) string {
@@ -680,9 +761,11 @@ func buildSmartUncompressPlan(remoteDir string, base string, members []string, s
 		normalizedMembers = []string{smartUncompressTargetBaseName(base)}
 	}
 	if len(normalizedMembers) == 1 && !strings.HasSuffix(normalizedMembers[0], "/") {
+		rootName := strings.SplitN(strings.TrimSpace(normalizedMembers[0]), "/", 2)[0]
 		return smartUncompressPlan{
-			Mode:   smartUncompressModeDirect,
-			Reason: "single_file",
+			Mode:     smartUncompressModeDirect,
+			Reason:   "single_file",
+			RootName: rootName,
 		}
 	}
 	topLevelName := ""
@@ -714,8 +797,9 @@ func buildSmartUncompressPlan(remoteDir string, base string, members []string, s
 	}
 	if sawEntry && allInSingleTopLevelDir && topLevelName != "" {
 		return smartUncompressPlan{
-			Mode:   smartUncompressModeDirect,
-			Reason: "single_root_dir",
+			Mode:     smartUncompressModeDirect,
+			Reason:   "single_root_dir",
+			RootName: topLevelName,
 		}
 	}
 	targetName := strings.TrimSpace(smartUncompressTargetBaseName(base))
@@ -771,12 +855,8 @@ func (m *SSHManager) execRemoteCmdLong(ctx context.Context, sessionId string, cm
 	if err != nil {
 		return err
 	}
-	session, err := client.NewSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-	_, err = runCommandWithSessionContext(ctx, session, cmd, remoteCmdLongTimeout)
+	// 复用统一的长命令通道：它同时处理 NewSession 的取消/超时与 session 关闭。
+	_, err = m.ExecuteLongCmdWithClientContext(ctx, client, cmd)
 	return err
 }
 
@@ -795,25 +875,225 @@ func (m *SSHManager) DeleteItemContext(ctx context.Context, sessionId string, pa
 	if err != nil {
 		return err
 	}
-	if isDir {
-		if sftpClient != nil {
-			if err := sftpClient.RemoveAll(path); err == nil {
-				return ensureContextActive(ctx)
+	if !isDir {
+		if sftpClient == nil {
+			sftpClient, err = m.GetSFTPClient(sessionId)
+			if err != nil {
+				return err
 			}
 		}
-		_, err := m.ExecuteCmdWithClientContext(ctx, client, rmRfCmd(path))
-		return err
-	}
-	if sftpClient == nil {
-		sftpClient, err = m.GetSFTPClient(sessionId)
-		if err != nil {
+		if err := ensureContextActive(ctx); err != nil {
 			return err
 		}
+		return sftpClient.Remove(path)
 	}
-	if err := ensureContextActive(ctx); err != nil {
-		return err
+
+	// 目录：本地 session 的 SFTP 是内置服务（本地磁盘，不会网络挂起），直接 RemoveAll；
+	// 远端 session 优先用一条 rm -rf：SFTP RemoveAll 是逐目录项 RPC，十万级文件要跑很久
+	// 且中途卡住没有任何超时/取消手段，rm -rf 走长超时通道，可被 ctx 取消。
+	// rm 的退出码不可全信（Windows cmd 不解析 POSIX 单引号，会「静默成功」），
+	// 所以统一走 removeRemotePaths：执行后复核，必要时回退 SFTP。
+	m.mu.RLock()
+	sd, hasSd := m.sessions[sessionId]
+	m.mu.RUnlock()
+	if hasSd && sd.IsLocal {
+		if sftpClient == nil {
+			sftpClient, err = m.GetSFTPClient(sessionId)
+			if err != nil {
+				return err
+			}
+		}
+		return sftpClient.RemoveAll(path)
 	}
-	return sftpClient.Remove(path)
+	return m.removeRemotePaths(ctx, sessionId, client, sftpClient, rmRfCmd(path), []string{path}, isWindowsSSHServer(client))
+}
+
+// isWindowsServerVersion 判断 SSH 服务端 banner 是否来自 Windows OpenSSH。
+// Windows OpenSSH 的版本串形如 "SSH-2.0-OpenSSH_for_Windows_9.5"。
+// 这是零成本的远端系统信号（握手时已经拿到），不用额外执行探测命令。
+func isWindowsServerVersion(version []byte) bool {
+	return bytes.Contains(bytes.ToLower(version), []byte("windows"))
+}
+
+func isWindowsSSHServer(client *ssh.Client) bool {
+	if client == nil {
+		return false
+	}
+	return isWindowsServerVersion(client.ServerVersion())
+}
+
+// deleteVerifyTimeout 是删除后 SFTP 复核的上限。共享 SFTP client 没有看门狗，
+// Lstat 在服务端卡死时会永久阻塞，不能让删除调用跟着挂住。
+const deleteVerifyTimeout = 5 * time.Second
+
+// remotePathRemoved 用 SFTP Lstat 复核一次删除的结果。
+// verifiable=false 表示没有可用 SFTP、或 Lstat 报的不是「不存在」（例如权限不足），
+// 这时保留旧行为（相信 rm 的退出码），避免因为复核不了就把成功的删除判成失败。
+func remotePathRemoved(sftpClient *sftp.Client, path string) (removed bool, verifiable bool) {
+	if sftpClient == nil || strings.TrimSpace(path) == "" {
+		return false, false
+	}
+	if _, err := sftpClient.Lstat(path); err != nil {
+		if isRemotePathNotFound(err) {
+			return true, true
+		}
+		return false, false
+	}
+	return false, true
+}
+
+// remotePathRemovedBounded 在超时/取消边界内执行一次复核。
+// 超时或取消都返回 verifiable=false：调用方保留「相信 rm 退出码」的旧行为，
+// 并在返回前用 ensureContextActive 把用户取消映射成 ctx 错误。
+//
+// done 带缓冲，超时后后台 goroutine 仍能写完退出；但如果 Lstat 本身被卡住
+// （服务端不响应 SFTP 请求），该 goroutine 会挂到连接被拆掉为止——这是在不关
+// 共享 client 的前提下能做的兜底，至少调用方不会被拖住。
+func remotePathRemovedBounded(ctx context.Context, check func() (bool, bool), timeout time.Duration) (removed bool, verifiable bool) {
+	type verifyResult struct {
+		removed    bool
+		verifiable bool
+	}
+	done := make(chan verifyResult, 1)
+	go func() {
+		removed, verifiable := check()
+		done <- verifyResult{removed: removed, verifiable: verifiable}
+	}()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	var ctxDone <-chan struct{}
+	if ctx != nil {
+		ctxDone = ctx.Done()
+	}
+	select {
+	case res := <-done:
+		return res.removed, res.verifiable
+	case <-ctxDone:
+		return false, false
+	case <-timer.C:
+		log.Printf("[ssh] 删除后 SFTP 复核超时（%v），按无法复核处理", timeout)
+		return false, false
+	}
+}
+
+// sftpClientForVerify 返回可用于复核/回退的 SFTP 客户端；拿不到时返回 nil。
+func (m *SSHManager) sftpClientForVerify(sessionId string, sftpClient *sftp.Client) *sftp.Client {
+	if sftpClient != nil {
+		return sftpClient
+	}
+	client, err := m.GetSFTPClient(sessionId)
+	if err != nil {
+		return nil
+	}
+	return client
+}
+
+// removePathsViaSFTP 用 SFTP RemoveAll 删除一批路径（回退路径，无超时但可靠）。
+func (m *SSHManager) removePathsViaSFTP(ctx context.Context, sessionId string, sftpClient *sftp.Client, paths []string, reason string) error {
+	if sftpClient == nil {
+		client, getErr := m.GetSFTPClient(sessionId)
+		if getErr != nil {
+			return fmt.Errorf("%s; sftp unavailable: %w", reason, getErr)
+		}
+		sftpClient = client
+	}
+	for _, path := range paths {
+		if err := ensureContextActive(ctx); err != nil {
+			return err
+		}
+		if err := sftpClient.RemoveAll(path); err != nil {
+			return fmt.Errorf("%s; sftp remove failed: %w", reason, err)
+		}
+	}
+	return ensureContextActive(ctx)
+}
+
+// removeRemotePaths 删除远端路径（文件或目录），返回 nil 表示已确认删除：
+//
+//  1. Windows 远端（banner 判定）直接走 SFTP：cmd.exe 不解析 POSIX 单引号，
+//     `rm -rf 'C:\dir'` 里的单引号会变成路径字面量的一部分——要么静默成功
+//     （-f 让不存在的路径被忽略），要么把路径里的 & | 当成命令分隔符（注入风险）。
+//  2. 其它远端先走 rm -rf（长超时通道，可被 ctx 取消），再用 SFTP Lstat 复核：
+//     退出码 0 但目标仍在（自定义 shell、rm 别名、指标不一的实现）时回退 SFTP。
+//  3. rm 失败但属于「没有 shell/没有 rm」时同样回退；取消/超时直接返回，
+//     不再进入不可中断的 RemoveAll。
+func (m *SSHManager) removeRemotePaths(ctx context.Context, sessionId string, client *ssh.Client, sftpClient *sftp.Client, cmd string, paths []string, windowsRemote bool) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	if windowsRemote {
+		log.Printf("[ssh] 远端是 Windows OpenSSH，跳过 POSIX shell 删除直接用 SFTP: %s", paths[0])
+		return m.removePathsViaSFTP(ctx, sessionId, sftpClient, paths, "windows remote: skip POSIX shell delete")
+	}
+
+	_, rmErr := m.executeLongCmdWithClientContext(ctx, client, cmd)
+	if rmErr == nil {
+		verifyClient := m.sftpClientForVerify(sessionId, sftpClient)
+		removed, verifiable := remotePathRemovedBounded(ctx, func() (bool, bool) {
+			return remotePathRemoved(verifyClient, paths[0])
+		}, deleteVerifyTimeout)
+		if !verifiable || removed {
+			return ensureContextActive(ctx)
+		}
+		log.Printf("[ssh] rm -rf 退出码为 0 但目标仍存在（远端 shell 可能不解析 POSIX 引号），回退 SFTP: %s", paths[0])
+		return m.removePathsViaSFTP(ctx, sessionId, sftpClient, paths, "rm -rf reported success but target still exists")
+	}
+	// 取消/超时说明用户已放弃或链路异常：不能再用无超时、无法中断的 SFTP
+	// RemoveAll 继续删除（既违背取消语义，也可能永久挂起）。
+	if ctx != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+	}
+	if !rmUnavailableForFallback(rmErr) {
+		return fmt.Errorf("rm -rf failed: %w", rmErr)
+	}
+	return m.removePathsViaSFTP(ctx, sessionId, sftpClient, paths, fmt.Sprintf("rm -rf failed: %v", rmErr))
+}
+
+// rmUnavailableMarkers 是「命令根本没跑起来 / 目标系统没有 rm」的错误文本特征。
+// 这类失败不能只看退出码：Windows cmd 报 1（内部 ERRORLEVEL 才是 9009）、
+// PowerShell 报 1，都不在 POSIX 的 126/127 里；受限 shell 和 channel 被拒更是
+// 连命令都没执行。
+var rmUnavailableMarkers = []string{
+	"open failed", // 服务器禁用 shell channel / MaxSessions 满
+	"administratively prohibited",
+	"exec request failed", // 受限 shell（scponly 等）拒绝 exec
+	"shell request failed",
+	"command not found",
+	"not recognized as an internal or external command", // Windows cmd
+	"不是内部或外部命令",                                         // Windows cmd（中文）
+	"commandnotfoundexception",                          // Windows PowerShell
+	"parameter cannot be found",                         // Windows PowerShell（-rf 不是合法参数）
+	"namedparameternotfound",                            // 同上，部分 PowerShell 宿主会带 FullyQualifiedErrorId
+	"找不到与参数名称",                                          // 同上（中文 PowerShell）
+}
+
+// rmUnavailableForFallback 判断 rm -rf 失败是否属于「远端没有可用 shell / 没有 rm」。
+// 只有这类错误才值得退回 SFTP 逐项删除；超时、权限、磁盘错误、取消都必须直接
+// 返回，避免把用户取消变成「继续删」。
+//
+// 判定顺序很关键：先看错误文本，再看退出码。因为 Windows cmd/PowerShell 上
+// `rm -rf` 的退出码是 1（不是 126/127），如果先按 ExitError 分流，后面的文本标记
+// 永远走不到，Windows 服务器上就会直接失败而不是回退 SFTP。
+func rmUnavailableForFallback(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := strings.ToLower(err.Error())
+	for _, marker := range rmUnavailableMarkers {
+		if strings.Contains(text, marker) {
+			return true
+		}
+	}
+	var exitErr *ssh.ExitError
+	if errors.As(err, &exitErr) {
+		switch exitErr.ExitStatus() {
+		case 126, 127: // 不可执行 / 命令不存在
+			return true
+		}
+	}
+	return false
 }
 
 // DeleteItemShell 用 rm -rf 删除
@@ -841,17 +1121,16 @@ func (m *SSHManager) DeleteItemShellContext(ctx context.Context, sessionId strin
 		}
 		return sftpClient.RemoveAll(path)
 	}
-	client, _, err := m.GetClientEntry(sessionId)
+	client, sftpClient, err := m.GetClientEntry(sessionId)
 	if err != nil {
 		return err
 	}
-	_, err = m.ExecuteCmdWithClientContext(ctx, client, rmRfCmd(path))
-	return err
+	return m.removeRemotePaths(ctx, sessionId, client, sftpClient, rmRfCmd(path), []string{path}, isWindowsSSHServer(client))
 }
 
 const (
 	batchDeleteTargetBytes = 64 * 1024
-	batchDeleteMaxItems = 500
+	batchDeleteMaxItems    = 500
 )
 
 func batchRmRfCmd(paths []string) string {
@@ -916,15 +1195,18 @@ func (m *SSHManager) BatchDeleteItemShellContext(ctx context.Context, sessionId 
 		}
 		return firstErr
 	}
-	client, _, err := m.GetClientEntry(sessionId)
+	client, sftpClient, err := m.GetClientEntry(sessionId)
 	if err != nil {
 		return err
 	}
+	windowsRemote := isWindowsSSHServer(client)
 	for _, batch := range splitBatchDeletePaths(safePaths) {
 		if err := ensureContextActive(ctx); err != nil {
 			return err
 		}
-		if _, err := m.ExecuteCmdWithClientContext(ctx, client, batchRmRfCmd(batch)); err != nil {
+		// 每个 batch 一条 rm -rf；复核只看 batch 里第一条：静默失败是「整条命令
+		// 没生效」（shell 不解析引号），与具体路径无关，全量 Lstat 太重。
+		if err := m.removeRemotePaths(ctx, sessionId, client, sftpClient, batchRmRfCmd(batch), batch, windowsRemote); err != nil {
 			return err
 		}
 	}

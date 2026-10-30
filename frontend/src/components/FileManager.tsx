@@ -25,7 +25,7 @@ import { FILE_LIST_NAME_MIN_WIDTH, FILE_LIST_ACTIONS_COLUMN_WIDTH } from '../uti
 
 // FileManager 编排层：按声明顺序组合各领域 hook（保证 effect 执行顺序与
 // 拆分前一致），并把控制器对象分发给各渲染段（Toolbar/TabBar/Content/Overlays）。
-export default function FileManager({ sessionId, sessionGroupId = sessionId, addToast, isActive = true, initialPath = '' }: FileManagerProps) {
+export default function FileManager({ sessionId, sessionGroupId = sessionId, addToast, removeToast, isActive = true, initialPath = '' }: FileManagerProps) {
   const { t } = useTranslation();
   const core = useFileManagerCore({ sessionId, sessionGroupId, isActive, t });
   const tabScroll = useFileManagerTabScroll(core);
@@ -39,7 +39,7 @@ export default function FileManager({ sessionId, sessionGroupId = sessionId, add
   const locator = useFileManagerLocator({ ...core, ...wsSync, ...paneView });
   const editors = useFileManagerEditors({ ...core, ...fmEditors, ...transfers, addToast });
   const tabs = useFileManagerTabs({ ...core, ...wsSync, ...paneView, ...loader, ...transfers, initialPath, addToast });
-  const itemOps = useFileManagerItemOps({ ...core, ...wsSync, ...paneView, ...fmClipboard, ...fmEditors, ...loader, ...transfers, ...locator, addToast });
+  const itemOps = useFileManagerItemOps({ ...core, ...wsSync, ...paneView, ...fmClipboard, ...fmEditors, ...loader, ...transfers, ...locator, addToast, removeToast });
   const scrollSync = useFileManagerScrollSync({ ...core, ...wsSync, ...paneView, ...uploadPanel, ...transfers, ...itemOps });
   const dragDrop = useFileManagerDragDrop({ ...core, ...wsSync, ...uploadPanel, ...transfers });
   const paneScroller = useFileManagerPaneScroller({ ...core, ...wsSync, ...paneView, ...locator });
