@@ -573,6 +573,14 @@ export function useTerminalSession(deps: {
         };
 
       currentWs.onopen = () => {
+        // 重置本地 bracketed paste 状态：WS 建连 = 远端 PTY 新建，终端模式默认全 OFF。
+        // SSH 重连不重建 xterm，上一个会话（如 bash）留下的 2004(ON) 会残留：粘贴被
+        // 包裹成 \x1b[200~...\x1b[201~ 发给远端，而 busybox ash 不支持 bracketed
+        // paste——read_key 把 \x1b[200~ 当未知 ESC 序列，连同跟随的字节一起吞掉
+        // （实测吞掉 \x1b[200~tail -fn+1，只剩 /reinstall.log 被当命令执行）。
+        // 本地写 \x1b[?2004l 关闭 xterm 的 2004（不发给远端，无可见输出）；新远端
+        // 若支持（bash/zsh），起 shell 后会重新发 \x1b[?2004h 自动恢复包裹行为。
+        termRef.current?.write('\x1b[?2004l');
         // 补发一次初始尺寸：终端首次 fit 发生在 onResize 订阅之前，那次
         // 尺寸变化事件被错过，本地 PTY 可能长期停留在出生尺寸；这里主动
         // 同步一次，同时给 SIGWINCH 会重绘提示符的 shell（bash/zsh）兜底自愈机会。
