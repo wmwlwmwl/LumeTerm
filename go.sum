@@ -45,8 +45,8 @@ github.com/klauspost/crc32 v1.3.0 h1:sSmTt3gUt81RP655XGZPElI0PelVTZ6YwCRnPSupoFM
 github.com/klauspost/crc32 v1.3.0/go.mod h1:D7kQaZhnkX/Y0tstFGf8VUzv2UofNGqCjnC3zdHB0Hw=
 github.com/kr/fs v0.1.0 h1:Jskdu9ieNAYnjxsi0LbQp1ulIKZV1LAFgK1tWhpZgl8=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
-github.com/labstack/echo/v4 v4.15.3 h1:lIdG4kK5RdMyhwCwSc4AmSQsLBb3AVwok6S8PX/9kwQ=
-github.com/labstack/echo/v4 v4.15.3/go.mod h1:Xzp1Ns1RA2c9fY7nSgUJkpkUZGNbEIVHZbtbOMPktBI=
+github.com/labstack/echo/v4 v4.16.1 h1:h05NuF1GvNu6jSAZxOv++AdjD/NJK+mZdGy0thiiuns=
+github.com/labstack/echo/v4 v4.16.1/go.mod h1:V/EQaTVHYJH92QhbQe7kFQ4mjgcjxLQQUQtAN87zZdw=
 github.com/labstack/gommon v0.5.0 h1:6VSQ2NOzsnEJ5W6+84E0RbcaDDmgB6NIAzWCczTEe6c=
 github.com/labstack/gommon v0.5.0/go.mod h1:Rzlg7HHy1maLfzBYGg9NZcVuz1sA68HHhLjhcEllYE0=
 github.com/leaanthony/debme v1.2.1 h1:9Tgwf+kjcrbMQ4WnPcEIUcQuIZYqdWftzZkBr+i/oOc=
