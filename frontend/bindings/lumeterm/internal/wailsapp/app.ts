@@ -56,6 +56,13 @@ export function AbortDownloadTransfer(identifier: string): $CancellablePromise<v
 }
 
 /**
+ * AbortFileOperation 取消指定 operationId 的文件操作（压缩/解压/预览/chmod/删除）。
+ */
+export function AbortFileOperation(operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(1955512870, operationId);
+}
+
+/**
  * AcceptHostKeyChange 用户确认主机密钥变更
  * action: 0=取消, 1=仅本次接受, 2=接受并保存
  */
@@ -112,8 +119,8 @@ export function BatchDeleteConnections(ids: string[]): $CancellablePromise<void>
 /**
  * BatchDeleteItemShell 用一条rm -rf path1 path2 ... 批量删除
  */
-export function BatchDeleteItemShell(sessionId: string, paths: string[]): $CancellablePromise<void> {
-    return $Call.ByID(2291566825, sessionId, paths);
+export function BatchDeleteItemShell(sessionId: string, paths: string[], operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(2291566825, sessionId, paths, operationId);
 }
 
 /**
@@ -138,12 +145,12 @@ export function ChangeRecoveryPassword(newPassword: string): $CancellablePromise
 /**
  * ChmodFile changes file permissions via SFTP or recursively via chmod -R
  */
-export function ChmodFile(sessionId: string, path: string, mode: string, recursive: boolean): $CancellablePromise<void> {
-    return $Call.ByID(3469707286, sessionId, path, mode, recursive);
+export function ChmodFile(sessionId: string, path: string, mode: string, recursive: boolean, operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(3469707286, sessionId, path, mode, recursive, operationId);
 }
 
-export function ChownFile(sessionId: string, path: string, owner: string, group: string, recursive: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1218980682, sessionId, path, owner, group, recursive);
+export function ChownFile(sessionId: string, path: string, owner: string, group: string, recursive: boolean, operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(1218980682, sessionId, path, owner, group, recursive, operationId);
 }
 
 /**
@@ -179,8 +186,8 @@ export function CompleteChunkedUploadFile(taskID: string, fileID: string): $Canc
 /**
  * CompressItem archives a file or directory on the remote server
  */
-export function CompressItem(sessionId: string, remotePath: string): $CancellablePromise<void> {
-    return $Call.ByID(3061219892, sessionId, remotePath);
+export function CompressItem(sessionId: string, remotePath: string, operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(3061219892, sessionId, remotePath, operationId);
 }
 
 /**
@@ -231,15 +238,15 @@ export function DeleteCredential(id: string): $CancellablePromise<void> {
 /**
  * DeleteItem deletes a file or directory via SFTP
  */
-export function DeleteItem(sessionId: string, path: string, isDir: boolean): $CancellablePromise<void> {
-    return $Call.ByID(2965895931, sessionId, path, isDir);
+export function DeleteItem(sessionId: string, path: string, isDir: boolean, operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(2965895931, sessionId, path, isDir, operationId);
 }
 
 /**
  * DeleteItemShell 用 rm -rf 删除
  */
-export function DeleteItemShell(sessionId: string, path: string): $CancellablePromise<void> {
-    return $Call.ByID(3949090735, sessionId, path);
+export function DeleteItemShell(sessionId: string, path: string, operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(3949090735, sessionId, path, operationId);
 }
 
 export function DeleteMCPGlobalServer(name: string): $CancellablePromise<void> {
@@ -906,8 +913,8 @@ export function PreviewDownloadConflicts(sessionId: string, remotePath: string, 
 /**
  * PreviewSmartUncompressItem previews smart extract destination without modifying files.
  */
-export function PreviewSmartUncompressItem(sessionId: string, remotePath: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(4226893678, sessionId, remotePath).then(($result: any) => {
+export function PreviewSmartUncompressItem(sessionId: string, remotePath: string, operationId: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(4226893678, sessionId, remotePath, operationId).then(($result: any) => {
         return $$createType0($result);
     });
 }
@@ -1432,15 +1439,15 @@ export function ToggleMCPClientServerToolDisabledForPrompts(name: string, source
 /**
  * UncompressItem extracts an archive on the remote server using the saved smart extract strategy.
  */
-export function UncompressItem(sessionId: string, remotePath: string): $CancellablePromise<void> {
-    return $Call.ByID(2783335275, sessionId, remotePath);
+export function UncompressItem(sessionId: string, remotePath: string, operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(2783335275, sessionId, remotePath, operationId);
 }
 
 /**
  * UncompressItemWithStrategy extracts an archive on the remote server using a caller-provided conflict strategy.
  */
-export function UncompressItemWithStrategy(sessionId: string, remotePath: string, strategy: string): $CancellablePromise<void> {
-    return $Call.ByID(1930478230, sessionId, remotePath, strategy);
+export function UncompressItemWithStrategy(sessionId: string, remotePath: string, strategy: string, operationId: string): $CancellablePromise<void> {
+    return $Call.ByID(1930478230, sessionId, remotePath, strategy, operationId);
 }
 
 /**
