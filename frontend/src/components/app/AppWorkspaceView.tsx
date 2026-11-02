@@ -78,6 +78,7 @@ export default function AppWorkspaceView({ orchestrator }: AppWorkspaceViewProps
       activeSessionId={sessionState.activeSessionId}
       activeTerminalId={sessionState.activeTerminalId}
       addToast={shared.addToast}
+      removeToast={shared.removeToast}
       getEffectiveTerminals={sessionState.getEffectiveTerminals}
     />
   );

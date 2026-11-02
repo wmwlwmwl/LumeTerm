@@ -104,6 +104,7 @@ export interface FileManagerProps {
   sessionId: string
   sessionGroupId: string
   addToast?: (message: string | Error, type?: string, duration?: number, actions?: unknown[]) => number
+  removeToast?: (id: number) => void
   isActive?: boolean
   initialPath?: string
 }

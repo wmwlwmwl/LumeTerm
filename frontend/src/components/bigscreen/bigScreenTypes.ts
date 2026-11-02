@@ -2,8 +2,8 @@ import { createEmptyHist, type ProbeHist, type ProbeInfo } from '../probe/probeT
 
 /** 大屏历史曲线点数（比探针面板更长，适合挂墙展示） */
 export const BIG_SCREEN_HISTORY = 60;
-/** 单次采集超时 */
-export const BIG_SCREEN_FETCH_TIMEOUT_MS = 50000;
+/** 单次采集超时：需大于后端 probeTotalBudget（70s），与 ProbePanel 保持一致 */
+export const BIG_SCREEN_FETCH_TIMEOUT_MS = 90000;
 /** 选中列表持久化键 */
 export const BIG_SCREEN_SELECTED_KEY = 'bigScreenSelectedServers';
 /** 见过的服务器持久化键（用于仅对"新连接"自动上屏，让手动取消的选择得以保留） */

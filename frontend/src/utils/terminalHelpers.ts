@@ -282,6 +282,33 @@ export function extractCommandFromBufferLine(line: string) {
   return t.trim()
 }
 
+/**
+ * PS2 续行提示符行（整行匹配）：shell 显示它表示"正在等下一行输入"，已就绪可立即收行。
+ * 覆盖默认形态：
+ *   - bash 默认 `> `（heredoc 正文 / 反斜杠续行）
+ *   - bash 带提示的续行 `quote> ` `cmd> ` `pipe> `（未闭合引号/管道等）
+ *   - zsh 默认 PS2 `%_>`：`pipe>` `then>` `cmdsubst>` 等
+ *   - PowerShell `>>>`
+ * 只认整行小写词+> 的保守形态；自定义 PS2 不匹配时走门控发送器的超时兜底（与旧行为一致）。
+ */
+export function isShellContinuationPromptLine(text: string) {
+  // 尾部空白已被剥掉（PS2 渲染宽度不定），这里只需整行「可选小写词 + 若干 >」
+  const t = String(text || '').replace(/\s+$/g, '')
+  return /^[a-z]*>+$/.test(t)
+}
+
+if (import.meta.env.DEV) {
+  console.assert(isShellContinuationPromptLine('>'), 'bash 默认 PS2 应识别为续行提示符');
+  console.assert(isShellContinuationPromptLine('> '), 'PS2 尾空格应识别为续行提示符');
+  console.assert(isShellContinuationPromptLine('quote>'), 'bash 引号续行应识别为续行提示符');
+  console.assert(isShellContinuationPromptLine('pipe>'), 'zsh 续行应识别为续行提示符');
+  console.assert(isShellContinuationPromptLine('>>>'), 'PowerShell 续行应识别为续行提示符');
+  console.assert(!isShellContinuationPromptLine('cat > /root/1.txt'), '普通命令行不应误判为续行提示符');
+  console.assert(!isShellContinuationPromptLine('</root>'), 'HTML 输出行不应误判为续行提示符');
+  console.assert(!isShellContinuationPromptLine('root@host:~#'), 'PS1 提示符不应误判为续行提示符');
+  console.assert(!isShellContinuationPromptLine(''), '空行不应误判为续行提示符');
+}
+
 export function splitTrailingIncompleteEscapeSequence(input: string) {
   if (!input) {
     return { complete: '', carry: '' }
@@ -467,25 +494,46 @@ if (import.meta.env.DEV) {
  * 远端未开 bracketed paste(2004) 时，多行粘贴/发送的“逐行 + 提示符回归门控”发送器（issue #379）。
  * 一次性灌入多行时，上一行 \r 执行后远端 readline 尚未就绪，紧跟的行首
  * 字符可能被吞(实测丢 1~2 字符；行首补空格可规避，侧面证实)。逐行发送并
- * 等待 ssh-command-finished(提示符回归)事件确认上一行执行完，再发下一行，
- * 与远端时序无关，字节零丢失。timeoutMs 兜底防提示符识别失效卡死；
+ * 等待 ssh-command-finished(提示符回归) 或 ssh-continuation-ready(PS2 续行提示符，
+ * 如 heredoc 正文 / 引号续行——此时 shell 已就绪等下一行输入) 事件确认上一行
+ * 已被 shell 接收，再发下一行，与远端时序无关，字节零丢失。
+ * 内部空行照发裸 \r——heredoc 正文里的空行是有意义的内容，丢弃会损坏落盘文件；
+ * 与真实终端无 2004 时的粘贴行为一致（PS1 下的空行也只是多敲一个空回车）。
+ * 事件按 getSessionId()/getTerminalId() 返回值双重过滤：前者挡其它服务器会话，
+ * 后者挡同一服务器会话的其它终端窗格(它们共享 serverId 但各有唯一的 terminalId)，
+ * 避免别人的提示符事件提前放掉本终端的门。
+ * 不识别 PS2 时 heredoc 每行只能干等 timeoutMs 超时，表现为内容“一点一点”慢速出现。
+ * timeoutMs 兜底防提示符识别失效卡死；
  * send 返回 false(断连等)即中止；返回的 cancel 用于清除未完成链。
  * 注意：远端已开 2004 时粘贴走 term.paste 包裹整块透传，不经此发送器。
  */
 export function createGatedLineSender(opts: {
   send: (chunk: string) => boolean;
   armCommandFinish: () => void;
+  /** 每次收到事件时调用，返回本会话 id；与 detail.sessionId 不符的事件忽略 */
+  getSessionId?: () => string;
+  /** 返回本终端 id；与 detail.terminalId 不符的事件忽略(同服务器多终端窗格隔离) */
+  getTerminalId?: () => string;
   timeoutMs?: number;
 }): (lines: string[]) => () => void {
   const timeoutMs = opts.timeoutMs ?? 2500;
   let queue: string[] = [];
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let listener: (() => void) | null = null;
-
+  let listener: ((e: Event) => void) | null = null;
+  const isOwnEvent = (e: Event) => {
+    const detail = (e as CustomEvent).detail;
+    const sid = opts.getSessionId?.();
+    const tid = opts.getTerminalId?.();
+    return (sid == null || detail?.sessionId === sid) && (tid == null || detail?.terminalId === tid);
+  };
   const releaseGate = () => {
     if (timer !== null) { clearTimeout(timer); timer = null; }
-    if (listener !== null) { window.removeEventListener('ssh-command-finished', listener); listener = null; }
+    if (listener !== null) {
+      window.removeEventListener('ssh-command-finished', listener);
+      window.removeEventListener('ssh-continuation-ready', listener);
+      listener = null;
+    }
   };
   const cancel = () => {
     stopped = true;
@@ -500,17 +548,23 @@ export function createGatedLineSender(opts: {
     if (!opts.send(line + '\r')) { stopped = true; return; }
     opts.armCommandFinish();
     timer = setTimeout(sendNext, timeoutMs);
-    const onFinished = () => {
+    const onFinished = (e: Event) => {
+      if (!isOwnEvent(e)) return;
       releaseGate();
       sendNext();
     };
     listener = onFinished;
     window.addEventListener('ssh-command-finished', onFinished);
+    window.addEventListener('ssh-continuation-ready', onFinished);
   };
   return (lines: string[]) => {
     cancel();
     stopped = false;
-    queue = lines.filter((l) => l !== '');
+    // 尾部空行剥掉(等效 normalizeTerminalPasteText 清尾回车，防多敲空回车连发)；
+    // 内部空行照发——heredoc 正文里的空行是有意义的内容，丢弃会损坏落盘文件
+    let end = lines.length;
+    while (end > 0 && lines[end - 1] === '') end -= 1;
+    queue = lines.slice(0, end);
     sendNext();
     return cancel;
   };

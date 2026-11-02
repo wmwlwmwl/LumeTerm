@@ -312,7 +312,7 @@ export default function useAppOrchestrator() {
     onOpenBigScreen: handleOpenBigScreen,
   };
 
-  const sharedProps = { addToast: looseAddToast, t: looseT };
+  const sharedProps = { addToast: looseAddToast, removeToast, t: looseT };
 
   const dialogsProps = {
     closePortForwardDialog, connectSerial: sessionState.connectSerial, loadServers: sessionState.loadServers, portForwardDialogSessionId, portForwardInitialMapping, portForwardInitialTab, probePanelPosition, setProbePanelPosition, setSettingsInitialTab, setShowCredentials, setShowSerialModal, setShowSettings, settingsInitialTab, showCredentials, showPortForwardDialog, showSerialModal, showSettings,

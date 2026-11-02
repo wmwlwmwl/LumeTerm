@@ -1,7 +1,11 @@
 import { t } from '../../i18n.ts';
 
 export const HISTORY_SIZE = 30;
-export const PROBE_FETCH_TIMEOUT_MS = 50000;
+/**
+ * 单次采集前端等待上限。必须大于后端 probeTotalBudget（70s：部署 15s + 运行 45s + 诊断 10s），
+ * 否则会出现「前端先报超时、后端还在采集」的假超时。
+ */
+export const PROBE_FETCH_TIMEOUT_MS = 90000;
 
 export interface ProbeHist {
   cpu: number[];

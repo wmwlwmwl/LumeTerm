@@ -592,6 +592,154 @@
 .file-icon-themed.file-icon-pm { color: var(--file-icon-perl); }
 .file-icon-themed.file-icon-diff,
 .file-icon-themed.file-icon-patch { color: var(--file-icon-diff); }
+
+/* ── 图标覆盖补齐：压缩/打包（tar.xz/zstd/lzma/deb/rpm/iso 等，后缀取末段） ── */
+.file-icon-themed.file-icon-xz,
+.file-icon-themed.file-icon-txz,
+.file-icon-themed.file-icon-zst,
+.file-icon-themed.file-icon-zstd,
+.file-icon-themed.file-icon-tzst,
+.file-icon-themed.file-icon-lzma,
+.file-icon-themed.file-icon-lz,
+.file-icon-themed.file-icon-br,
+.file-icon-themed.file-icon-lzo,
+.file-icon-themed.file-icon-tbz,
+.file-icon-themed.file-icon-tbz2,
+.file-icon-themed.file-icon-taz,
+.file-icon-themed.file-icon-cab,
+.file-icon-themed.file-icon-deb,
+.file-icon-themed.file-icon-rpm,
+.file-icon-themed.file-icon-iso,
+.file-icon-themed.file-icon-dmg,
+.file-icon-themed.file-icon-img { color: var(--file-icon-archive); }
+
+/* ── 密钥/证书（SSH 场景高频） ── */
+.file-icon-themed.file-icon-pem,
+.file-icon-themed.file-icon-key,
+.file-icon-themed.file-icon-crt,
+.file-icon-themed.file-icon-cer,
+.file-icon-themed.file-icon-csr,
+.file-icon-themed.file-icon-p12,
+.file-icon-themed.file-icon-pfx,
+.file-icon-themed.file-icon-pub,
+.file-icon-themed.file-icon-gpg,
+.file-icon-themed.file-icon-asc,
+.file-icon-themed.file-icon-kdbx,
+.file-icon-themed.file-icon-ppk { color: var(--file-icon-key); }
+
+/* ── 文档：文字/表格/演示/电子书 ── */
+.file-icon-themed.file-icon-doc,
+.file-icon-themed.file-icon-docx,
+.file-icon-themed.file-icon-odt,
+.file-icon-themed.file-icon-rtf { color: var(--file-icon-doc); }
+.file-icon-themed.file-icon-xls,
+.file-icon-themed.file-icon-xlsx,
+.file-icon-themed.file-icon-ods,
+.file-icon-themed.file-icon-csv,
+.file-icon-themed.file-icon-tsv { color: var(--file-icon-sheet); }
+.file-icon-themed.file-icon-ppt,
+.file-icon-themed.file-icon-pptx,
+.file-icon-themed.file-icon-odp { color: var(--file-icon-slides); }
+.file-icon-themed.file-icon-epub,
+.file-icon-themed.file-icon-mobi { color: var(--file-icon-pdf); }
+
+/* ── 图片补齐 ── */
+.file-icon-themed.file-icon-ico,
+.file-icon-themed.file-icon-bmp,
+.file-icon-themed.file-icon-tif,
+.file-icon-themed.file-icon-tiff,
+.file-icon-themed.file-icon-heic,
+.file-icon-themed.file-icon-heif,
+.file-icon-themed.file-icon-avif,
+.file-icon-themed.file-icon-psd,
+.file-icon-themed.file-icon-xcf { color: var(--file-icon-image); }
+
+/* ── 音视频补齐 ── */
+.file-icon-themed.file-icon-mov,
+.file-icon-themed.file-icon-wmv,
+.file-icon-themed.file-icon-flv,
+.file-icon-themed.file-icon-webm,
+.file-icon-themed.file-icon-m4v,
+.file-icon-themed.file-icon-mpg,
+.file-icon-themed.file-icon-mpeg,
+.file-icon-themed.file-icon-3gp { color: var(--file-icon-video); }
+.file-icon-themed.file-icon-flac,
+.file-icon-themed.file-icon-aac,
+.file-icon-themed.file-icon-ogg,
+.file-icon-themed.file-icon-m4a,
+.file-icon-themed.file-icon-opus,
+.file-icon-themed.file-icon-wma { color: var(--file-icon-audio); }
+
+/* ── 脚本/配置补齐：批处理、shell 点文件（.bashrc 末段为 bashrc）、systemd 单元 ── */
+.file-icon-themed.file-icon-bat,
+.file-icon-themed.file-icon-cmd,
+.file-icon-themed.file-icon-fish,
+.file-icon-themed.file-icon-bashrc,
+.file-icon-themed.file-icon-zshrc,
+.file-icon-themed.file-icon-profile,
+.file-icon-themed.file-icon-bash_profile,
+.file-icon-themed.file-icon-zprofile,
+.file-icon-themed.file-icon-zshenv,
+.file-icon-themed.file-icon-bash_aliases { color: var(--file-icon-shell); }
+.file-icon-themed.file-icon-properties,
+.file-icon-themed.file-icon-config,
+.file-icon-themed.file-icon-gitignore,
+.file-icon-themed.file-icon-gitattributes,
+.file-icon-themed.file-icon-gitmodules,
+.file-icon-themed.file-icon-gitconfig,
+.file-icon-themed.file-icon-editorconfig,
+.file-icon-themed.file-icon-service,
+.file-icon-themed.file-icon-socket,
+.file-icon-themed.file-icon-timer { color: var(--file-icon-config); }
+
+/* ── 数据库补齐 ── */
+.file-icon-themed.file-icon-db,
+.file-icon-themed.file-icon-sqlite,
+.file-icon-themed.file-icon-sqlite3,
+.file-icon-themed.file-icon-db3 { color: var(--file-icon-sql); }
+
+/* ── 语言长尾/字体/二进制 ── */
+.file-icon-themed.file-icon-kt,
+.file-icon-themed.file-icon-kts,
+.file-icon-themed.file-icon-swift,
+.file-icon-themed.file-icon-scala,
+.file-icon-themed.file-icon-dart,
+.file-icon-themed.file-icon-zig,
+.file-icon-themed.file-icon-nim,
+.file-icon-themed.file-icon-ex,
+.file-icon-themed.file-icon-exs,
+.file-icon-themed.file-icon-erl,
+.file-icon-themed.file-icon-hrl,
+.file-icon-themed.file-icon-hs,
+.file-icon-themed.file-icon-clj,
+.file-icon-themed.file-icon-r,
+.file-icon-themed.file-icon-jl,
+.file-icon-themed.file-icon-fs,
+.file-icon-themed.file-icon-ipynb,
+.file-icon-themed.file-icon-tf,
+.file-icon-themed.file-icon-tfvars,
+.file-icon-themed.file-icon-hcl { color: var(--file-icon-code); }
+.file-icon-themed.file-icon-dockerfile { color: var(--file-icon-code); }
+.file-icon-themed.file-icon-gradle { color: var(--file-icon-java); }
+.file-icon-themed.file-icon-ttf,
+.file-icon-themed.file-icon-otf,
+.file-icon-themed.file-icon-woff,
+.file-icon-themed.file-icon-woff2,
+.file-icon-themed.file-icon-eot { color: var(--file-icon-font); }
+.file-icon-themed.file-icon-exe,
+.file-icon-themed.file-icon-msi,
+.file-icon-themed.file-icon-dll,
+.file-icon-themed.file-icon-so,
+.file-icon-themed.file-icon-dylib,
+.file-icon-themed.file-icon-a,
+.file-icon-themed.file-icon-o,
+.file-icon-themed.file-icon-bin,
+.file-icon-themed.file-icon-appimage { color: var(--file-icon-diff); }
+
+/* ── 构建文件：makefile/cmake/nginx 之前只有图标无配色 ── */
+.file-icon-themed.file-icon-makefile,
+.file-icon-themed.file-icon-cmake,
+.file-icon-themed.file-icon-nginx { color: var(--file-icon-toml); }
 .file-name {
   font-size: var(--text-base);
   color: var(--file-manager-text-color, var(--text-primary));

@@ -18,6 +18,7 @@ import {
   formatTerminalTimestamp,
   getTerminalBufferSnapshotText,
   isInteractivePromptText,
+  isShellContinuationPromptLine,
   normalizeTerminalPasteText,
   startsInteractiveScreen,
   textDecoder,
@@ -405,12 +406,25 @@ export function useTerminalSession(deps: {
         scheduleGutterSync();
       }
     });
+    // PS2 去重：同一提示符行(buffer 绝对行号)只派发一次续行就绪。
+    // `>` 与空格分包到达、空行 `\r` 回显拆包、zle 重绘同一行等都会让同一提示符
+    // 反复匹配，重复派发会让门控发送器一次提示符放行多行，削弱逐行防丢字保护。
+    let lastContinuationPromptLine = -1;
     const writeParsedDisposable = term.onWriteParsed(() => {
       scheduleGutterSync();
       scheduleLinkUnderlineSync();
       // 命令完成检测：仅当处于"等待命令完成"状态且不在 TUI（备用屏）时，
       // 检查光标所在行是否已回归 shell 提示符。命中则派发事件并退出等待态。
       // 提示符识别复用 isShellPromptLine；只取末行避免全量扫描。
+      // PS2 续行提示符（heredoc 正文/引号续行的 `>`、`quote>`、`pipe>` 等）
+      // 单独派发 ssh-continuation-ready：逐行门控发送器据此立即放行下一行，
+      // 不必干等 2.5s 超时；不派发 ssh-command-finished，避免文件管理器中途误刷新。
+      // 注意不清 awaitingCommandFinish：PS2 只是续行不是完成，保持等待态，
+      // heredoc/REPL 结束回到 PS1 时仍能正常派发 ssh-command-finished；
+      // 普通命令输出里整行为 `>`/`小写词>` 的误判也只多派发一个(过滤后无人的)
+      // 事件，不会再吞掉真正的完成事件导致文件管理器漏刷新。
+      // detail.terminalId 是每终端唯一的 sessionId，供门控发送器区分同一服务器
+      // 会话的多个终端窗格；sessionId(serverId) 字段保持原语义供文件管理器过滤。
       if (!awaitingCommandFinishRef.current || alternateBufferActiveRef.current) return;
       const buf = term.buffer.active;
       if (!buf) return;
@@ -418,8 +432,16 @@ export function useTerminalSession(deps: {
       const text = lastLine ? lastLine.translateToString(true) : '';
       if (isShellPromptLine(text)) {
         awaitingCommandFinishRef.current = false;
+        lastContinuationPromptLine = -1;
         window.dispatchEvent(new CustomEvent('ssh-command-finished', {
-          detail: { sessionId: serverIdRef.current }
+          detail: { sessionId: serverIdRef.current, terminalId: sessionId }
+        }));
+      } else if (isShellContinuationPromptLine(text)) {
+        const promptLine = buf.baseY + buf.cursorY;
+        if (promptLine === lastContinuationPromptLine) return;
+        lastContinuationPromptLine = promptLine;
+        window.dispatchEvent(new CustomEvent('ssh-continuation-ready', {
+          detail: { sessionId: serverIdRef.current, terminalId: sessionId }
         }));
       }
     });
@@ -551,6 +573,14 @@ export function useTerminalSession(deps: {
         };
 
       currentWs.onopen = () => {
+        // 重置本地 bracketed paste 状态：WS 建连 = 远端 PTY 新建，终端模式默认全 OFF。
+        // SSH 重连不重建 xterm，上一个会话（如 bash）留下的 2004(ON) 会残留：粘贴被
+        // 包裹成 \x1b[200~...\x1b[201~ 发给远端，而 busybox ash 不支持 bracketed
+        // paste——read_key 把 \x1b[200~ 当未知 ESC 序列，连同跟随的字节一起吞掉
+        // （实测吞掉 \x1b[200~tail -fn+1，只剩 /reinstall.log 被当命令执行）。
+        // 本地写 \x1b[?2004l 关闭 xterm 的 2004（不发给远端，无可见输出）；新远端
+        // 若支持（bash/zsh），起 shell 后会重新发 \x1b[?2004h 自动恢复包裹行为。
+        termRef.current?.write('\x1b[?2004l');
         // 补发一次初始尺寸：终端首次 fit 发生在 onResize 订阅之前，那次
         // 尺寸变化事件被错过，本地 PTY 可能长期停留在出生尺寸；这里主动
         // 同步一次，同时给 SIGWINCH 会重绘提示符的 shell（bash/zsh）兜底自愈机会。
@@ -637,6 +667,8 @@ export function useTerminalSession(deps: {
         return true;
       },
       armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
+      getSessionId: () => serverIdRef.current,
+      getTerminalId: () => sessionId,
     });
     term.onData((data) => {
       if ((statusRef.current === 'closed' || statusRef.current === 'error') && (data.includes('\r') || data.includes('\n'))) {

@@ -36,6 +36,12 @@ export function useTerminalQuickCmd(deps: {
   const cancelPacedPasteRef = useRef<() => void>(() => {});
   // 多行直接会话执行：逐行 + 提示符回归门控发送器(单例，重渲染不重建)
   const gatedLineSenderRef = useRef<((lines: string[]) => () => void) | null>(null);
+  // 发送器单例只建一次，serverId 变化时靠 ref 让事件过滤始终读到当前值
+  const gatedServerIdRef = useRef(serverId);
+  gatedServerIdRef.current = serverId;
+  // terminalId(每终端唯一)同理，挡同一服务器会话其它终端窗格的事件
+  const gatedTerminalIdRef = useRef(sessionId);
+  gatedTerminalIdRef.current = sessionId;
   const gatedLineSender = (() => {
     if (!gatedLineSenderRef.current) {
       gatedLineSenderRef.current = createGatedLineSender({
@@ -46,6 +52,8 @@ export function useTerminalQuickCmd(deps: {
           return true;
         },
         armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
+        getSessionId: () => gatedServerIdRef.current,
+        getTerminalId: () => gatedTerminalIdRef.current,
       });
     }
     return gatedLineSenderRef.current;

@@ -1318,7 +1318,9 @@ func shellQuotePath(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
-func (s *Service) uncompressUploadedArchive(sessionId string, remotePath string) error {
+// uncompressUploadedArchive 在远端解压刚上传的归档。解压 GB 级包可能远超 30s，
+// 故走长超时通道，并把任务 ctx 透传下去：用户取消上传时能立即中断远端解压。
+func (s *Service) uncompressUploadedArchive(ctx context.Context, sessionId string, remotePath string) error {
 	client, _, err := s.backend.ClientEntry(sessionId)
 	if err != nil {
 		return err
@@ -1347,7 +1349,8 @@ func (s *Service) uncompressUploadedArchive(sessionId string, remotePath string)
 	default:
 		return fmt.Errorf("unsupported archive format")
 	}
-	output, err := s.backend.ExecuteCommand(context.Background(), client, command)
+	// 解压 GB 级归档同样可能远超 30s，不能走短命令的 30s 兜底。
+	output, err := s.backend.ExecuteLongCommand(ctx, client, command)
 	if err != nil {
 		return fmt.Errorf("uncompress uploaded archive failed: %w, output: %s", err, output)
 	}
@@ -1497,7 +1500,7 @@ func (s *Service) UploadLocalPathsCompressed(sessionId string, uploadID string, 
 		s.emitCompressedUploadProgress(sessionId, uploadID, "verifying", 99, 100, 0, 0, "", "automatic remote repair completed, continuing extract")
 	}
 	s.emitCompressedUploadProgress(sessionId, uploadID, "extracting", 99, 0, 0, 0, fileName, "extracting archive on remote server")
-	if err := s.uncompressUploadedArchive(sessionId, remoteArchive); err != nil {
+	if err := s.uncompressUploadedArchive(ctx, sessionId, remoteArchive); err != nil {
 		_ = s.backend.DeleteRemote(context.Background(), sessionId, remoteArchive, false)
 		task.clearRemoteArchive()
 		return fmt.Errorf("remote extract failed after automatic repair\narchive: %s\nremote target: %s\nreason: %w", remoteArchive, remoteDir, err)

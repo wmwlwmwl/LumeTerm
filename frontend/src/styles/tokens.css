@@ -315,6 +315,12 @@ svg[class*="lucide"] {
   --file-icon-powershell: #60a5fa;
   --file-icon-perl: #c4b5fd;
   --file-icon-diff: #94a3b8;
+  --file-icon-key: #2dd4bf;
+  --file-icon-doc: #60a5fa;
+  --file-icon-sheet: #4ade80;
+  --file-icon-slides: #fb923c;
+  --file-icon-code: #93c5fd;
+  --file-icon-font: #a78bfa;
 }
 
 /* ── 设计 Token：浅色模式 ───────────────────────── */
@@ -378,6 +384,12 @@ body.theme-light {
   --file-icon-powershell: #1d4ed8;
   --file-icon-perl: #6d28d9;
   --file-icon-diff: #475569;
+  --file-icon-key: #0f766e;
+  --file-icon-doc: #1d4ed8;
+  --file-icon-sheet: #15803d;
+  --file-icon-slides: #c2410c;
+  --file-icon-code: #1e40af;
+  --file-icon-font: #7c3aed;
 
   /* ── 监控面板专用文字（比全局更清晰） ── */
   --probe-label:     #1f2937;

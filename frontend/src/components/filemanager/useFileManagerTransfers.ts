@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
+import { createFileOperationId } from '../../utils/fileOperations.ts';
 import {
   DEFAULT_FILE_MANAGER_DOWNLOAD_DIR,
   FILE_MANAGER_LAYOUT_MODE_SIDEBAR_DUAL,
@@ -922,7 +923,7 @@ export function useFileManagerTransfers(deps: ReturnType<typeof useFileManagerCo
             for (let index = undoOperations.length - 1; index >= 0; index--) {
               const operation = undoOperations[index];
               if (operation.mode === 'copy') {
-                await AppGo.DeleteItemShell(sessionId, operation.destPath);
+                await AppGo.DeleteItemShell(sessionId, operation.destPath, createFileOperationId('undo-copy-delete'));
               } else {
                 await AppGo.MoveItem(sessionId, operation.destPath, operation.srcPath);
               }
