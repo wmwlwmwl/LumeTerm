@@ -5,7 +5,7 @@ import { warnDev } from '../utils/devLog';
 import type { config } from '../../wailsjs/go/models.ts';
 import type { SessionLike, WorkspaceContentTab } from '../utils/sessionWorkspace.ts';
 import type { TerminalPaneLayout } from '../utils/terminalPaneLayout.ts';
-import type { FileManagerWorkspaceState } from '../utils/fileWorkbench.ts';
+import { remapSessionFileManagerPathCaches, type FileManagerWorkspaceState } from '../utils/fileWorkbench.ts';
 import type { SnapshotOverrides, WorkspaceSessionSnapshot } from './useWorkspacePersistence.ts';
 import type { AIWorkspaceTabGroup } from '../utils/aiWorkspaceTabs.ts';
 
@@ -999,6 +999,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
         nextFileManagerWorkspaces[mapped] = state;
       });
       replaceAllSessionFileManagerWorkspaces(nextFileManagerWorkspaces);
+      remapSessionFileManagerPathCaches(oldToNew);
       remapAIWorkspaceTabGroups(oldToNew);
       const remappedLayouts = remapTerminalPaneLayouts(terminalPaneLayoutsRef.current, oldToNew, parentId);
       terminalPaneLayoutsRef.current = remappedLayouts;
@@ -1539,6 +1540,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
           ...currentWorkspaces,
           ...remappedSnapshotWorkspaces,
         });
+        remapSessionFileManagerPathCaches(result.oldToNew);
         Object.keys(sessionSnapshot.aiTabWorkspaces || {}).forEach((terminalId) => {
           delete currentAITabWorkspaces[terminalId];
         });

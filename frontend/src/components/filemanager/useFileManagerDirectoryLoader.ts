@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
 import {
@@ -46,6 +46,12 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
     queueFileListViewRestore, updateItemsPreservingView, buildItemsWithTrackedDiff, getPaneViewState,
     currentPath, isActiveRef,
   } = deps;
+  // 初始化只按「挂载 + sessionId」执行一次；切服务器/终端回来的 isActive 变化只走静默刷新
+  const initializedSessionRef = useRef('');
+  // 恢复工作区时新 shell 的启动 cwd 锚点：首个 cwd 事件不应覆盖已记住的浏览目录
+  const restoredBootstrapCwdRef = useRef('');
+  // 拿不到启动 cwd 锚点时的兜底：忽略重挂后的第一个 cwd 事件
+  const ignoreFirstCwdFollowRef = useRef(false);
   const loadDir = useCallback(async (path: unknown, options: LoadDirOptions | boolean = {}) => {
     const normalizedPath = normalizePath(path) || '/';
     const resolvedOptions = typeof options === 'boolean' ? { silent: options } : (options || {});
@@ -220,7 +226,6 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
         pushCandidate(cwd);
       } catch (_) {}
     }
-    pushCandidate('/root');
     pushCandidate('/');
     return candidates;
   }, [initialPath, normalizePath, sessionId]);
@@ -337,6 +342,20 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
   }, [normalizePath]);
 
   const applyTerminalCwdFollow = useCallback(async (cwd: unknown, options: Record<string, unknown> = {}) => {
+    // 重连/重挂后新 shell 的启动 cwd（通常是 home）不应覆盖已恢复的浏览目录；
+    // 只忽略启动的那一次，之后用户真实 cd 仍正常跟随。
+    const normalizedCwd = normalizePath(cwd);
+    const bootstrapCwd = normalizePath(restoredBootstrapCwdRef.current);
+    if (bootstrapCwd && normalizedCwd === bootstrapCwd) {
+      restoredBootstrapCwdRef.current = '';
+      pendingTerminalCwdRef.current = '';
+      return false;
+    }
+    if (ignoreFirstCwdFollowRef.current) {
+      ignoreFirstCwdFollowRef.current = false;
+      pendingTerminalCwdRef.current = '';
+      return false;
+    }
     const followTarget = resolveTerminalCwdFollowTarget(cwd);
     if (!followTarget?.path || !followTarget?.tabId) {
       pendingTerminalCwdRef.current = '';
@@ -397,12 +416,32 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
   }, [activePaneKey, commitFileManagerWorkspace, loadDir, resolveTerminalCwdFollowTarget, syncCurrentTabToWorkspace]);
 
   useEffect(() => {
-    if (!isActive) {
+    if (!isActive || initializedSessionRef.current === sessionId) {
       return undefined;
     }
+    initializedSessionRef.current = sessionId;
+    const existingWorkspaceSnapshot = getSessionFileManagerWorkspace(sessionId);
+    const hasRememberedTabs = Array.isArray(existingWorkspaceSnapshot?.tabs) && existingWorkspaceSnapshot.tabs.length > 0;
     let cancelled = false;
     currentPathHydratedRef.current = false;
     initializingPathRef.current = true;
+    const rememberedActiveTabPath = hasRememberedTabs
+      ? normalizePath(
+        existingWorkspaceSnapshot.tabs.find((tab) => tab.id === existingWorkspaceSnapshot.activeTabId)?.path
+        || existingWorkspaceSnapshot.tabs[0]?.path,
+      )
+      : '';
+    const rememberedHomePath = hasRememberedTabs
+      ? normalizePath(
+        existingWorkspaceSnapshot.tabs.find((tab) => getFileManagerSystemTabType(tab) === FILE_MANAGER_SYSTEM_TAB_KIND_HOME)?.path
+        || existingWorkspaceSnapshot.tabs[0]?.path,
+      )
+      : '';
+    // 慢线路下（SFTP 首包可能要等很久）初始化探测阶段也要有反馈；
+    // 已恢复目录且已有该目录缓存时跳过，避免缓存可用时闪一下加载态
+    if (!rememberedActiveTabPath || !getCachedPathItems(rememberedActiveTabPath)) {
+      setLoading(true);
+    }
     (async () => {
       try {
         let systemTerminalCwdPath = normalizePath(pendingTerminalCwdRef.current);
@@ -413,7 +452,17 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
             systemTerminalCwdPath = '';
           }
         }
-        const forcedInitialPath = systemTerminalCwdPath || await resolveNonRememberedInitialPath();
+        const forcedInitialPath = hasRememberedTabs
+          ? (rememberedHomePath || systemTerminalCwdPath || '/')
+          : (systemTerminalCwdPath || await resolveNonRememberedInitialPath());
+        if (hasRememberedTabs) {
+          // 已恢复工作区：记住新 shell 的启动 cwd，首个 cwd 事件不得覆盖浏览目录
+          if (systemTerminalCwdPath) {
+            restoredBootstrapCwdRef.current = systemTerminalCwdPath;
+          } else {
+            ignoreFirstCwdFollowRef.current = true;
+          }
+        }
         const existingWorkspace = getSessionFileManagerWorkspace(sessionId);
         const repairedWorkspace = ensureForcedInitialFileManagerTab(existingWorkspace, forcedInitialPath, systemTerminalCwdPath || forcedInitialPath);
         const resolvedWorkspace = repairedWorkspace !== existingWorkspace
@@ -461,7 +510,9 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
           silent: true,
           preserveView: false,
           trackDiff: false,
-          showLoading: true,
+          // 恢复工作区时优先用已重映射的目录缓存首屏渲染，后台再刷新；无缓存才显示 loading
+          showLoading: hasRememberedTabs ? undefined : true,
+          preferPathCache: hasRememberedTabs,
         });
         if (!ok && isFileManagerTabLoadSuperseded(existingTab.id)) {
           return;
@@ -469,7 +520,8 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
         if (!ok && !cancelled && existingTab.pinned !== true) {
           setPaneSelectionRestore(resolvedInitialPaneKey, { selectedPaths: [], lastClickedPath: null });
           getPaneViewState(resolvedInitialPaneKey).pendingRestore = { key: '', offset: 0, scrollTop: 0 };
-          ok = await loadDir('/root', {
+          // 原目录读不到时直接回落根目录：不再试探 /root（非 root 用户必然失败）
+          await loadDir('/', {
             tabId: existingTab.id,
             silent: true,
             preserveView: false,
@@ -477,27 +529,27 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
             showLoading: true,
             preserveWorkspacePathOnSuccess: true,
           });
-          if (!ok && isFileManagerTabLoadSuperseded(existingTab.id)) {
-            return;
-          }
-          if (!ok) {
-            await loadDir('/', {
-              tabId: existingTab.id,
-              silent: true,
-              preserveView: false,
-              trackDiff: false,
-              showLoading: true,
-              preserveWorkspacePathOnSuccess: true,
-            });
-          }
         }
       } finally {
         if (!cancelled) {
           initializingPathRef.current = false;
-          // 初始化期间积压的 cwd 在此应用
+          // 首屏未真正加载（如工作区无标签直接返回）时收掉初始化加载态，避免常驻转圈
+          if (!currentPathHydratedRef.current) {
+            setLoading(false);
+          }
           const pendingPath = normalizePath(pendingTerminalCwdRef.current);
-          if (pendingPath && pendingPath !== currentPathRef.current) {
-            void applyTerminalCwdFollow(pendingPath, { force: true, showLoading: false });
+          if (hasRememberedTabs) {
+            // 恢复工作区时不强制跟随初始化期间到达的启动 cwd；若恰好已收到启动事件，
+            // 锚点已被消费，清掉避免再误吞一次真实 cd。
+            if (pendingPath && normalizePath(restoredBootstrapCwdRef.current) === pendingPath) {
+              restoredBootstrapCwdRef.current = '';
+            }
+            pendingTerminalCwdRef.current = '';
+          } else {
+            // 初始化期间积压的 cwd 在此应用
+            if (pendingPath && pendingPath !== currentPathRef.current) {
+              void applyTerminalCwdFollow(pendingPath, { force: true, showLoading: false });
+            }
           }
         }
       }
@@ -505,6 +557,10 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
     return () => {
       cancelled = true;
       initializingPathRef.current = false;
+      // 未真正完成首屏加载时不锁定，下一次激活可重试
+      if (!currentPathHydratedRef.current) {
+        initializedSessionRef.current = '';
+      }
     };
   }, [applyTerminalCwdFollow, ensureForcedInitialFileManagerTab, isActive, loadDir, normalizePath, resolveNonRememberedInitialPath, sessionId]);
 

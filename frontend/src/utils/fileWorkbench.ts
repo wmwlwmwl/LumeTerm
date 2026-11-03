@@ -601,8 +601,23 @@ export function replaceAllSessionFileManagerWorkspaces(nextState: unknown): Reco
   return normalized;
 }
 
+export function remapSessionFileManagerPathCaches(idMap: Record<string, string> | null | undefined): void {
+  const sourceMap = idMap && typeof idMap === 'object' ? idMap : {};
+  const store = ensureFileManagerPathCacheStore();
+  const keys = Object.keys(store);
+  const remapped: Record<string, unknown> = {};
+  keys.forEach((sessionId) => {
+    remapped[normalizeSessionGroupId(sourceMap[sessionId] || sessionId)] = store[sessionId];
+  });
+  keys.forEach((key) => {
+    delete store[key];
+  });
+  Object.assign(store, remapped);
+}
+
 export function remapSessionFileManagerWorkspaces(idMap: Record<string, string> | null | undefined): Record<string, FileManagerWorkspaceState> {
   const sourceMap = idMap && typeof idMap === 'object' ? idMap : {};
+  remapSessionFileManagerPathCaches(sourceMap);
   const current = getAllSessionFileManagerWorkspaces();
   const remapped: Record<string, FileManagerWorkspaceState> = {};
   Object.entries(current).forEach(([sessionId, state]) => {
