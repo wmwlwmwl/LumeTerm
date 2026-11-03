@@ -310,6 +310,48 @@ func TestStaleSessionWaitKeepsReplacement(t *testing.T) {
 	}
 }
 
+func TestTrackedSSHConnMarksDeadOnReadError(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	tracked := &trackedSSHConn{Conn: clientConn}
+	if tracked.dead.Load() {
+		t.Fatal("初始状态不应标记 transport 已断开")
+	}
+	_ = serverConn.Close()
+	if _, err := tracked.Read(make([]byte, 1)); err == nil {
+		t.Fatal("对端关闭后 Read 应返回错误")
+	}
+	if !tracked.dead.Load() {
+		t.Fatal("Read 错误后应标记 transport 已断开")
+	}
+	_ = tracked.Close()
+}
+
+// TestDisconnectAndNotifySkipsWhenTransportDead 复现「整机断线重连只恢复根终端」：
+// transport 读失败会让各子终端 session.Wait 先于整机清理返回，若逐终端发
+// session_end，前端会把子终端从会话终端列表删除，重连时就只剩根终端。
+// transport 已死时必须抑制单终端路径，交给 cleanupClientTransport 统一通知。
+func TestDisconnectAndNotifySkipsWhenTransportDead(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+	tracked := &trackedSSHConn{Conn: clientConn}
+	tracked.dead.Store(true)
+
+	manager := NewSSHManager()
+	manager.clients["server"] = &sshClientEntry{NetConn: tracked}
+	manager.sessions["root"] = &SessionData{ConnKey: "server"}
+	manager.sessions["term_a"] = &SessionData{ConnKey: "server", GroupSessionId: "root"}
+	manager.connTerminals["server"] = []string{"root", "term_a"}
+
+	manager.disconnectAndNotify("root", nil, "session_end")
+
+	if manager.sessions["root"] == nil || manager.sessions["term_a"] == nil {
+		t.Fatal("transport 已断时不应由单终端路径清理会话")
+	}
+	if len(manager.connTerminals["server"]) != 2 {
+		t.Fatalf("transport 已断时应保留完整终端列表, 实际: %v", manager.connTerminals["server"])
+	}
+}
+
 func TestStaleClientCleanupKeepsReplacement(t *testing.T) {
 	manager := NewSSHManager()
 	oldClient := &ssh.Client{}

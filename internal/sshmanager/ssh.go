@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"lumeterm/internal/config"
@@ -96,6 +97,36 @@ type sshClientEntry struct {
 	SFTPReady     chan struct{}
 	SFTPReadyOnce sync.Once
 	SFTPInitErr   error
+}
+
+// trackedSSHConn 记录 SSH transport 是否已读失败/被关闭。
+// 整机断线时 x/crypto 读循环先收到错误再关闭所有 channel，各子终端的
+// session.Wait 往往早于 client.Wait 的整机清理返回；靠该标记可确定性区分
+// 「整机断线」与「单个 shell 退出」，避免前端把断线中的子终端逐个删除，
+// 导致重连只能恢复根终端。
+type trackedSSHConn struct {
+	net.Conn
+	dead atomic.Bool
+}
+
+func (c *trackedSSHConn) Read(p []byte) (int, error) {
+	n, err := c.Conn.Read(p)
+	if err != nil {
+		c.dead.Store(true)
+	}
+	return n, err
+}
+
+func (c *trackedSSHConn) Close() error {
+	c.dead.Store(true)
+	return c.Conn.Close()
+}
+
+// isTransportDead 判断连接是否已记录 transport 断线；非 tracked 连接(如测试桩)
+// 视为存活，保持原有行为。
+func isTransportDead(conn net.Conn) bool {
+	c, ok := conn.(*trackedSSHConn)
+	return ok && c.dead.Load()
 }
 
 type SessionData struct {
@@ -660,6 +691,9 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 				return dialErr
 			}
 
+			// 包装 transport，记录读失败/关闭状态（整机断线判定依据）
+			netConn = &trackedSSHConn{Conn: netConn}
+
 			if cancelCtx.Err() != nil {
 				netConn.Close()
 				return fmt.Errorf("连接已取消")
@@ -1081,6 +1115,14 @@ func (m *SSHManager) disconnectAndNotify(sessionId string, expectedSession *ssh.
 	}
 	connKey := expected.ConnKey
 	terminalsBefore := len(m.connTerminals[connKey])
+	// 共享 transport 已断：该终端结束是整机断线的一部分，交给
+	// cleanupClientTransport 按完整 connTerminals 快照统一发一次整机断开事件
+	// （携带全部 terminalIds）。此处不发逐终端 session_end，避免前端把断线中
+	// 的子终端逐个删除，导致重连只能恢复根终端。
+	if entry := m.clients[connKey]; entry != nil && isTransportDead(entry.NetConn) {
+		m.mu.RUnlock()
+		return
+	}
 	m.mu.RUnlock()
 
 	if !m.disconnect(sessionId, expected) {
