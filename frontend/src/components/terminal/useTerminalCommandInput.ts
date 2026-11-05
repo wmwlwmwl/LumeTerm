@@ -4,7 +4,7 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
 import { extractQuickCommandParams } from '../../utils/quickCommandParams.ts';
-import { buildWrappedMultiLineCommand, createGatedLineSender, getTextareaAutocompletePopupPosition, isInteractivePromptText } from '../../utils/terminalHelpers.ts';
+import { buildWrappedMultiLineCommand, createGatedLineSender, getTextareaAutocompletePopupPosition, isInteractivePromptText, type GatedLineSenderApi } from '../../utils/terminalHelpers.ts';
 import { warnDev } from '../../utils/devLog';
 import { CMD_INPUT_BASE_HEIGHT_PX, CMD_INPUT_MAX_HEIGHT_PX } from './terminalTypes.ts';
 import {
@@ -58,9 +58,9 @@ export function useTerminalCommandInput(deps: {
   const [cmdInput, setCmdInput]               = useState('');
   const cmdInputRef                           = useRef<HTMLTextAreaElement | null>(null);
   // 多行直接会话执行的逐行发送链取消句柄(新提交时取消,防陈旧分片后发)
-  const cancelPacedPasteRef                   = useRef<() => void>(() => {});
+  const cancelPacedPasteRef                   = useRef<GatedLineSenderApi | null>(null);
   // 多行直接会话执行：逐行 + 提示符回归门控发送器(单例，重渲染不重建)
-  const gatedLineSenderRef                    = useRef<((lines: string[]) => () => void) | null>(null);
+  const gatedLineSenderRef                    = useRef<GatedLineSenderApi | null>(null);
   // 发送器单例只建一次，serverId 变化时靠 ref 让事件过滤始终读到当前值
   const gatedServerIdRef                      = useRef(serverId);
   gatedServerIdRef.current                    = serverId;
@@ -83,6 +83,11 @@ export function useTerminalCommandInput(deps: {
     }
     return gatedLineSenderRef.current;
   })();
+  // 卸载时取消未完成的逐行发送链，避免组件已销毁后仍按提示符/超时继续写会话
+  useEffect(() => () => {
+    cancelPacedPasteRef.current?.cancel();
+    cancelPacedPasteRef.current = null;
+  }, []);
   const [terminalCwd, setTerminalCwd]         = useState('/');
   const [commandAutocomplete, setCommandAutocomplete] = useState(createCommandAutocompleteState());
   // 命令输入快捷键提示浮层开关（F1 切换；关闭持久化到 localStorage）
@@ -160,8 +165,9 @@ export function useTerminalCommandInput(deps: {
       });
     } else if (lineCount > 1) {
       // 多行直接会话执行：逐行 + 提示符回归门控，与远端时序无关
-      cancelPacedPasteRef.current?.();
-      cancelPacedPasteRef.current = gatedLineSender(text.split('\n'));
+      cancelPacedPasteRef.current?.cancel();
+      cancelPacedPasteRef.current = gatedLineSender;
+      gatedLineSender.start(text.split('\n'));
     } else {
       AppGo.WriteTerminal(sessionId, text + '\r').catch((err) => {
         warnDev('WriteTerminal failed:', err);

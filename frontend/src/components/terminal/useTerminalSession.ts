@@ -15,11 +15,14 @@ import {
   DEFAULT_TERMINAL_SHORTCUTS,
   extractCommandFromBufferLine,
   createGatedLineSender,
+  type GatedLineSenderApi,
   formatTerminalTimestamp,
   getTerminalBufferSnapshotText,
   isInteractivePromptText,
   isShellContinuationPromptLine,
+  isLooseShellPromptLine,
   normalizeTerminalPasteText,
+  planTerminalPaste,
   startsInteractiveScreen,
   textDecoder,
   textEncoder,
@@ -28,6 +31,12 @@ import { createTerminalLocalEchoFilter } from './terminalLocalEchoFilter.ts';
 import { createTerminalKeyEventHandler } from './terminalKeyEventHandler.ts';
 
 type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
+
+/**
+ * 多行粘贴的行数阈值：超过后强制弹「警告（带仅插入/取消）」，即使关闭了
+ * 「多行粘贴前确认」设置也会询问。避免误粘一个脚本文件就直接批量执行。
+ */
+const LONG_PASTE_LINES = 50;
 
 /** xterm 当前单元格尺寸（css px）；拿不到时返回 0 */
 function readTermCellSize(term: XTerm | null): { w: number; h: number } {
@@ -67,6 +76,8 @@ export function useTerminalSession(deps: {
   awaitingPasswordRef: React.RefObject<boolean>;
   awaitingCommandFinishRef: React.RefObject<boolean>;
   pendingCmdRef: React.RefObject<string>;
+  /** 粘贴执行器（多行即执行/多行确认），由本 hook 写入、剪贴板 hook 与按键处理器调用 */
+  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { insertOnly?: boolean }) => void | Promise<void>) | null>;
   isTerminalPointerDownRef: React.RefObject<boolean>;
   dispatchSyntheticTerminalMouseUp: (clientX?: number, clientY?: number) => void;
   keywordHighlightEnabledRef: React.RefObject<boolean>;
@@ -102,7 +113,7 @@ export function useTerminalSession(deps: {
     shortcutsRef, localEchoRef, timestampsEnabledRef, commandBlocksEnabledRef,
     alternateBufferActiveRef, setAlternateBufferActive,
     screenScrollbackRef, prepareScreenScrollbackRef,
-    awaitingPasswordRef, awaitingCommandFinishRef, pendingCmdRef,
+    awaitingPasswordRef, awaitingCommandFinishRef, pendingCmdRef, pasteTextToTerminalRef,
     isTerminalPointerDownRef, dispatchSyntheticTerminalMouseUp,
     keywordHighlightEnabledRef, hlDecoderRef, hlStateRef,
     termSearchInputRef, setShowTermSearch, setTermSearchQuery, setTermSearchResult,
@@ -122,8 +133,8 @@ export function useTerminalSession(deps: {
   const userPinnedRef = useRef(false);
   const lastSentPTYSizeRef = useRef<{ cols: number; rows: number }>({ cols: 0, rows: 0 });
   const ptyResizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 多行粘贴逐行发送链的取消句柄(新输入/卸载时取消,防陈旧分片后发)
-  const cancelPacedPasteRef = useRef<() => void>(() => {});
+  // 多行粘贴逐行发送链的句柄(新输入打断/卸载时处理,防陈旧分片后发)
+  const cancelPacedPasteRef = useRef<GatedLineSenderApi | null>(null);
   // 上一次被接受的终端容器像素尺寸（按轴比较，见 safeFit 的按轴去抖）。
   const lastFitRectRef = useRef<{ w: number; h: number } | null>(null);
 
@@ -443,6 +454,14 @@ export function useTerminalSession(deps: {
         window.dispatchEvent(new CustomEvent('ssh-continuation-ready', {
           detail: { sessionId: serverIdRef.current, terminalId: sessionId }
         }));
+      } else if (isLooseShellPromptLine(text)) {
+        // 自定义提示符（starship ❯ / oh-my-posh λ 等）：严格版识别不到时兜底，
+        // 否则逐行门控发送每行都要干等 2.5s 超时。只用于本事件判定，不改命令块分块。
+        awaitingCommandFinishRef.current = false;
+        lastContinuationPromptLine = -1;
+        window.dispatchEvent(new CustomEvent('ssh-command-finished', {
+          detail: { sessionId: serverIdRef.current, terminalId: sessionId }
+        }));
       }
     });
     const bufferChangeDisposable = term.buffer.onBufferChange((buffer) => {
@@ -516,6 +535,188 @@ export function useTerminalSession(deps: {
       try { fitAddon.fit(); } catch (_) {}
     }, 100);
 
+    // ── 粘贴：对齐 Windows Terminal 的多行粘贴语义 ─────────────────
+    // 旧行为（issue #379）：term.paste() 在远端开启 bracketed paste(2004) 时只把整块
+    // 插入 readline 缓冲区，换行不触发执行，用户必须再按一次回车。这里对齐主流终端：
+    // 多行粘贴先弹「警告 + 剪贴板预览」确认（可在设置里关闭），确认后执行前 N-1 行，
+    // 最后一行只键入不回车，由用户决定是否执行。三处入口（自定义 Ctrl+V / 右键菜单 /
+    // 选区粘贴）与原生 paste 事件（macOS ⌘V、系统右键菜单）共用同一个执行器。
+    let lastPasteShortcutAt = 0;
+    const markPasteHandled = () => { lastPasteShortcutAt = Date.now(); };
+
+    // 逐行 + 提示符回归门控发送器（与远端时序无关，字节零丢失）；粘贴的末行作为
+    // pendingTail 只键入不回车，heredoc/续行场景复用同一套 PS2 事件放行逻辑。
+    const gatedLineSender = createGatedLineSender({
+      send: (chunk) => {
+        if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
+        wsRef.current.send(textEncoder.encode(chunk));
+        return true;
+      },
+      armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
+      getSessionId: () => serverIdRef.current,
+      getTerminalId: () => sessionId,
+    });
+
+    // 多行提示默认开启（对齐 Windows Terminal 的多行粘贴警告）
+    const shouldConfirmMultiLinePaste = () =>
+      localStorage.getItem('terminalMultiLinePasteConfirm') !== 'false';
+
+    // Windows Terminal 风格确认框：警告 + 剪贴板内容预览，按钮「仍然粘贴 / 取消」；
+    // 勾选「不再询问」等价于关闭「多行粘贴前确认」设置（可在设置里重新打开）。
+    // options.dedup=false：同一标题的弹窗允许排队，快速粘贴两次不会把第二次吞掉。
+    const confirmMultiLinePaste = async (payload: string): Promise<'paste' | 'cancel'> => {
+      const dialog = typeof window !== 'undefined' ? window.lumeDialog : undefined;
+      if (!dialog?.choice) return 'paste';
+      const allLines = payload.split('\r');
+      const preview = allLines.slice(0, 8).join('\n') + (allLines.length > 8 ? '\n…' : '');
+      const choice = await dialog.choice(
+        `${t('您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？')}\n\n${t('剪贴板内容（预览）：')}\n${preview}`,
+        t('警告'),
+        [
+          { value: 'paste', label: t('仍然粘贴'), primary: true, shortcut: 'y' },
+          { value: 'cancel', label: t('取消'), shortcut: 'n' },
+        ],
+        t('不再询问'),
+        { dedup: false }
+      );
+      const record = typeof choice === 'object' && choice !== null
+        ? choice as { value?: unknown; checked?: unknown }
+        : null;
+      const value = record ? String(record.value ?? '') : String(choice ?? '');
+      if (record?.checked === true) {
+        localStorage.setItem('terminalMultiLinePasteConfirm', 'false');
+        window.dispatchEvent(new CustomEvent('terminal-multiline-paste-confirm-changed', { detail: false }));
+      }
+      return value === 'paste' ? 'paste' : 'cancel';
+    };
+
+    // 超长粘贴保护：行数超过阈值时，即使关闭了「多行粘贴前确认」也强制确认一次，
+    // 并额外提供「仅插入」（不执行，等价把整段文本放进 readline 缓冲区）。
+    const confirmLongPaste = async (payload: string, lineCount: number): Promise<'paste' | 'insert' | 'cancel'> => {
+      const dialog = typeof window !== 'undefined' ? window.lumeDialog : undefined;
+      if (!dialog?.choice) return 'paste';
+      const allLines = payload.split('\r');
+      const preview = allLines.slice(0, 8).join('\n') + (allLines.length > 8 ? '\n…' : '');
+      const choice = await dialog.choice(
+        `${t('粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？', { count: lineCount })}\n\n${t('剪贴板内容（预览）：')}\n${preview}`,
+        t('警告'),
+        [
+          { value: 'paste', label: t('仍然粘贴'), primary: true, shortcut: 'y' },
+          { value: 'insert', label: t('仅插入'), shortcut: 'i' },
+          { value: 'cancel', label: t('取消'), shortcut: 'n' },
+        ],
+        '',
+        { dedup: false }
+      );
+      const value = typeof choice === 'object' && choice !== null
+        ? String((choice as { value?: unknown }).value ?? '')
+        : String(choice ?? '');
+      if (value === 'paste') return 'paste';
+      if (value === 'insert') return 'insert';
+      return 'cancel';
+    };
+
+    /** 统一粘贴入口：多行确认后执行前 N-1 行、末行留给用户回车；单行按尾换行插入/执行。 */
+    const pasteTextToTerminal = async (text: string, options?: { insertOnly?: boolean }) => {
+      const currentTerm = termRef.current;
+      const currentWs = wsRef.current;
+      if (!currentTerm || !text || !currentWs || currentWs.readyState !== WebSocket.OPEN) {
+        currentTerm?.focus();
+        return;
+      }
+      const plan = planTerminalPaste(text);
+      if (plan.payload === '') return;
+
+      // 单行：不走逐行执行链，vim/less 等备用屏里也保持旧的「插入 + 按需回车」行为
+      // （TUI 里粘贴一行带尾换行 = 插入文本 + 一个回车，是用户预期）。
+      if (!plan.multiline) {
+        currentTerm.paste(plan.payload);
+        if (plan.execute) currentTerm.input('\r');
+        currentTerm.focus();
+        return;
+      }
+
+      // 备用屏（vim / less / top / tmux 等 TUI）的多行粘贴：保持 bracketed paste 整块插入。
+      // 逐行补回车会撕裂界面，TUI 自己会接管粘贴语义，也不弹多行确认。
+      if (currentTerm.buffer.active.type === 'alternate') {
+        currentTerm.paste(plan.payload);
+        currentTerm.focus();
+        return;
+      }
+
+      // 选区粘贴等场景只插入：多行内容整块进 readline 缓冲区，不逐行执行。
+      if (options?.insertOnly) {
+        currentTerm.paste(plan.payload);
+        currentTerm.focus();
+        return;
+      }
+
+      // 行数先算出来：超长粘贴用更严格的确认（带「仅插入」），与设置开关无关。
+      const allLines = plan.payload.split('\r');
+      const lineCount = allLines.length;
+      if (lineCount > LONG_PASTE_LINES) {
+        const action = await confirmLongPaste(plan.payload, lineCount);
+        if (termRef.current !== currentTerm) return;
+        currentTerm.focus();
+        if (action === 'cancel') return;
+        if (action === 'insert') {
+          currentTerm.paste(plan.payload);
+          return;
+        }
+      } else if (shouldConfirmMultiLinePaste()) {
+        const action = await confirmMultiLinePaste(plan.payload);
+        // 确认框期间会话可能被重建/销毁，避免往已释放的 xterm 写入
+        if (termRef.current !== currentTerm) return;
+        currentTerm.focus();
+        if (action !== 'paste') return;
+      }
+
+      // 多行「换行即发令枪」：门控发送器逐行等提示符回归后执行下一行，避免一次性
+      // 灌入时远端 readline 未就绪吞掉行首字符。
+      //  - 剪贴板以换行结尾：末行也执行（那个换行就是最后一次回车），全部行 ⇒ 执行
+      //    ——例如复制带尾换行的三行，结果是三个 123456 + 新提示符；
+      //  - 剪贴板无尾换行：前 N-1 行执行，最后一行只键入留在提示符，等用户自己回车。
+      const lines = allLines;
+      const tail = plan.executeAll ? '' : (lines.pop() ?? '');
+
+      // 多行粘贴直接写 PTY，不经过 term.onData，命令历史 / screen 滚动兼容需要
+      // 在这里按 onData 同一套规则补记，否则粘贴执行的命令不会进历史下拉。
+      // 末行（tail）没有执行，等用户真正回车时由 onData 记录，这里跳过。
+      for (const line of lines) {
+        const cmd = line.trim();
+        if (!cmd || awaitingPasswordRef.current) continue;
+        prepareScreenScrollbackRef.current(cmd);
+        if (cmd.length > 1 && !/^\d+$/.test(cmd)) {
+          window.dispatchEvent(new CustomEvent('ssh-command-history', {
+            detail: { sessionId: serverIdRef.current, command: cmd, time: new Date().toISOString(), source: 'input' },
+          }));
+        }
+      }
+
+      cancelPacedPasteRef.current?.cancel();
+      cancelPacedPasteRef.current = gatedLineSender;
+      gatedLineSender.start(lines, tail);
+      currentTerm.focus();
+    };
+    pasteTextToTerminalRef.current = pasteTextToTerminal;
+
+    // 原生 paste 事件（macOS ⌘V / 系统右键菜单）：捕获阶段拦下，同步读 clipboardData
+    //（不触发 WebKit 异步剪贴板提示气泡 issue #263），再交给执行器。
+    const handleNativePaste = (event: ClipboardEvent) => {
+      // 自定义快捷键已接管本次粘贴时，原生路径只负责吞掉默认插入，避免重复粘贴。
+      if (Date.now() - lastPasteShortcutAt < 300) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const pastedText = event.clipboardData?.getData('text/plain') ?? '';
+      if (!pastedText) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void pasteTextToTerminal(pastedText);
+    };
+    containerRef.current?.addEventListener('paste', handleNativePaste, true);
+
     // ── 自定义快捷键 ──────────────────────────────────────────────
 
     // 初始化快捷键缓存（移出按键热路径，仅在首次或变更时读取）
@@ -537,11 +738,12 @@ export function useTerminalSession(deps: {
       term,
       shortcutsRef,
       wsRef,
-      pendingCmdRef,
       termRef,
       termSearchInputRef,
       setShowTermSearch,
       setTermSearchQuery,
+      pasteTextToTerminal,
+      markPasteHandled,
       pasteTerminalSelectionToTerminal,
     }));
 
@@ -659,17 +861,6 @@ export function useTerminalSession(deps: {
     let localInputLength = 0; // 用于保护提示符，防止退格越界
     let pendingCmdReliable = true;
 
-    // 远端未开 bracketed paste(2004) 时的多行粘贴回退：逐行 + 提示符回归门控(与远端时序无关)；2.5s 超时兜底防卡死
-    const gatedLineSender = createGatedLineSender({
-      send: (chunk) => {
-        if (wsRef.current?.readyState !== WebSocket.OPEN) return false;
-        wsRef.current.send(textEncoder.encode(chunk));
-        return true;
-      },
-      armCommandFinish: () => { awaitingCommandFinishRef.current = true; },
-      getSessionId: () => serverIdRef.current,
-      getTerminalId: () => sessionId,
-    });
     term.onData((data) => {
       if ((statusRef.current === 'closed' || statusRef.current === 'error') && (data.includes('\r') || data.includes('\n'))) {
         window.dispatchEvent(new CustomEvent('ssh-reconnect-trigger', { detail: sessionId }));
@@ -685,13 +876,16 @@ export function useTerminalSession(deps: {
       userPinnedRef.current = false;
 
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        cancelPacedPasteRef.current?.();
+        // 用户手工输入打断多行粘贴时，不能丢掉剩余行：真实终端里粘贴的字节早已全部
+        // 进入 PTY，用户输入只会排在后面。这里先把剩余行一次性补发，再发本次输入。
+        cancelPacedPasteRef.current?.flush();
         if (out.includes('\x1b[200~')) {
           // bracketed paste：整块透传，远端 readline 字面插入不执行，不拆行不补 \r
           wsRef.current.send(textEncoder.encode(out));
         } else if (out.length > 1 && out.includes('\r')) {
           // 远端未开 bracketed paste(2004) 时的回退：逐行发送 + 提示符回归门控(实现见上方)
-          cancelPacedPasteRef.current = gatedLineSender(out.split('\r'));
+          cancelPacedPasteRef.current = gatedLineSender;
+          gatedLineSender.start(out.split('\r'));
         } else {
           wsRef.current.send(textEncoder.encode(out));
         }
@@ -703,6 +897,14 @@ export function useTerminalSession(deps: {
       if (out.includes('\r') || out.includes('\n')) {
         if (term.buffer.active.type === 'alternate') {
           pendingCmdRef.current = '';
+          return;
+        }
+        // bracketed paste 只是整块"插入到 readline 缓冲区"，此刻远端还没执行、缓冲区
+        // 也尚未渲染出粘贴内容；从这里取命令会把转义残留（[200~ / [201~）写进命令历史。
+        // 多行粘贴的提交动作由紧随其后的回车事件记录（见 pasteTextToTerminal），这里跳过。
+        if (out.includes('\x1b[200~')) {
+          pendingCmdRef.current = '';
+          pendingCmdReliable = true;
           return;
         }
         // 多行粘贴：只把最后一行之前的可见内容并入历史，避免把整段 paste 拆烂
@@ -838,10 +1040,13 @@ export function useTerminalSession(deps: {
         clearTimeout(ptyResizeTimerRef.current);
         ptyResizeTimerRef.current = null;
       }
-      cancelPacedPasteRef.current?.();
+      cancelPacedPasteRef.current?.cancel();
+      cancelPacedPasteRef.current = null;
       if (vpEl) vpEl.removeEventListener('scroll', onTermScroll);
-      // 移除 wheel 监听器，避免内存泄漏
+      // 移除 wheel / paste 监听器，避免内存泄漏
       containerRef.current?.removeEventListener('wheel', wheelHandler);
+      containerRef.current?.removeEventListener('paste', handleNativePaste, true);
+      if (pasteTextToTerminalRef.current === pasteTextToTerminal) pasteTextToTerminalRef.current = null;
       if (ws) { try { ws.close(); } catch (_) {} }
       if (wsRef.current === ws) wsRef.current = null;
       tsClear(); // 清理时间戳

@@ -30,6 +30,12 @@ export default function GlobalDialog({ suspendDefault = false }: GlobalDialogPro
     return true;
   }, []);
 
+  // options.dedup === false 时跳过同标题去重：同一动作连续触发两次（例如快速粘贴两次）
+  // 时两个弹窗依次排队，而不是把第二次静默当成「取消」。
+  const dedupeUnlessDisabled = (options: Record<string, unknown> | undefined, isDuplicate: (d: QueuedDialog) => boolean) => (
+    options?.dedup === false ? (() => false) : isDuplicate
+  );
+
   const removeDialog = useCallback((id: number) => {
     dialogsRef.current = dialogsRef.current.filter((dialog) => dialog.id !== id);
     setDialogs(dialogsRef.current);
@@ -49,7 +55,7 @@ export default function GlobalDialog({ suspendDefault = false }: GlobalDialogPro
             message: normalizedMessage,
             copyable: options?.copyable !== false,
             onClose: () => resolve()
-          }, d => d.type === 'alert' && d.priority === getDialogPriority(options) && d.message === normalizedMessage && d.title === title);
+          }, dedupeUnlessDisabled(options, d => d.type === 'alert' && d.priority === getDialogPriority(options) && d.message === normalizedMessage && d.title === title));
           if (!queued) resolve();
         });
       },
@@ -64,7 +70,7 @@ export default function GlobalDialog({ suspendDefault = false }: GlobalDialogPro
             checkboxLabel,
             onConfirm: (_, checked) => resolve(checkboxLabel ? { confirmed: true, checked } : true),
             onCancel: () => resolve(checkboxLabel ? { confirmed: false, checked: false } : false)
-          }, d => d.type === 'confirm' && d.priority === getDialogPriority(options) && d.message === message);
+          }, dedupeUnlessDisabled(options, d => d.type === 'confirm' && d.priority === getDialogPriority(options) && d.message === message));
           // 去重丢弃按「取消」处理：不确认即不执行破坏性操作
           if (!queued) resolve(checkboxLabel ? { confirmed: false, checked: false } : false);
         });
@@ -84,7 +90,7 @@ export default function GlobalDialog({ suspendDefault = false }: GlobalDialogPro
             validate: typeof options?.validate === 'function' ? options.validate : null,
             onConfirm: (val, checked) => resolve(checkboxLabel ? { value: val as string, checked } : val as string),
             onCancel: () => resolve(null)
-          }, d => d.type === 'prompt' && d.priority === getDialogPriority(options) && d.message === message);
+          }, dedupeUnlessDisabled(options, d => d.type === 'prompt' && d.priority === getDialogPriority(options) && d.message === message));
           if (!queued) resolve(null);
         });
       },
@@ -100,7 +106,7 @@ export default function GlobalDialog({ suspendDefault = false }: GlobalDialogPro
             checkboxLabel,
             onChoice: (val, checked) => resolve(checkboxLabel ? { value: val, checked } : val),
             onClose: () => resolve(null)
-          }, d => d.type === 'choice' && d.priority === getDialogPriority(options) && d.title === title);
+          }, dedupeUnlessDisabled(options, d => d.type === 'choice' && d.priority === getDialogPriority(options) && d.title === title));
           if (!queued) resolve(null);
         });
       }

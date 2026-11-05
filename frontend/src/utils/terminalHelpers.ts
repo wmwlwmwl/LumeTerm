@@ -3,6 +3,7 @@
 import type { Terminal as XTerm, IBufferLine, IBufferRange } from '@xterm/xterm';
 import { isDarkTerminalSurface, type TerminalTheme } from './theme.ts';
 import { parseCommandInputContext } from './terminalCommandAutocompleteParser.ts';
+import { warnDev } from './devLog';
 import * as AppGo from '../../wailsjs/go/wailsapp/App.js';
 
 export interface LineSegment {
@@ -309,6 +310,54 @@ if (import.meta.env.DEV) {
   console.assert(!isShellContinuationPromptLine(''), '空行不应误判为续行提示符');
 }
 
+/**
+ * 宽松提示符识别：**只用于「逐行门控发送」判断上一条命令是否执行完**，
+ * 命令块/时间戳等 UI 仍走严格的 isShellPromptLine（避免改变既有分块行为）。
+ *
+ * 严格版只认 `user@host:path$` 一类，starship / oh-my-posh / powerlevel10k 这类
+ * 装饰字形提示符识别不到 → 粘贴多行时每行都要干等 2.5s 超时。这里补两类：
+ *   1. 行首（或行尾）是装饰性提示符字形：❯ ➜ › » λ ƒ ψ ▶ ▷ ❱ ❭ ⟩
+ *      这些字形几乎不会出现在普通命令输出里，再用行长上限兜住极端情况；
+ *   2. 带虚拟环境 / conda 前缀的传统提示符：`(venv) user@host:~$`
+ *      （严格版要求行首直接是 user@host，前缀会导致漏判）
+ * 宁可漏判（退回 2.5s 超时，与旧行为一致），也不要在命令还在跑时提前放行。
+ */
+export const LOOSE_PROMPT_GLYPHS = '❯➜›»λƒψ▶▷❱❭⟩';
+// 模块级复用：该判定在命令输出期间每个 onWriteParsed 都会跑，避免反复 new RegExp
+const LOOSE_PROMPT_HEAD_RE = new RegExp('^[' + LOOSE_PROMPT_GLYPHS + ']', 'u');
+const LOOSE_PROMPT_TAIL_RE = new RegExp('(?:^|\\s)[' + LOOSE_PROMPT_GLYPHS + '][=>]?$', 'u');
+
+export function isLooseShellPromptLine(text: string) {
+  const t = String(text || '').replace(/[\s\u00a0]+$/g, '')
+  if (!t) return false
+  // 1) 装饰字形在行首（光标通常就停在这行）：starship `❯ ` / oh-my-posh `λ ` 等
+  if (t.length <= 120 && LOOSE_PROMPT_HEAD_RE.test(t)) return true
+  // 2) 行尾是装饰字形，且前面是空白或 = >（排除 `f(λ)` `output»` 这类普通输出）
+  if (t.length <= 80 && LOOSE_PROMPT_TAIL_RE.test(t)) return true
+  // 3) fish 等 `user@host ~>` 形态（不带冒号，严格版漏判）
+  if (/^[\w.-]+@[\w.-]+\s+[^\n]{0,40}[>#$%]\s*$/.test(t)) return true
+  // 4) 带环境前缀的传统提示符：(venv) / (conda) (base) user@host:~$
+  if (/^(?:\([^)]{1,32}\)\s*)+[\w.-]+@[\w.-]+:[^\n]*?[#$%]/.test(t)) return true
+  return false
+}
+
+if (import.meta.env.DEV) {
+  console.assert(isLooseShellPromptLine('❯ '), 'starship 提示符应识别');
+  console.assert(isLooseShellPromptLine('❯ ls -al'), '带命令的 starship 提示符应识别');
+  console.assert(isLooseShellPromptLine('➜  ~ '), 'oh-my-zsh 默认提示符应识别');
+  console.assert(isLooseShellPromptLine('λ '), 'λ 提示符应识别');
+  console.assert(isLooseShellPromptLine('~/proj on  main ❯'), '单行 starship 提示符应识别');
+  console.assert(isLooseShellPromptLine('user@host ~>'), 'fish 提示符应识别');
+  console.assert(isLooseShellPromptLine('(venv) user@host:~$ ls'), '带虚拟环境前缀的提示符应识别');
+  console.assert(!isLooseShellPromptLine('123456'), '普通输出不应识别');
+  console.assert(!isLooseShellPromptLine('✓ built in 4.90s'), '构建输出不应识别');
+  console.assert(!isLooseShellPromptLine('$ hello'), '行首 $ 的普通输出不应识别');
+  console.assert(!isLooseShellPromptLine('f(λ)'), '括号内 λ 不应识别');
+  console.assert(!isLooseShellPromptLine('output»'), '紧贴文字的 » 不应识别');
+  console.assert(!isLooseShellPromptLine('❯ ' + 'x'.repeat(150)), '超长行不应识别');
+  console.assert(!isLooseShellPromptLine(''), '空行不应识别');
+}
+
 export function splitTrailingIncompleteEscapeSequence(input: string) {
   if (!input) {
     return { complete: '', carry: '' }
@@ -475,19 +524,49 @@ export function normalizeTerminalPasteText(text: string) {
 }
 
 /**
- * 单行粘贴且剪贴板带尾部换行（如从网页复制 "ping x\n"）→ 粘贴后自动执行；
- * 多行内容永远整块插入不执行（issue #379）。与 normalizeTerminalPasteText 搭配使用：
- * payload 为 normalize 后的文本，多行（含 \r）或原文无尾换行时不自动执行。
+ * 粘贴计划：把剪贴板原文归一化成 PTY 输入，并决定哪些行要执行。
+ *
+ * 对齐主流终端的「换行即发令枪」：粘贴文本里每个换行都会让 shell 执行上一行。
+ * 最后一行是否执行，取决于剪贴板原文是否以换行结尾（真实终端里末尾那个 \n
+ * 就是最后多按的一次回车）：
+ * - 有尾换行：每一行都执行（含最后一行）；
+ * - 无尾换行：执行前 N-1 行，最后一行只键入留在提示符，由用户决定是否回车；
+ * - 单行：只插入不执行；剪贴板以换行结尾时补一次回车（保持旧的单行语义）。
+ * payload 已清掉尾部连续空行，避免一次粘贴连发多个空回车。
  */
-export function shouldAutoExecutePaste(payload: string, rawText: string) {
-  return payload !== '' && !payload.includes('\r') && /[\r\n]$/.test(rawText)
+export function planTerminalPaste(text: string): {
+  /** 归一化后的待写入文本（行分隔为 \r、无尾部回车） */
+  payload: string;
+  /** 是否包含换行（即多行粘贴） */
+  multiline: boolean;
+  /** 多行且剪贴板以换行结尾：末行也要执行（全部行都以 \r 提交） */
+  executeAll: boolean;
+  /** 单行粘贴写入后是否应补一次回车（多行由调用方单独处理，固定为 false） */
+  execute: boolean;
+} {
+  const raw = String(text ?? '');
+  const payload = normalizeTerminalPasteText(raw);
+  const multiline = payload.includes('\r');
+  const trailingNewline = /[\r\n]$/.test(raw);
+  return {
+    payload,
+    multiline,
+    executeAll: multiline && trailingNewline,
+    execute: payload !== '' && !multiline && trailingNewline,
+  };
 }
 
 if (import.meta.env.DEV) {
-  console.assert(shouldAutoExecutePaste('ping 662662.xyz', 'ping 662662.xyz\n'), '单行+尾换行应自动执行');
-  console.assert(!shouldAutoExecutePaste('ping 662662.xyz', 'ping 662662.xyz'), '无尾换行不应自动执行');
-  console.assert(!shouldAutoExecutePaste('a\rb\n', 'a\nb\n'), '多行不应自动执行');
-  console.assert(!shouldAutoExecutePaste('', '\n'), '空内容不应自动执行');
+  const multi = planTerminalPaste('echo 123456\n echo 123456\n echo 123456\n');
+  console.assert(multi.multiline, '多行应识别为多行粘贴');
+  console.assert(multi.payload === 'echo 123456\r echo 123456\r echo 123456', '多行应归一为 \r 分隔并清尾');
+  console.assert(multi.executeAll, '多行且带尾换行时末行也要执行');
+  const multiNoTail = planTerminalPaste('echo 123456\n echo 123456\n echo 123456');
+  console.assert(multiNoTail.multiline && !multiNoTail.executeAll, '多行无尾换行时末行保留待回车');
+  const single = planTerminalPaste('ls -al');
+  console.assert(!single.multiline && !single.execute, '单行无尾换行只插入不执行');
+  console.assert(planTerminalPaste('ls\n').execute, '单行+尾换行应自动执行');
+  console.assert(planTerminalPaste('\n').payload === '', '纯空行不应产生输入');
 }
 
 /**
@@ -505,8 +584,18 @@ if (import.meta.env.DEV) {
  * 不识别 PS2 时 heredoc 每行只能干等 timeoutMs 超时，表现为内容“一点一点”慢速出现。
  * timeoutMs 兜底防提示符识别失效卡死；
  * send 返回 false(断连等)即中止；返回的 cancel 用于清除未完成链。
- * 注意：远端已开 2004 时粘贴走 term.paste 包裹整块透传，不经此发送器。
+ * 可选 pendingTail：队列里各行执行完、提示符回归后，把最后一行只"键入"不回车，
+ * 交由用户决定是否执行（Windows Terminal 风格的多行粘贴末行保留）。
  */
+export interface GatedLineSenderApi {
+  /** 开始发送：lines 逐行执行（各补 \r），pendingTail 最后只键入、不补回车 */
+  start: (lines: string[], pendingTail?: string) => void;
+  /** 丢弃剩余行（新粘贴 / 组件卸载） */
+  cancel: () => void;
+  /** 立即把剩余行一次性发完（用户手工输入打断粘贴时用，避免静默丢行） */
+  flush: () => void;
+}
+
 export function createGatedLineSender(opts: {
   send: (chunk: string) => boolean;
   armCommandFinish: () => void;
@@ -515,9 +604,10 @@ export function createGatedLineSender(opts: {
   /** 返回本终端 id；与 detail.terminalId 不符的事件忽略(同服务器多终端窗格隔离) */
   getTerminalId?: () => string;
   timeoutMs?: number;
-}): (lines: string[]) => () => void {
+}): GatedLineSenderApi {
   const timeoutMs = opts.timeoutMs ?? 2500;
   let queue: string[] = [];
+  let pendingTail = '';
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let listener: ((e: Event) => void) | null = null;
@@ -538,16 +628,30 @@ export function createGatedLineSender(opts: {
   const cancel = () => {
     stopped = true;
     queue = [];
+    pendingTail = '';
     releaseGate();
   };
   const sendNext = () => {
     if (stopped) return;
     releaseGate();
     const line = queue.shift();
-    if (line === undefined) return;
+    if (line === undefined) {
+      // 队列执行完：末行只键入、不补回车，等用户自己按回车（执行权交还用户）
+      if (pendingTail !== '') {
+        const tail = pendingTail;
+        pendingTail = '';
+        opts.send(tail);
+      }
+      return;
+    }
     if (!opts.send(line + '\r')) { stopped = true; return; }
     opts.armCommandFinish();
-    timer = setTimeout(sendNext, timeoutMs);
+    timer = setTimeout(() => {
+      // 超时兜底：提示符没被识别（starship/oh-my-posh 等自定义提示符）才会走到这里，
+      // 每行白等 timeoutMs。DEV 下显式告警，便于定位「粘贴一行一行很慢」的问题。
+      if (import.meta.env.DEV) warnDev('[Terminal] 提示符未被识别，逐行发送超时放行（自定义提示符？）');
+      sendNext();
+    }, timeoutMs);
     const onFinished = (e: Event) => {
       if (!isOwnEvent(e)) return;
       releaseGate();
@@ -557,7 +661,7 @@ export function createGatedLineSender(opts: {
     window.addEventListener('ssh-command-finished', onFinished);
     window.addEventListener('ssh-continuation-ready', onFinished);
   };
-  return (lines: string[]) => {
+  const start = (lines: string[], tail = '') => {
     cancel();
     stopped = false;
     // 尾部空行剥掉(等效 normalizeTerminalPasteText 清尾回车，防多敲空回车连发)；
@@ -565,9 +669,30 @@ export function createGatedLineSender(opts: {
     let end = lines.length;
     while (end > 0 && lines[end - 1] === '') end -= 1;
     queue = lines.slice(0, end);
+    pendingTail = tail;
     sendNext();
-    return cancel;
   };
+  // 立即发完剩余行：真实终端里粘贴的字节本来就已经全部进了 PTY，用户此时输入
+  // 只会排在粘贴内容之后。这里把剩余行一次性补发，保证「输入打断粘贴」不丢命令。
+  const flush = () => {
+    if (!queue.length && pendingTail === '') { releaseGate(); return; }
+    const rest = queue;
+    const tail = pendingTail;
+    queue = [];
+    pendingTail = '';
+    stopped = true;
+    releaseGate();
+    let sentSomething = false;
+    for (const line of rest) {
+      if (!opts.send(line + '\r')) return;
+      sentSomething = true;
+    }
+    if (tail !== '') opts.send(tail);
+    // 补发的行同样要等命令完成（文件管理器按需刷新 / 命令块闭合），否则这批命令
+    // 的提示符回归事件会因为不在等待态而被丢掉。
+    if (sentSomething) opts.armCommandFinish();
+  };
+  return { start, cancel, flush };
 }
 
 /**

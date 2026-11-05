@@ -49,6 +49,9 @@ export function useTerminalGutter(deps: {
     if (/^\[[^\]]+\][#$%](?:\s+|$)/.test(t)) return true;
     // root@host ~]# cmd  一类
     if (/^[\w.-]+@[\w.-]+\s+[^\n]*[#$%](?:\s+|$)/.test(t)) return true;
+    // Windows 本机终端：PowerShell "PS C:\path> cmd" / CMD "C:\path> cmd"。
+    // 不识别时多行粘贴/命令输入栏的逐行门控只能干等 2.5s 超时（每行一次）。
+    if (/^(?:PS\s+)?[A-Za-z]:[\\/][^\n]*?>(?:\s|$)/.test(t)) return true;
     // 极简：以 #/$ 单独起命令（少见）
     if (/^[#$]\s+\S/.test(t)) return true;
     return false;

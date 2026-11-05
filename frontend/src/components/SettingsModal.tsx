@@ -129,6 +129,7 @@ export default function SettingsModal({
     confirmGitForcePush,
     confirmGitUntrack,
     confirmTerminalSelectionPaste,
+    confirmTerminalMultilinePaste,
     windowCloseAction,
     updateUseProxy,
     rememberWorkspace,
@@ -149,6 +150,7 @@ export default function SettingsModal({
     handleToggleConfirmGitForcePush,
     handleToggleConfirmGitUntrack,
     handleToggleConfirmTerminalSelectionPaste,
+    handleToggleConfirmTerminalMultilinePaste,
     handleWindowCloseActionChange,
     handleToggleUpdateUseProxy,
     handleToggleRememberWorkspace,
@@ -271,6 +273,8 @@ export default function SettingsModal({
                 onToggleConfirmGitUntrack={handleToggleConfirmGitUntrack}
                 confirmTerminalSelectionPaste={confirmTerminalSelectionPaste}
                 onToggleConfirmTerminalSelectionPaste={handleToggleConfirmTerminalSelectionPaste}
+                confirmTerminalMultilinePaste={confirmTerminalMultilinePaste}
+                onToggleConfirmTerminalMultilinePaste={handleToggleConfirmTerminalMultilinePaste}
                 windowCloseAction={windowCloseAction}
                 onWindowCloseActionChange={handleWindowCloseActionChange}
                 updateUseProxy={updateUseProxy}
