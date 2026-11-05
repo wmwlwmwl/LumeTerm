@@ -68,6 +68,8 @@ export function useSettingsGeneralState(addToast: ToastFn) {
   const [confirmFileDelete, setConfirmFileDelete] = useState(localStorage.getItem('skipFileDeleteConfirm') !== 'true');
   const [confirmProcessKill, setConfirmProcessKill] = useState(localStorage.getItem('skipProcessKillConfirm') !== 'true');
   const [confirmTerminalSelectionPaste, setConfirmTerminalSelectionPaste] = useState(localStorage.getItem('skipTerminalSelectionPasteConfirm') !== 'true');
+  // 多行粘贴确认默认关闭：终端习惯是「粘贴即执行」，需要防呆的用户在设置里开启
+  const [confirmTerminalMultilinePaste, setConfirmTerminalMultilinePaste] = useState(localStorage.getItem('terminalMultiLinePasteConfirm') === 'true');
   const [confirmGitDiscard, setConfirmGitDiscard] = useState(localStorage.getItem('skipGitDiscardConfirm') !== 'true');
   const [confirmGitForcePush, setConfirmGitForcePush] = useState(localStorage.getItem('skipGitForcePushConfirm') !== 'true');
   const [confirmGitUntrack, setConfirmGitUntrack] = useState(localStorage.getItem('skipGitUntrackConfirm') !== 'true');
@@ -105,6 +107,12 @@ export function useSettingsGeneralState(addToast: ToastFn) {
     setConfirmTerminalSelectionPaste(next);
     if (next) localStorage.removeItem('skipTerminalSelectionPasteConfirm');
     else localStorage.setItem('skipTerminalSelectionPasteConfirm', 'true');
+  };
+  const handleToggleConfirmTerminalMultilinePaste = () => {
+    const next = !confirmTerminalMultilinePaste;
+    setConfirmTerminalMultilinePaste(next);
+    localStorage.setItem('terminalMultiLinePasteConfirm', String(next));
+    window.dispatchEvent(new CustomEvent('terminal-multiline-paste-confirm-changed', { detail: next }));
   };
   const handleToggleConfirmGitDiscard = () => {
     const next = !confirmGitDiscard;
@@ -170,6 +178,14 @@ export function useSettingsGeneralState(addToast: ToastFn) {
     }
   };
   const [supportsWebviewGpuDisable, setSupportsWebviewGpuDisable] = useState(false);
+  // 粘贴确认弹窗里勾「不再询问」会直接改 localStorage 并广播，设置面板打开时也要同步
+  useEffect(() => {
+    const handleMultilinePasteConfirmChange = (event: Event) => {
+      setConfirmTerminalMultilinePaste((event as CustomEvent<boolean>).detail === true);
+    };
+    window.addEventListener('terminal-multiline-paste-confirm-changed', handleMultilinePasteConfirmChange);
+    return () => window.removeEventListener('terminal-multiline-paste-confirm-changed', handleMultilinePasteConfirmChange);
+  }, []);
   useEffect(() => {
     let cancelled = false;
 
@@ -211,6 +227,7 @@ export function useSettingsGeneralState(addToast: ToastFn) {
     confirmFileDelete,
     confirmProcessKill,
     confirmTerminalSelectionPaste,
+    confirmTerminalMultilinePaste,
     confirmGitDiscard,
     confirmGitForcePush,
     confirmGitUntrack,
@@ -231,6 +248,7 @@ export function useSettingsGeneralState(addToast: ToastFn) {
     handleToggleConfirmFileDelete,
     handleToggleConfirmProcessKill,
     handleToggleConfirmTerminalSelectionPaste,
+    handleToggleConfirmTerminalMultilinePaste,
     handleToggleConfirmGitDiscard,
     handleToggleConfirmGitForcePush,
     handleToggleConfirmGitUntrack,

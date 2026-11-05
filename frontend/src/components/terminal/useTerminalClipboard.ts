@@ -3,7 +3,7 @@ import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import type { IBufferRange } from '@xterm/xterm';
 import type { I18nKey } from '../../i18n.ts';
-import { normalizeTerminalPasteText, readClipboardText, shouldAutoExecutePaste } from '../../utils/terminalHelpers.ts';
+import { normalizeTerminalPasteText, readClipboardText } from '../../utils/terminalHelpers.ts';
 import { warnDev } from '../../utils/devLog';
 
 type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
@@ -13,8 +13,8 @@ type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
 export function useTerminalClipboard(deps: {
   termRef: React.RefObject<XTerm | null>;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  wsRef: React.RefObject<WebSocket | null>;
-  pendingCmdRef: React.RefObject<string>;
+  /** 由 useTerminalSession 注入的粘贴执行器（多行粘贴即执行/确认弹窗统一入口） */
+  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { skipConfirm?: boolean }) => void | Promise<void>) | null>;
   terminalRightClickPasteOnEmptyRef: React.RefObject<boolean>;
   terminalRightClickPasteModeRef: React.RefObject<string>;
   terminalLeftClickCopyOnSelectionRef: React.RefObject<boolean>;
@@ -22,10 +22,21 @@ export function useTerminalClipboard(deps: {
   t: LooseT;
 }) {
   const {
-    termRef, containerRef, wsRef, pendingCmdRef,
+    termRef, containerRef, pasteTextToTerminalRef,
     terminalLeftClickCopyOnSelectionRef, terminalLeftClickCopyOnSelectionModeRef,
     t,
   } = deps;
+
+  // 会话主链路 effect 尚未就绪时（极端时序）退回只插入，避免粘贴内容直接丢失
+  const pasteTextToTerminal = useCallback((text: string, options?: { skipConfirm?: boolean }) => {
+    const paste = pasteTextToTerminalRef.current;
+    if (paste) {
+      void paste(text, options);
+      return;
+    }
+    const term = termRef.current;
+    if (term && text) term.paste(normalizeTerminalPasteText(text));
+  }, [pasteTextToTerminalRef, termRef]);
   const terminalMouseDownSelectionRef = useRef<{ mode: 'mouseup' | 'click'; startClientX: number; startClientY: number; text?: string } | null>(null);
   const isTerminalPointerDownRef = useRef(false);
   // macOS WKWebView / 系统手势可能吞掉 mouseup，导致 xterm 拖选状态机卡死（此后划动指针 = 持续划选）。
@@ -103,20 +114,15 @@ export function useTerminalClipboard(deps: {
     // 走 Wails 运行时读取剪贴板：右键/菜单粘贴没有 keydown 可放行成原生 paste 事件，
     // macOS 下 navigator.clipboard.readText() 会弹 "Paste" 提示气泡（issue #263）
     readClipboardText().then((text) => {
-      const payload = normalizeTerminalPasteText(text);
-      if (payload && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        pendingCmdRef.current += payload.replace(/[\x00-\x1F\x7F]/g, '');
-        // term.paste：远端开启 bracketed paste(2004) 时自动包裹整块插入不执行（issue #379）
-        termRef.current?.paste(payload);
-        // 单行+尾换行：粘贴后自动执行（input 模拟键入走 onData，命令记录/命令块闭合全复用）
-        if (shouldAutoExecutePaste(payload, text)) termRef.current?.input('\r');
-      }
+      // 多行粘贴即执行、单行按需插入、多行确认等策略统一由会话主链路的
+      // pasteTextToTerminal 决策（见 useTerminalSession），三处粘贴入口共用同一实现。
+      pasteTextToTerminal(text);
       termRef.current?.focus();
     }).catch((err) => {
       warnDev('Failed to read clipboard:', err);
       termRef.current?.focus();
     });
-  }, []);
+  }, [pasteTextToTerminal, termRef]);
 
   const pasteTerminalSelectionToTerminal = useCallback(async () => {
     const term = termRef.current;
@@ -143,16 +149,12 @@ export function useTerminalClipboard(deps: {
       }
     }
 
-    const payload = normalizeTerminalPasteText(selectedText);
-    if (payload && wsRef.current?.readyState === WebSocket.OPEN) {
-      pendingCmdRef.current += payload.replace(/[\x00-\x1F\x7F]/g, '');
-      // 同 pasteClipboardToTerminal：bracketed paste 整块插入；单行+尾换行自动执行（issue #379）
-      termRef.current?.paste(payload);
-      if (shouldAutoExecutePaste(payload, selectedText)) termRef.current?.input('\r');
-      term.clearSelection();
-    }
+    // 与剪贴板粘贴共用同一策略：多行粘贴即执行（换行即发令枪）。
+    // 选区粘贴已有「超过3行」二次确认，这里跳过执行前的多行确认，避免连续弹两个窗。
+    pasteTextToTerminal(selectedText, { skipConfirm: true });
+    term.clearSelection();
     term.focus();
-  }, [t]);
+  }, [t, pasteTextToTerminal, termRef]);
 
   const handleTerminalMouseDownCapture = useCallback((event: React.MouseEvent) => {
     if (event.button === 0) {

@@ -68,6 +68,9 @@ export default function Terminal({
   const [termSearchCaseSensitive, setTermSearchCaseSensitive] = useState(false);
   const [termSearchResult, setTermSearchResult] = useState({ resultIndex: -1, resultCount: 0 });
   const pendingCmdRef                         = useRef('');
+  // 统一粘贴入口：由 useTerminalSession 注入（多行粘贴即执行 / 多行确认），
+  // 右键菜单、选区粘贴、自定义 Ctrl+V 与原生 paste 事件共用（见 useTerminalClipboard）。
+  const pasteTextToTerminalRef               = useRef<((text: string) => void | Promise<void>) | null>(null);
   const awaitingPasswordRef                   = useRef(false); // 检测到密码提示后，下一行输入不记入命令历史
   const awaitingCommandFinishRef              = useRef(false); // 按回车提交命令后，等待命令完成（提示符回归）
 
@@ -123,7 +126,7 @@ export default function Terminal({
     pasteClipboardToTerminal, pasteTerminalSelectionToTerminal,
     handleTerminalMouseDownCapture, handleTerminalMouseUpCapture,
   } = useTerminalClipboard({
-    termRef, containerRef, wsRef, pendingCmdRef, t,
+    termRef, containerRef, pasteTextToTerminalRef, t,
     terminalRightClickPasteOnEmptyRef, terminalRightClickPasteModeRef,
     terminalLeftClickCopyOnSelectionRef, terminalLeftClickCopyOnSelectionModeRef,
   });
@@ -137,7 +140,7 @@ export default function Terminal({
     shortcutsRef, localEchoRef, timestampsEnabledRef, commandBlocksEnabledRef,
     alternateBufferActiveRef, setAlternateBufferActive,
     screenScrollbackRef, prepareScreenScrollbackRef,
-    awaitingPasswordRef, awaitingCommandFinishRef, pendingCmdRef,
+    awaitingPasswordRef, awaitingCommandFinishRef, pendingCmdRef, pasteTextToTerminalRef,
     isTerminalPointerDownRef, dispatchSyntheticTerminalMouseUp,
     keywordHighlightEnabledRef, hlDecoderRef, hlStateRef, termSearchInputRef,
     setShowTermSearch, setTermSearchQuery, setTermSearchResult, setContextMenu, setLinkMenu,

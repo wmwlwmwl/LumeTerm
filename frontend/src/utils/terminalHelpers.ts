@@ -475,19 +475,44 @@ export function normalizeTerminalPasteText(text: string) {
 }
 
 /**
- * 单行粘贴且剪贴板带尾部换行（如从网页复制 "ping x\n"）→ 粘贴后自动执行；
- * 多行内容永远整块插入不执行（issue #379）。与 normalizeTerminalPasteText 搭配使用：
- * payload 为 normalize 后的文本，多行（含 \r）或原文无尾换行时不自动执行。
+ * 粘贴计划：把剪贴板原文归一化成 PTY 输入，并决定写入后是否要立即触发执行。
+ *
+ * 真实终端的直觉是「换行符即发令枪」：粘贴的多行文本里每个换行都会让 shell
+ * 执行上一行。issue #379 曾把多行粘贴改成 bracketed paste 只插入、必须手动
+ * 回车，与用户习惯不符，这里恢复终端语义（具体发包方式见 useTerminalSession）：
+ * - 多行：换行保留为行分隔，粘贴后立即整段执行（等价逐行敲回车；与命令输入栏
+ *   多行提交一致，不依赖剪贴板末尾是否恰好带换行）；
+ * - 单行：只插入不执行；剪贴板以换行结尾时补一次回车（保持旧的单行语义）。
+ * payload 已清掉尾部连续空行，避免一次粘贴连发多个空回车。
  */
-export function shouldAutoExecutePaste(payload: string, rawText: string) {
-  return payload !== '' && !payload.includes('\r') && /[\r\n]$/.test(rawText)
+export function planTerminalPaste(text: string): {
+  /** 归一化后的待写入文本（行分隔为 \r、无尾部回车） */
+  payload: string;
+  /** 是否包含换行（即多行粘贴） */
+  multiline: boolean;
+  /** 写入后是否应补一次回车（多行恒为真；单行看剪贴板是否以换行结尾） */
+  execute: boolean;
+} {
+  const raw = String(text ?? '');
+  const payload = normalizeTerminalPasteText(raw);
+  const multiline = payload.includes('\r');
+  return {
+    payload,
+    multiline,
+    execute: payload !== '' && (multiline || /[\r\n]$/.test(raw)),
+  };
 }
 
 if (import.meta.env.DEV) {
-  console.assert(shouldAutoExecutePaste('ping 662662.xyz', 'ping 662662.xyz\n'), '单行+尾换行应自动执行');
-  console.assert(!shouldAutoExecutePaste('ping 662662.xyz', 'ping 662662.xyz'), '无尾换行不应自动执行');
-  console.assert(!shouldAutoExecutePaste('a\rb\n', 'a\nb\n'), '多行不应自动执行');
-  console.assert(!shouldAutoExecutePaste('', '\n'), '空内容不应自动执行');
+  const multi = planTerminalPaste('echo 123456\n echo 123456\n echo 123456\n');
+  console.assert(multi.multiline && multi.execute, '多行+尾换行应自动执行');
+  console.assert(multi.payload === 'echo 123456\r echo 123456\r echo 123456', '多行应归一为 \r 分隔并清尾');
+  const multiNoTail = planTerminalPaste('echo 1\necho 2');
+  console.assert(multiNoTail.multiline && multiNoTail.execute, '多行粘贴应整段执行（不依赖尾换行）');
+  const single = planTerminalPaste('ls -al');
+  console.assert(!single.multiline && !single.execute, '单行无尾换行只插入不执行');
+  console.assert(planTerminalPaste('ls\n').execute, '单行+尾换行应自动执行');
+  console.assert(planTerminalPaste('\n').payload === '', '纯空行不应产生输入');
 }
 
 /**

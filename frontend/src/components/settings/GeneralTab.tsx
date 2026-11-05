@@ -24,6 +24,8 @@ interface GeneralTabProps {
   onToggleConfirmGitUntrack: () => void;
   confirmTerminalSelectionPaste: boolean;
   onToggleConfirmTerminalSelectionPaste: () => void;
+  confirmTerminalMultilinePaste: boolean;
+  onToggleConfirmTerminalMultilinePaste: () => void;
   windowCloseAction: string;
   onWindowCloseActionChange: (value: string) => void;
   updateUseProxy: boolean;
@@ -76,6 +78,8 @@ export default function GeneralTab({
   onToggleConfirmGitUntrack,
   confirmTerminalSelectionPaste,
   onToggleConfirmTerminalSelectionPaste,
+  confirmTerminalMultilinePaste,
+  onToggleConfirmTerminalMultilinePaste,
   windowCloseAction,
   onWindowCloseActionChange,
   updateUseProxy,
@@ -118,6 +122,7 @@ export default function GeneralTab({
     confirmGitForcePush: { checked: confirmGitForcePush, onChange: onToggleConfirmGitForcePush },
     confirmGitUntrack: { checked: confirmGitUntrack, onChange: onToggleConfirmGitUntrack },
     confirmTerminalSelectionPaste: { checked: confirmTerminalSelectionPaste, onChange: onToggleConfirmTerminalSelectionPaste },
+    confirmTerminalMultilinePaste: { checked: confirmTerminalMultilinePaste, onChange: onToggleConfirmTerminalMultilinePaste },
     terminalRightClickPasteOnEmpty: { checked: terminalRightClickPasteOnEmpty, onChange: () => onTerminalRightClickPasteOnEmptyChange(!terminalRightClickPasteOnEmpty) },
     terminalLeftClickCopyOnSelection: { checked: terminalLeftClickCopyOnSelection, onChange: () => onTerminalLeftClickCopyOnSelectionChange(!terminalLeftClickCopyOnSelection) },
     terminalTabDoubleClickActionEnabled: { checked: terminalTabDoubleClickActionEnabled, onChange: () => onTerminalTabDoubleClickActionEnabledChange(!terminalTabDoubleClickActionEnabled) },
