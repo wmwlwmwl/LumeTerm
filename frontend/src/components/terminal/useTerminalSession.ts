@@ -69,7 +69,7 @@ export function useTerminalSession(deps: {
   awaitingCommandFinishRef: React.RefObject<boolean>;
   pendingCmdRef: React.RefObject<string>;
   /** 粘贴执行器（多行即执行/多行确认），由本 hook 写入、剪贴板 hook 与按键处理器调用 */
-  pasteTextToTerminalRef: React.MutableRefObject<((text: string) => void | Promise<void>) | null>;
+  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => void | Promise<void>) | null>;
   isTerminalPointerDownRef: React.RefObject<boolean>;
   dispatchSyntheticTerminalMouseUp: (clientX?: number, clientY?: number) => void;
   keywordHighlightEnabledRef: React.RefObject<boolean>;
@@ -573,7 +573,7 @@ export function useTerminalSession(deps: {
     };
 
     /** 统一粘贴入口：多行确认后执行前 N-1 行、末行留给用户回车；单行按尾换行插入/执行。 */
-    const pasteTextToTerminal = async (text: string, options?: { skipConfirm?: boolean }) => {
+    const pasteTextToTerminal = async (text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => {
       const currentTerm = termRef.current;
       const currentWs = wsRef.current;
       if (!currentTerm || !text || !currentWs || currentWs.readyState !== WebSocket.OPEN) {
@@ -598,6 +598,13 @@ export function useTerminalSession(deps: {
         return;
       }
 
+      // 选区粘贴等场景只插入：多行内容整块进 readline 缓冲区，不逐行执行。
+      if (options?.insertOnly) {
+        currentTerm.paste(plan.payload);
+        currentTerm.focus();
+        return;
+      }
+
       if (!options?.skipConfirm && shouldConfirmMultiLinePaste()) {
         const action = await confirmMultiLinePaste(plan.payload);
         // 确认框期间会话可能被重建/销毁，避免往已释放的 xterm 写入
@@ -613,6 +620,21 @@ export function useTerminalSession(deps: {
       //  - 剪贴板无尾换行：前 N-1 行执行，最后一行只键入留在提示符，等用户自己回车。
       const lines = plan.payload.split('\r');
       const tail = plan.executeAll ? '' : (lines.pop() ?? '');
+
+      // 多行粘贴直接写 PTY，不经过 term.onData，命令历史 / screen 滚动兼容需要
+      // 在这里按 onData 同一套规则补记，否则粘贴执行的命令不会进历史下拉。
+      // 末行（tail）没有执行，等用户真正回车时由 onData 记录，这里跳过。
+      for (const line of lines) {
+        const cmd = line.trim();
+        if (!cmd || awaitingPasswordRef.current) continue;
+        prepareScreenScrollbackRef.current(cmd);
+        if (cmd.length > 1 && !/^\d+$/.test(cmd)) {
+          window.dispatchEvent(new CustomEvent('ssh-command-history', {
+            detail: { sessionId: serverIdRef.current, command: cmd, time: new Date().toISOString(), source: 'input' },
+          }));
+        }
+      }
+
       cancelPacedPasteRef.current?.();
       cancelPacedPasteRef.current = gatedLineSender(lines, tail);
       currentTerm.focus();

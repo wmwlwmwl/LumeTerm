@@ -70,7 +70,7 @@ export default function Terminal({
   const pendingCmdRef                         = useRef('');
   // 统一粘贴入口：由 useTerminalSession 注入（多行确认 + 末行保留），
   // 右键菜单、选区粘贴、自定义 Ctrl+V 与原生 paste 事件共用（见 useTerminalClipboard）。
-  const pasteTextToTerminalRef               = useRef<((text: string) => void | Promise<void>) | null>(null);
+  const pasteTextToTerminalRef               = useRef<((text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => void | Promise<void>) | null>(null);
   const awaitingPasswordRef                   = useRef(false); // 检测到密码提示后，下一行输入不记入命令历史
   const awaitingCommandFinishRef              = useRef(false); // 按回车提交命令后，等待命令完成（提示符回归）
 

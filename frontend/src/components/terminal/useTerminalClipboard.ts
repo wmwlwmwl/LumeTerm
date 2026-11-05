@@ -14,7 +14,7 @@ export function useTerminalClipboard(deps: {
   termRef: React.RefObject<XTerm | null>;
   containerRef: React.RefObject<HTMLDivElement | null>;
   /** 由 useTerminalSession 注入的粘贴执行器（多行确认/末行保留统一入口） */
-  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { skipConfirm?: boolean }) => void | Promise<void>) | null>;
+  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => void | Promise<void>) | null>;
   terminalRightClickPasteOnEmptyRef: React.RefObject<boolean>;
   terminalRightClickPasteModeRef: React.RefObject<string>;
   terminalLeftClickCopyOnSelectionRef: React.RefObject<boolean>;
@@ -28,7 +28,7 @@ export function useTerminalClipboard(deps: {
   } = deps;
 
   // 会话主链路 effect 尚未就绪时（极端时序）退回只插入，避免粘贴内容直接丢失
-  const pasteTextToTerminal = useCallback((text: string, options?: { skipConfirm?: boolean }) => {
+  const pasteTextToTerminal = useCallback((text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => {
     const paste = pasteTextToTerminalRef.current;
     if (paste) {
       void paste(text, options);
@@ -149,9 +149,9 @@ export function useTerminalClipboard(deps: {
       }
     }
 
-    // 与剪贴板粘贴共用同一策略：多行确认后执行前 N-1 行、末行保留。
-    // 选区粘贴已有「超过3行」二次确认，这里跳过执行前的多行确认，避免连续弹两个窗。
-    pasteTextToTerminal(selectedText, { skipConfirm: true });
+    // 选区粘贴保持「只插入不执行」：选区多来自滚屏输出（日志/配置片段），
+    // 直接执行风险高；单行沿用旧语义（带尾换行才执行）。
+    pasteTextToTerminal(selectedText, { insertOnly: true });
     term.clearSelection();
     term.focus();
   }, [t, pasteTextToTerminal, termRef]);
