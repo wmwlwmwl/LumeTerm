@@ -16,7 +16,7 @@ require (
 	github.com/wailsapp/wails/v2 v2.17.1
 	go.bug.st/serial v1.8.0
 	golang.org/x/crypto v0.58.0
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 	golang.org/x/text v0.43.0
 	modernc.org/sqlite v1.61.0
 )
