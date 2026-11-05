@@ -16,7 +16,7 @@ export function createTerminalKeyEventHandler(deps: {
   termSearchInputRef: React.RefObject<HTMLInputElement | null>;
   setShowTermSearch: React.Dispatch<React.SetStateAction<boolean>>;
   setTermSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-  /** 统一粘贴入口：多行即执行、单行按需插入、多行确认（见 useTerminalSession） */
+  /** 统一粘贴入口：多行确认 + 末行保留、单行按需插入（见 useTerminalSession） */
   pasteTextToTerminal: (text: string) => void | Promise<void>;
   /** 标记本次粘贴已由快捷键接管，供原生 paste 事件监听器去重 */
   markPasteHandled: () => void;
@@ -67,7 +67,7 @@ export function createTerminalKeyEventHandler(deps: {
       // 在 macOS 上按下 ⌘V 且使用默认粘贴配置时，放行给系统原生 paste 事件处理，
       // 避免触发 WebKit 异步剪贴板 "Paste" 提示气泡（issue #263）。
       // 原生 paste 事件由 useTerminalSession 的捕获监听器接管（同步读 clipboardData，
-      // 不会弹气泡），因此多行粘贴同样会「换行即执行」。
+      // 不会弹气泡），因此多行粘贴同样走「确认 + 末行保留」。
       if (isMac && e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'v' || e.key === 'V') && customShortcuts.paste === 'Ctrl+V') {
         return true;
       }

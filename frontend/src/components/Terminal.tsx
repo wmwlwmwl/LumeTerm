@@ -68,7 +68,7 @@ export default function Terminal({
   const [termSearchCaseSensitive, setTermSearchCaseSensitive] = useState(false);
   const [termSearchResult, setTermSearchResult] = useState({ resultIndex: -1, resultCount: 0 });
   const pendingCmdRef                         = useRef('');
-  // 统一粘贴入口：由 useTerminalSession 注入（多行粘贴即执行 / 多行确认），
+  // 统一粘贴入口：由 useTerminalSession 注入（多行确认 + 末行保留），
   // 右键菜单、选区粘贴、自定义 Ctrl+V 与原生 paste 事件共用（见 useTerminalClipboard）。
   const pasteTextToTerminalRef               = useRef<((text: string) => void | Promise<void>) | null>(null);
   const awaitingPasswordRef                   = useRef(false); // 检测到密码提示后，下一行输入不记入命令历史

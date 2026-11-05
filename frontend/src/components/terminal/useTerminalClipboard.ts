@@ -13,7 +13,7 @@ type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
 export function useTerminalClipboard(deps: {
   termRef: React.RefObject<XTerm | null>;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  /** 由 useTerminalSession 注入的粘贴执行器（多行粘贴即执行/确认弹窗统一入口） */
+  /** 由 useTerminalSession 注入的粘贴执行器（多行确认/末行保留统一入口） */
   pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { skipConfirm?: boolean }) => void | Promise<void>) | null>;
   terminalRightClickPasteOnEmptyRef: React.RefObject<boolean>;
   terminalRightClickPasteModeRef: React.RefObject<string>;
@@ -114,7 +114,7 @@ export function useTerminalClipboard(deps: {
     // 走 Wails 运行时读取剪贴板：右键/菜单粘贴没有 keydown 可放行成原生 paste 事件，
     // macOS 下 navigator.clipboard.readText() 会弹 "Paste" 提示气泡（issue #263）
     readClipboardText().then((text) => {
-      // 多行粘贴即执行、单行按需插入、多行确认等策略统一由会话主链路的
+      // 多行确认、末行保留、单行按需插入等策略统一由会话主链路的
       // pasteTextToTerminal 决策（见 useTerminalSession），三处粘贴入口共用同一实现。
       pasteTextToTerminal(text);
       termRef.current?.focus();
@@ -149,7 +149,7 @@ export function useTerminalClipboard(deps: {
       }
     }
 
-    // 与剪贴板粘贴共用同一策略：多行粘贴即执行（换行即发令枪）。
+    // 与剪贴板粘贴共用同一策略：多行确认后执行前 N-1 行、末行保留。
     // 选区粘贴已有「超过3行」二次确认，这里跳过执行前的多行确认，避免连续弹两个窗。
     pasteTextToTerminal(selectedText, { skipConfirm: true });
     term.clearSelection();

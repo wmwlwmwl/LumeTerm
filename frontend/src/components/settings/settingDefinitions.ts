@@ -175,7 +175,7 @@ const settingsTreeSource = rootNode(
         ]),
         subsectionNode('general.confirmation.terminal', '终端与窗口确认', [
           fieldNode('general.terminal-selection-paste-confirm', 'terminalSelectionPasteConfirm', '粘贴所选项时确认', '粘贴超过3行的终端选区前弹出确认弹窗', { control: 'toggle', stateKey: 'confirmTerminalSelectionPaste' }),
-          fieldNode('general.terminal-multiline-paste-confirm', 'terminalMultilinePasteConfirm', '多行粘贴前确认', '粘贴包含多行命令的内容前弹出确认弹窗, 可选择全部执行或仅粘贴', { control: 'toggle', stateKey: 'confirmTerminalMultilinePaste' }),
+          fieldNode('general.terminal-multiline-paste-confirm', 'terminalMultilinePasteConfirm', '多行粘贴前确认', '粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览', { control: 'toggle', stateKey: 'confirmTerminalMultilinePaste' }),
           fieldNode('general.window-close', 'windowClose', '关闭窗口时', '选择关闭窗口时的默认行为', { control: 'select', stateKey: 'windowCloseAction' }),
         ]),
       ]),

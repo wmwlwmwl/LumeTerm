@@ -68,8 +68,8 @@ export function useSettingsGeneralState(addToast: ToastFn) {
   const [confirmFileDelete, setConfirmFileDelete] = useState(localStorage.getItem('skipFileDeleteConfirm') !== 'true');
   const [confirmProcessKill, setConfirmProcessKill] = useState(localStorage.getItem('skipProcessKillConfirm') !== 'true');
   const [confirmTerminalSelectionPaste, setConfirmTerminalSelectionPaste] = useState(localStorage.getItem('skipTerminalSelectionPasteConfirm') !== 'true');
-  // 多行粘贴确认默认关闭：终端习惯是「粘贴即执行」，需要防呆的用户在设置里开启
-  const [confirmTerminalMultilinePaste, setConfirmTerminalMultilinePaste] = useState(localStorage.getItem('terminalMultiLinePasteConfirm') === 'true');
+  // 多行粘贴确认默认开启（对齐 Windows Terminal 的多行粘贴警告），可在设置里关闭
+  const [confirmTerminalMultilinePaste, setConfirmTerminalMultilinePaste] = useState(localStorage.getItem('terminalMultiLinePasteConfirm') !== 'false');
   const [confirmGitDiscard, setConfirmGitDiscard] = useState(localStorage.getItem('skipGitDiscardConfirm') !== 'true');
   const [confirmGitForcePush, setConfirmGitForcePush] = useState(localStorage.getItem('skipGitForcePushConfirm') !== 'true');
   const [confirmGitUntrack, setConfirmGitUntrack] = useState(localStorage.getItem('skipGitUntrackConfirm') !== 'true');

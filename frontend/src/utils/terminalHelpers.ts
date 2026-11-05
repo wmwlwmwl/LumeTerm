@@ -475,13 +475,11 @@ export function normalizeTerminalPasteText(text: string) {
 }
 
 /**
- * 粘贴计划：把剪贴板原文归一化成 PTY 输入，并决定写入后是否要立即触发执行。
+ * 粘贴计划：把剪贴板原文归一化成 PTY 输入，并决定单行粘贴是否补回车。
  *
- * 真实终端的直觉是「换行符即发令枪」：粘贴的多行文本里每个换行都会让 shell
- * 执行上一行。issue #379 曾把多行粘贴改成 bracketed paste 只插入、必须手动
- * 回车，与用户习惯不符，这里恢复终端语义（具体发包方式见 useTerminalSession）：
- * - 多行：换行保留为行分隔，粘贴后立即整段执行（等价逐行敲回车；与命令输入栏
- *   多行提交一致，不依赖剪贴板末尾是否恰好带换行）；
+ * 多行粘贴对齐 Windows Terminal 的语义：先弹确认，确认后执行前 N-1 行、
+ * 最后一行只键入留给用户回车（具体发包见 useTerminalSession）：
+ * - 多行：换行保留为行分隔，由粘贴执行器逐行门控发送，末行不回车；
  * - 单行：只插入不执行；剪贴板以换行结尾时补一次回车（保持旧的单行语义）。
  * payload 已清掉尾部连续空行，避免一次粘贴连发多个空回车。
  */
@@ -490,7 +488,7 @@ export function planTerminalPaste(text: string): {
   payload: string;
   /** 是否包含换行（即多行粘贴） */
   multiline: boolean;
-  /** 写入后是否应补一次回车（多行恒为真；单行看剪贴板是否以换行结尾） */
+  /** 单行粘贴写入后是否应补一次回车（多行由调用方单独处理，固定为 false） */
   execute: boolean;
 } {
   const raw = String(text ?? '');
@@ -499,16 +497,16 @@ export function planTerminalPaste(text: string): {
   return {
     payload,
     multiline,
-    execute: payload !== '' && (multiline || /[\r\n]$/.test(raw)),
+    execute: payload !== '' && !multiline && /[\r\n]$/.test(raw),
   };
 }
 
 if (import.meta.env.DEV) {
   const multi = planTerminalPaste('echo 123456\n echo 123456\n echo 123456\n');
-  console.assert(multi.multiline && multi.execute, '多行+尾换行应自动执行');
+  console.assert(multi.multiline, '多行应识别为多行粘贴');
   console.assert(multi.payload === 'echo 123456\r echo 123456\r echo 123456', '多行应归一为 \r 分隔并清尾');
   const multiNoTail = planTerminalPaste('echo 1\necho 2');
-  console.assert(multiNoTail.multiline && multiNoTail.execute, '多行粘贴应整段执行（不依赖尾换行）');
+  console.assert(multiNoTail.multiline && !multiNoTail.execute, '多行不在这里决定回车（由粘贴执行器逐行处理）');
   const single = planTerminalPaste('ls -al');
   console.assert(!single.multiline && !single.execute, '单行无尾换行只插入不执行');
   console.assert(planTerminalPaste('ls\n').execute, '单行+尾换行应自动执行');
@@ -530,7 +528,8 @@ if (import.meta.env.DEV) {
  * 不识别 PS2 时 heredoc 每行只能干等 timeoutMs 超时，表现为内容“一点一点”慢速出现。
  * timeoutMs 兜底防提示符识别失效卡死；
  * send 返回 false(断连等)即中止；返回的 cancel 用于清除未完成链。
- * 注意：远端已开 2004 时粘贴走 term.paste 包裹整块透传，不经此发送器。
+ * 可选 pendingTail：队列里各行执行完、提示符回归后，把最后一行只"键入"不回车，
+ * 交由用户决定是否执行（Windows Terminal 风格的多行粘贴末行保留）。
  */
 export function createGatedLineSender(opts: {
   send: (chunk: string) => boolean;
@@ -540,9 +539,10 @@ export function createGatedLineSender(opts: {
   /** 返回本终端 id；与 detail.terminalId 不符的事件忽略(同服务器多终端窗格隔离) */
   getTerminalId?: () => string;
   timeoutMs?: number;
-}): (lines: string[]) => () => void {
+}): (lines: string[], pendingTail?: string) => () => void {
   const timeoutMs = opts.timeoutMs ?? 2500;
   let queue: string[] = [];
+  let pendingTail = '';
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let listener: ((e: Event) => void) | null = null;
@@ -563,13 +563,22 @@ export function createGatedLineSender(opts: {
   const cancel = () => {
     stopped = true;
     queue = [];
+    pendingTail = '';
     releaseGate();
   };
   const sendNext = () => {
     if (stopped) return;
     releaseGate();
     const line = queue.shift();
-    if (line === undefined) return;
+    if (line === undefined) {
+      // 队列执行完：末行只键入、不补回车，等用户自己按回车（执行权交还用户）
+      if (pendingTail !== '') {
+        const tail = pendingTail;
+        pendingTail = '';
+        opts.send(tail);
+      }
+      return;
+    }
     if (!opts.send(line + '\r')) { stopped = true; return; }
     opts.armCommandFinish();
     timer = setTimeout(sendNext, timeoutMs);
@@ -582,7 +591,7 @@ export function createGatedLineSender(opts: {
     window.addEventListener('ssh-command-finished', onFinished);
     window.addEventListener('ssh-continuation-ready', onFinished);
   };
-  return (lines: string[]) => {
+  return (lines: string[], tail = '') => {
     cancel();
     stopped = false;
     // 尾部空行剥掉(等效 normalizeTerminalPasteText 清尾回车，防多敲空回车连发)；
@@ -590,6 +599,7 @@ export function createGatedLineSender(opts: {
     let end = lines.length;
     while (end > 0 && lines[end - 1] === '') end -= 1;
     queue = lines.slice(0, end);
+    pendingTail = tail;
     sendNext();
     return cancel;
   };
