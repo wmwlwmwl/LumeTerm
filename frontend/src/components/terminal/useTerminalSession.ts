@@ -583,17 +583,19 @@ export function useTerminalSession(deps: {
       const plan = planTerminalPaste(text);
       if (plan.payload === '') return;
 
-      // 备用屏（vim / less / top / tmux 等 TUI）：保持 bracketed paste 整块插入。
-      // 逐行补回车会撕裂界面，TUI 自己会接管粘贴语义，也不弹多行确认。
-      if (currentTerm.buffer.active.type === 'alternate') {
+      // 单行：不走逐行执行链，vim/less 等备用屏里也保持旧的「插入 + 按需回车」行为
+      // （TUI 里粘贴一行带尾换行 = 插入文本 + 一个回车，是用户预期）。
+      if (!plan.multiline) {
         currentTerm.paste(plan.payload);
+        if (plan.execute) currentTerm.input('\r');
         currentTerm.focus();
         return;
       }
 
-      if (!plan.multiline) {
+      // 备用屏（vim / less / top / tmux 等 TUI）的多行粘贴：保持 bracketed paste 整块插入。
+      // 逐行补回车会撕裂界面，TUI 自己会接管粘贴语义，也不弹多行确认。
+      if (currentTerm.buffer.active.type === 'alternate') {
         currentTerm.paste(plan.payload);
-        if (plan.execute) currentTerm.input('\r');
         currentTerm.focus();
         return;
       }
