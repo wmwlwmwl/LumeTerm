@@ -279,6 +279,8 @@ export default {
   "警告": "Cảnh báo",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Bạn sắp dán văn bản có nhiều dòng. Nếu dán văn bản này vào shell, các lệnh có thể được thực thi ngoài ý muốn. Tiếp tục?",
   "剪贴板内容（预览）：": "Nội dung bảng nhớ tạm (xem trước):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "Nội dung đã dán có {count} dòng. Thực hiện tất cả có thể gây ra hậu quả ngoài ý muốn. Tiếp tục?",
+  "仅插入": "Chỉ chèn",
   "仍然粘贴": "Vẫn dán",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Hiển thị hộp thoại xác nhận kèm bản xem trước nội dung bảng nhớ tạm trước khi dán nội dung nhiều dòng",
   "多行粘贴前确认": "Xác nhận trước khi dán nhiều dòng",

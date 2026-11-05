@@ -279,6 +279,8 @@ export default {
   "警告": "Warnung",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Sie sind dabei, Text mit mehreren Zeilen einzufügen. Wenn Sie diesen Text in die Shell einfügen, kann dies dazu führen, dass Befehle unerwartet ausgeführt werden. Fortfahren?",
   "剪贴板内容（预览）：": "Inhalt der Zwischenablage (Vorschau):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "Der eingefügte Inhalt umfasst {count} Zeilen. Wenn Sie alle ausführen, kann das unbeabsichtigte Auswirkungen haben. Fortfahren?",
+  "仅插入": "Nur einfügen",
   "仍然粘贴": "Trotzdem einfügen",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Vor dem Einfügen mehrzeiliger Inhalte einen Bestätigungsdialog mit Vorschau des Zwischenablageinhalts anzeigen",
   "多行粘贴前确认": "Vor mehrzeiligem Einfügen bestätigen",

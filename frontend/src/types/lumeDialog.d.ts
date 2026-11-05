@@ -7,6 +7,8 @@ export interface LumeDialogPromptOptions {
   inputType?: 'password' | 'text';
   validate?: (value: string) => string | null | undefined | Promise<string | null | undefined>;
   priority?: string;
+  /** 默认 true；置 false 时允许同标题弹窗排队（同动作连续触发两次不会被吞掉） */
+  dedup?: boolean;
   [key: string]: unknown;
 }
 

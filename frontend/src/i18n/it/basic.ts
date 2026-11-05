@@ -279,6 +279,8 @@ export default {
   "警告": "Avviso",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Stai per incollare un testo che contiene più righe. Se lo incolli nella shell, dei comandi potrebbero essere eseguiti inaspettatamente. Continuare?",
   "剪贴板内容（预览）：": "Contenuto degli appunti (anteprima):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "Il contenuto incollato contiene {count} righe. Eseguirle tutte potrebbe avere effetti indesiderati. Continuare?",
+  "仅插入": "Solo inserisci",
   "仍然粘贴": "Incolla comunque",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Mostra una finestra di conferma con l’anteprima del contenuto degli appunti prima di incollare contenuti su più righe",
   "多行粘贴前确认": "Conferma prima di incollare più righe",

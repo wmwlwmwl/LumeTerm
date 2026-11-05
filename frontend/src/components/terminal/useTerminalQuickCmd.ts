@@ -3,7 +3,7 @@ import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import * as AppGo from '../../../wailsjs/go/wailsapp/App.js';
 import { extractQuickCommandParams, fillQuickCommandParams, normalizeQuickCommandParamHistory, type QuickCommandParamHistory } from '../../utils/quickCommandParams.ts';
-import { buildWrappedMultiLineCommand, createGatedLineSender, isInteractivePromptText } from '../../utils/terminalHelpers.ts';
+import { buildWrappedMultiLineCommand, createGatedLineSender, isInteractivePromptText, type GatedLineSenderApi } from '../../utils/terminalHelpers.ts';
 import { warnDev } from '../../utils/devLog';
 import { normalizeQuickCommandItems, type FlattenedQuickCommand } from '../../utils/terminalCommandAutocomplete.ts';
 
@@ -33,9 +33,9 @@ export function useTerminalQuickCmd(deps: {
   // 待确认命令：{ item, values } 或 null（点命令条按钮后弹确认框，对齐安卓端）
   const [pendingQuickCmd, setPendingQuickCmd] = useState<{ item: FlattenedQuickCommand; values: Record<string, string> } | null>(null);
   // 多行直接会话执行的逐行发送链取消句柄(新提交时取消,防陈旧分片后发)
-  const cancelPacedPasteRef = useRef<() => void>(() => {});
+  const cancelPacedPasteRef = useRef<GatedLineSenderApi | null>(null);
   // 多行直接会话执行：逐行 + 提示符回归门控发送器(单例，重渲染不重建)
-  const gatedLineSenderRef = useRef<((lines: string[]) => () => void) | null>(null);
+  const gatedLineSenderRef = useRef<GatedLineSenderApi | null>(null);
   // 发送器单例只建一次，serverId 变化时靠 ref 让事件过滤始终读到当前值
   const gatedServerIdRef = useRef(serverId);
   gatedServerIdRef.current = serverId;
@@ -144,8 +144,9 @@ export function useTerminalQuickCmd(deps: {
     }
     if (pending.item.addCR !== false && !multiLineWrapEnabled && lineCount > 1) {
       // 多行直接会话执行：逐行 + 提示符回归门控，与远端时序无关
-      cancelPacedPasteRef.current?.();
-      cancelPacedPasteRef.current = gatedLineSender(text.split('\n'));
+      cancelPacedPasteRef.current?.cancel();
+      cancelPacedPasteRef.current = gatedLineSender;
+      gatedLineSender.start(text.split('\n'));
     } else {
       AppGo.WriteTerminal(sessionId, payload).catch((err) => {
         warnDev('WriteTerminal failed:', err);

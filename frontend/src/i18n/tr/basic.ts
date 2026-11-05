@@ -279,6 +279,8 @@ export default {
   "警告": "Uyarı",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Birden çok satır içeren bir metin yapıştırmak üzeresiniz. Bu metni kabuğa yapıştırırsanız komutlar beklenmedik şekilde çalıştırılabilir. Devam edilsin mi?",
   "剪贴板内容（预览）：": "Pano içeriği (önizleme):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "Yapıştırılan içerik {count} satır. Tümünü yürütmek beklenmedik sonuçlara yol açabilir. Devam edilsin mi?",
+  "仅插入": "Yalnızca ekle",
   "仍然粘贴": "Yine de yapıştır",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Çok satırlı içeriği yapıştırmadan önce pano içeriğinin önizlemesini içeren bir onay penceresi göster",
   "多行粘贴前确认": "Çok satırlı yapıştırmadan önce onayla",

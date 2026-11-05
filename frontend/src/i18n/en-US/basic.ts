@@ -279,6 +279,8 @@ export default {
   "警告": "Warning",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "You are about to paste text that contains multiple lines. If you paste this text into the shell, it may cause commands to be executed unexpectedly. Continue?",
   "剪贴板内容（预览）：": "Clipboard content (preview):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "The pasted content has {count} lines. Executing all of them may have unintended effects. Continue?",
+  "仅插入": "Insert only",
   "仍然粘贴": "Paste anyway",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Show a confirmation dialog with a clipboard preview before pasting multi-line content",
   "多行粘贴前确认": "Confirm multi-line paste",

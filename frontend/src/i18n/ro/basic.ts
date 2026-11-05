@@ -279,6 +279,8 @@ export default {
   "警告": "Avertisment",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Sunteți pe punctul de a lipi un text care conține mai multe rânduri. Dacă lipiți acest text în shell, comenzile s-ar putea executa neașteptat. Continuați?",
   "剪贴板内容（预览）：": "Conținutul clipboardului (previzualizare):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "Conținutul lipit are {count} rânduri. Executarea tuturor poate avea efecte neașteptate. Continuați?",
+  "仅插入": "Doar inserează",
   "仍然粘贴": "Lipește oricum",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Afișează o fereastră de confirmare cu previzualizarea conținutului clipboardului înainte de a lipi conținut pe mai multe rânduri",
   "多行粘贴前确认": "Confirmă înainte de lipirea pe mai multe rânduri",

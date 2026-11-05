@@ -279,6 +279,8 @@ export default {
   "警告": "Varování",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Chystáte se vložit text obsahující více řádků. Pokud jej vložíte do shellu, může to vést k neočekávanému spuštění příkazů. Pokračovat?",
   "剪贴板内容（预览）：": "Obsah schránky (náhled):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "Vložený obsah má {count} řádků. Spuštění všech může mít nečekané následky. Pokračovat?",
+  "仅插入": "Pouze vložit",
   "仍然粘贴": "Přesto vložit",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Před vložením víceřádkového obsahu zobrazit potvrzovací dialog s náhledem obsahu schránky",
   "多行粘贴前确认": "Potvrdit před vložením více řádků",

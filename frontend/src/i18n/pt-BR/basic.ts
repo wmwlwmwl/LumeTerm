@@ -279,6 +279,8 @@ export default {
   "警告": "Aviso",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Você está prestes a colar um texto que contém várias linhas. Se colar este texto no shell, comandos podem ser executados inesperadamente. Continuar?",
   "剪贴板内容（预览）：": "Conteúdo da área de transferência (visualização):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "O conteúdo colado tem {count} linhas. Executar todas pode causar efeitos inesperados. Continuar?",
+  "仅插入": "Apenas inserir",
   "仍然粘贴": "Colar mesmo assim",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Mostrar uma caixa de confirmação com uma prévia do conteúdo da área de transferência antes de colar conteúdo com várias linhas",
   "多行粘贴前确认": "Confirmar antes de colar várias linhas",

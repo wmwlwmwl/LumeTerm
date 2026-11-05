@@ -279,6 +279,8 @@ export default {
   "警告": "Ostrzeżenie",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Zamierzasz wkleić tekst zawierający wiele wierszy. Wklejenie go do powłoki może spowodować nieoczekiwane wykonanie poleceń. Kontynuować?",
   "剪贴板内容（预览）：": "Zawartość schowka (podgląd):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "Wklejona treść ma {count} wierszy. Wykonanie ich wszystkich może przynieść nieoczekiwane skutki. Kontynuować?",
+  "仅插入": "Tylko wstaw",
   "仍然粘贴": "Mimo to wklej",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Pokazuj okno potwierdzenia z podglądem zawartości schowka przed wklejeniem wielowierszowej treści",
   "多行粘贴前确认": "Potwierdzaj przed wklejeniem wielu wierszy",

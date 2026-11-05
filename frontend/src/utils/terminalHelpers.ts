@@ -3,6 +3,7 @@
 import type { Terminal as XTerm, IBufferLine, IBufferRange } from '@xterm/xterm';
 import { isDarkTerminalSurface, type TerminalTheme } from './theme.ts';
 import { parseCommandInputContext } from './terminalCommandAutocompleteParser.ts';
+import { warnDev } from './devLog';
 import * as AppGo from '../../wailsjs/go/wailsapp/App.js';
 
 export interface LineSegment {
@@ -538,6 +539,15 @@ if (import.meta.env.DEV) {
  * 可选 pendingTail：队列里各行执行完、提示符回归后，把最后一行只"键入"不回车，
  * 交由用户决定是否执行（Windows Terminal 风格的多行粘贴末行保留）。
  */
+export interface GatedLineSenderApi {
+  /** 开始发送：lines 逐行执行（各补 \r），pendingTail 最后只键入、不补回车 */
+  start: (lines: string[], pendingTail?: string) => void;
+  /** 丢弃剩余行（新粘贴 / 组件卸载） */
+  cancel: () => void;
+  /** 立即把剩余行一次性发完（用户手工输入打断粘贴时用，避免静默丢行） */
+  flush: () => void;
+}
+
 export function createGatedLineSender(opts: {
   send: (chunk: string) => boolean;
   armCommandFinish: () => void;
@@ -546,7 +556,7 @@ export function createGatedLineSender(opts: {
   /** 返回本终端 id；与 detail.terminalId 不符的事件忽略(同服务器多终端窗格隔离) */
   getTerminalId?: () => string;
   timeoutMs?: number;
-}): (lines: string[], pendingTail?: string) => () => void {
+}): GatedLineSenderApi {
   const timeoutMs = opts.timeoutMs ?? 2500;
   let queue: string[] = [];
   let pendingTail = '';
@@ -588,7 +598,12 @@ export function createGatedLineSender(opts: {
     }
     if (!opts.send(line + '\r')) { stopped = true; return; }
     opts.armCommandFinish();
-    timer = setTimeout(sendNext, timeoutMs);
+    timer = setTimeout(() => {
+      // 超时兜底：提示符没被识别（starship/oh-my-posh 等自定义提示符）才会走到这里，
+      // 每行白等 timeoutMs。DEV 下显式告警，便于定位「粘贴一行一行很慢」的问题。
+      if (import.meta.env.DEV) warnDev('[Terminal] 提示符未被识别，逐行发送超时放行（自定义提示符？）');
+      sendNext();
+    }, timeoutMs);
     const onFinished = (e: Event) => {
       if (!isOwnEvent(e)) return;
       releaseGate();
@@ -598,7 +613,7 @@ export function createGatedLineSender(opts: {
     window.addEventListener('ssh-command-finished', onFinished);
     window.addEventListener('ssh-continuation-ready', onFinished);
   };
-  return (lines: string[], tail = '') => {
+  const start = (lines: string[], tail = '') => {
     cancel();
     stopped = false;
     // 尾部空行剥掉(等效 normalizeTerminalPasteText 清尾回车，防多敲空回车连发)；
@@ -608,8 +623,23 @@ export function createGatedLineSender(opts: {
     queue = lines.slice(0, end);
     pendingTail = tail;
     sendNext();
-    return cancel;
   };
+  // 立即发完剩余行：真实终端里粘贴的字节本来就已经全部进了 PTY，用户此时输入
+  // 只会排在粘贴内容之后。这里把剩余行一次性补发，保证「输入打断粘贴」不丢命令。
+  const flush = () => {
+    if (!queue.length && pendingTail === '') { releaseGate(); return; }
+    const rest = queue;
+    const tail = pendingTail;
+    queue = [];
+    pendingTail = '';
+    stopped = true;
+    releaseGate();
+    for (const line of rest) {
+      if (!opts.send(line + '\r')) return;
+    }
+    if (tail !== '') opts.send(tail);
+  };
+  return { start, cancel, flush };
 }
 
 /**

@@ -279,6 +279,8 @@ export default {
   "警告": "Advertencia",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "Está a punto de pegar un texto que contiene varias líneas. Si pega este texto en el shell, los comandos podrían ejecutarse de forma inesperada. ¿Continuar?",
   "剪贴板内容（预览）：": "Contenido del portapapeles (vista previa):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "El contenido pegado tiene {count} líneas. Ejecutarlas todas puede tener efectos no deseados. ¿Continuar?",
+  "仅插入": "Solo insertar",
   "仍然粘贴": "Pegar de todos modos",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Mostrar un diálogo de confirmación con una vista previa del portapapeles antes de pegar contenido de varias líneas",
   "多行粘贴前确认": "Confirmar antes de pegar varias líneas",

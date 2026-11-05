@@ -279,6 +279,8 @@ export default {
   "警告": "Waarschuwing",
   "您将粘贴包含多行的文本。如果将此文本粘贴到 shell 中，则可能会导致命令意外执行。是否继续？": "U staat op het punt tekst met meerdere regels te plakken. Als u deze tekst in de shell plakt, kunnen opdrachten onverwacht worden uitgevoerd. Doorgaan?",
   "剪贴板内容（预览）：": "Inhoud van het klembord (voorbeeld):",
+  "粘贴内容共 {count} 行，全部执行可能产生预期外的影响。是否继续？": "De geplakte inhoud bevat {count} regels. Alles uitvoeren kan ongewenste gevolgen hebben. Doorgaan?",
+  "仅插入": "Alleen invoegen",
   "仍然粘贴": "Toch plakken",
   "粘贴包含多行的内容前弹出确认弹窗，并显示剪贴板内容预览": "Toon een bevestigingsvenster met een voorbeeld van de klembordinhoud voordat inhoud van meerdere regels wordt geplakt",
   "多行粘贴前确认": "Bevestigen voor meerregelig plakken",
