@@ -545,7 +545,8 @@ export function useTerminalSession(deps: {
     const shouldConfirmMultiLinePaste = () =>
       localStorage.getItem('terminalMultiLinePasteConfirm') !== 'false';
 
-    // Windows Terminal 风格确认框：警告 + 剪贴板内容预览，按钮「仍然粘贴 / 取消」
+    // Windows Terminal 风格确认框：警告 + 剪贴板内容预览，按钮「仍然粘贴 / 取消」；
+    // 勾选「不再询问」等价于关闭「多行粘贴前确认」设置（可在设置里重新打开）。
     const confirmMultiLinePaste = async (payload: string): Promise<'paste' | 'cancel'> => {
       const dialog = typeof window !== 'undefined' ? window.lumeDialog : undefined;
       if (!dialog?.choice) return 'paste';
@@ -557,11 +558,17 @@ export function useTerminalSession(deps: {
         [
           { value: 'paste', label: t('仍然粘贴'), primary: true, shortcut: 'y' },
           { value: 'cancel', label: t('取消'), shortcut: 'n' },
-        ]
+        ],
+        t('不再询问')
       );
-      const value = typeof choice === 'object' && choice !== null
-        ? String((choice as { value?: unknown }).value ?? '')
-        : String(choice ?? '');
+      const record = typeof choice === 'object' && choice !== null
+        ? choice as { value?: unknown; checked?: unknown }
+        : null;
+      const value = record ? String(record.value ?? '') : String(choice ?? '');
+      if (record?.checked === true) {
+        localStorage.setItem('terminalMultiLinePasteConfirm', 'false');
+        window.dispatchEvent(new CustomEvent('terminal-multiline-paste-confirm-changed', { detail: false }));
+      }
       return value === 'paste' ? 'paste' : 'cancel';
     };
 
@@ -599,11 +606,13 @@ export function useTerminalSession(deps: {
         if (action !== 'paste') return;
       }
 
-      // 多行：前 N-1 行逐行执行，最后一行只键入不回车（等用户按回车，与 Windows
-      // Terminal 的多行粘贴确认一致）。门控发送器逐行等提示符回归，避免一次性
+      // 多行「换行即发令枪」：门控发送器逐行等提示符回归后执行下一行，避免一次性
       // 灌入时远端 readline 未就绪吞掉行首字符。
+      //  - 剪贴板以换行结尾：末行也执行（那个换行就是最后一次回车），全部行 ⇒ 执行
+      //    ——例如复制带尾换行的三行，结果是三个 123456 + 新提示符；
+      //  - 剪贴板无尾换行：前 N-1 行执行，最后一行只键入留在提示符，等用户自己回车。
       const lines = plan.payload.split('\r');
-      const tail = lines.pop() ?? '';
+      const tail = plan.executeAll ? '' : (lines.pop() ?? '');
       cancelPacedPasteRef.current?.();
       cancelPacedPasteRef.current = gatedLineSender(lines, tail);
       currentTerm.focus();

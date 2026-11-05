@@ -475,11 +475,13 @@ export function normalizeTerminalPasteText(text: string) {
 }
 
 /**
- * 粘贴计划：把剪贴板原文归一化成 PTY 输入，并决定单行粘贴是否补回车。
+ * 粘贴计划：把剪贴板原文归一化成 PTY 输入，并决定哪些行要执行。
  *
- * 多行粘贴对齐 Windows Terminal 的语义：先弹确认，确认后执行前 N-1 行、
- * 最后一行只键入留给用户回车（具体发包见 useTerminalSession）：
- * - 多行：换行保留为行分隔，由粘贴执行器逐行门控发送，末行不回车；
+ * 对齐主流终端的「换行即发令枪」：粘贴文本里每个换行都会让 shell 执行上一行。
+ * 最后一行是否执行，取决于剪贴板原文是否以换行结尾（真实终端里末尾那个 \n
+ * 就是最后多按的一次回车）：
+ * - 有尾换行：每一行都执行（含最后一行）；
+ * - 无尾换行：执行前 N-1 行，最后一行只键入留在提示符，由用户决定是否回车；
  * - 单行：只插入不执行；剪贴板以换行结尾时补一次回车（保持旧的单行语义）。
  * payload 已清掉尾部连续空行，避免一次粘贴连发多个空回车。
  */
@@ -488,16 +490,20 @@ export function planTerminalPaste(text: string): {
   payload: string;
   /** 是否包含换行（即多行粘贴） */
   multiline: boolean;
+  /** 多行且剪贴板以换行结尾：末行也要执行（全部行都以 \r 提交） */
+  executeAll: boolean;
   /** 单行粘贴写入后是否应补一次回车（多行由调用方单独处理，固定为 false） */
   execute: boolean;
 } {
   const raw = String(text ?? '');
   const payload = normalizeTerminalPasteText(raw);
   const multiline = payload.includes('\r');
+  const trailingNewline = /[\r\n]$/.test(raw);
   return {
     payload,
     multiline,
-    execute: payload !== '' && !multiline && /[\r\n]$/.test(raw),
+    executeAll: multiline && trailingNewline,
+    execute: payload !== '' && !multiline && trailingNewline,
   };
 }
 
@@ -505,8 +511,9 @@ if (import.meta.env.DEV) {
   const multi = planTerminalPaste('echo 123456\n echo 123456\n echo 123456\n');
   console.assert(multi.multiline, '多行应识别为多行粘贴');
   console.assert(multi.payload === 'echo 123456\r echo 123456\r echo 123456', '多行应归一为 \r 分隔并清尾');
-  const multiNoTail = planTerminalPaste('echo 1\necho 2');
-  console.assert(multiNoTail.multiline && !multiNoTail.execute, '多行不在这里决定回车（由粘贴执行器逐行处理）');
+  console.assert(multi.executeAll, '多行且带尾换行时末行也要执行');
+  const multiNoTail = planTerminalPaste('echo 123456\n echo 123456\n echo 123456');
+  console.assert(multiNoTail.multiline && !multiNoTail.executeAll, '多行无尾换行时末行保留待回车');
   const single = planTerminalPaste('ls -al');
   console.assert(!single.multiline && !single.execute, '单行无尾换行只插入不执行');
   console.assert(planTerminalPaste('ls\n').execute, '单行+尾换行应自动执行');
