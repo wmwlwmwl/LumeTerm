@@ -58,6 +58,11 @@ export function useTerminalQuickCmd(deps: {
     }
     return gatedLineSenderRef.current;
   })();
+  // 卸载时取消未完成的逐行发送链，避免组件已销毁后仍按提示符/超时继续写会话
+  useEffect(() => () => {
+    cancelPacedPasteRef.current?.cancel();
+    cancelPacedPasteRef.current = null;
+  }, []);
   const [quickCmdHistoryParam, setQuickCmdHistoryParam] = useState<number | null>(null);
   const [quickCmdHistoryPosition, setQuickCmdHistoryPosition] = useState({ left: 0, top: 0 });
   const [quickCmdHistorySearch, setQuickCmdHistorySearch] = useState('');

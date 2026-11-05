@@ -323,13 +323,17 @@ if (import.meta.env.DEV) {
  * 宁可漏判（退回 2.5s 超时，与旧行为一致），也不要在命令还在跑时提前放行。
  */
 export const LOOSE_PROMPT_GLYPHS = '❯➜›»λƒψ▶▷❱❭⟩';
+// 模块级复用：该判定在命令输出期间每个 onWriteParsed 都会跑，避免反复 new RegExp
+const LOOSE_PROMPT_HEAD_RE = new RegExp('^[' + LOOSE_PROMPT_GLYPHS + ']', 'u');
+const LOOSE_PROMPT_TAIL_RE = new RegExp('(?:^|\\s)[' + LOOSE_PROMPT_GLYPHS + '][=>]?$', 'u');
+
 export function isLooseShellPromptLine(text: string) {
   const t = String(text || '').replace(/[\s\u00a0]+$/g, '')
   if (!t) return false
   // 1) 装饰字形在行首（光标通常就停在这行）：starship `❯ ` / oh-my-posh `λ ` 等
-  if (new RegExp('^[' + LOOSE_PROMPT_GLYPHS + ']', 'u').test(t) && t.length <= 120) return true
+  if (t.length <= 120 && LOOSE_PROMPT_HEAD_RE.test(t)) return true
   // 2) 行尾是装饰字形，且前面是空白或 = >（排除 `f(λ)` `output»` 这类普通输出）
-  if (new RegExp('(?:^|\\s)[' + LOOSE_PROMPT_GLYPHS + '][=>]?$', 'u').test(t) && t.length <= 80) return true
+  if (t.length <= 80 && LOOSE_PROMPT_TAIL_RE.test(t)) return true
   // 3) fish 等 `user@host ~>` 形态（不带冒号，严格版漏判）
   if (/^[\w.-]+@[\w.-]+\s+[^\n]{0,40}[>#$%]\s*$/.test(t)) return true
   // 4) 带环境前缀的传统提示符：(venv) / (conda) (base) user@host:~$
@@ -678,10 +682,15 @@ export function createGatedLineSender(opts: {
     pendingTail = '';
     stopped = true;
     releaseGate();
+    let sentSomething = false;
     for (const line of rest) {
       if (!opts.send(line + '\r')) return;
+      sentSomething = true;
     }
     if (tail !== '') opts.send(tail);
+    // 补发的行同样要等命令完成（文件管理器按需刷新 / 命令块闭合），否则这批命令
+    // 的提示符回归事件会因为不在等待态而被丢掉。
+    if (sentSomething) opts.armCommandFinish();
   };
   return { start, cancel, flush };
 }

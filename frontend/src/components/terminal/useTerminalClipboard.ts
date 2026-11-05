@@ -14,7 +14,7 @@ export function useTerminalClipboard(deps: {
   termRef: React.RefObject<XTerm | null>;
   containerRef: React.RefObject<HTMLDivElement | null>;
   /** 由 useTerminalSession 注入的粘贴执行器（多行确认/末行保留统一入口） */
-  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => void | Promise<void>) | null>;
+  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { insertOnly?: boolean }) => void | Promise<void>) | null>;
   terminalRightClickPasteOnEmptyRef: React.RefObject<boolean>;
   terminalRightClickPasteModeRef: React.RefObject<string>;
   terminalLeftClickCopyOnSelectionRef: React.RefObject<boolean>;
@@ -28,7 +28,7 @@ export function useTerminalClipboard(deps: {
   } = deps;
 
   // 会话主链路 effect 尚未就绪时（极端时序）退回只插入，避免粘贴内容直接丢失
-  const pasteTextToTerminal = useCallback((text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => {
+  const pasteTextToTerminal = useCallback((text: string, options?: { insertOnly?: boolean }) => {
     const paste = pasteTextToTerminalRef.current;
     if (paste) {
       void paste(text, options);

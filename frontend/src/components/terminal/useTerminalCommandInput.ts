@@ -83,6 +83,11 @@ export function useTerminalCommandInput(deps: {
     }
     return gatedLineSenderRef.current;
   })();
+  // 卸载时取消未完成的逐行发送链，避免组件已销毁后仍按提示符/超时继续写会话
+  useEffect(() => () => {
+    cancelPacedPasteRef.current?.cancel();
+    cancelPacedPasteRef.current = null;
+  }, []);
   const [terminalCwd, setTerminalCwd]         = useState('/');
   const [commandAutocomplete, setCommandAutocomplete] = useState(createCommandAutocompleteState());
   // 命令输入快捷键提示浮层开关（F1 切换；关闭持久化到 localStorage）

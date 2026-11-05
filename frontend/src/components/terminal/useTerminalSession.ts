@@ -77,7 +77,7 @@ export function useTerminalSession(deps: {
   awaitingCommandFinishRef: React.RefObject<boolean>;
   pendingCmdRef: React.RefObject<string>;
   /** 粘贴执行器（多行即执行/多行确认），由本 hook 写入、剪贴板 hook 与按键处理器调用 */
-  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => void | Promise<void>) | null>;
+  pasteTextToTerminalRef: React.MutableRefObject<((text: string, options?: { insertOnly?: boolean }) => void | Promise<void>) | null>;
   isTerminalPointerDownRef: React.RefObject<boolean>;
   dispatchSyntheticTerminalMouseUp: (clientX?: number, clientY?: number) => void;
   keywordHighlightEnabledRef: React.RefObject<boolean>;
@@ -617,7 +617,7 @@ export function useTerminalSession(deps: {
     };
 
     /** 统一粘贴入口：多行确认后执行前 N-1 行、末行留给用户回车；单行按尾换行插入/执行。 */
-    const pasteTextToTerminal = async (text: string, options?: { skipConfirm?: boolean; insertOnly?: boolean }) => {
+    const pasteTextToTerminal = async (text: string, options?: { insertOnly?: boolean }) => {
       const currentTerm = termRef.current;
       const currentWs = wsRef.current;
       if (!currentTerm || !text || !currentWs || currentWs.readyState !== WebSocket.OPEN) {
@@ -663,7 +663,7 @@ export function useTerminalSession(deps: {
           currentTerm.paste(plan.payload);
           return;
         }
-      } else if (!options?.skipConfirm && shouldConfirmMultiLinePaste()) {
+      } else if (shouldConfirmMultiLinePaste()) {
         const action = await confirmMultiLinePaste(plan.payload);
         // 确认框期间会话可能被重建/销毁，避免往已释放的 xterm 写入
         if (termRef.current !== currentTerm) return;
