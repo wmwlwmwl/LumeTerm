@@ -310,6 +310,50 @@ if (import.meta.env.DEV) {
   console.assert(!isShellContinuationPromptLine(''), '空行不应误判为续行提示符');
 }
 
+/**
+ * 宽松提示符识别：**只用于「逐行门控发送」判断上一条命令是否执行完**，
+ * 命令块/时间戳等 UI 仍走严格的 isShellPromptLine（避免改变既有分块行为）。
+ *
+ * 严格版只认 `user@host:path$` 一类，starship / oh-my-posh / powerlevel10k 这类
+ * 装饰字形提示符识别不到 → 粘贴多行时每行都要干等 2.5s 超时。这里补两类：
+ *   1. 行首（或行尾）是装饰性提示符字形：❯ ➜ › » λ ƒ ψ ▶ ▷ ❱ ❭ ⟩
+ *      这些字形几乎不会出现在普通命令输出里，再用行长上限兜住极端情况；
+ *   2. 带虚拟环境 / conda 前缀的传统提示符：`(venv) user@host:~$`
+ *      （严格版要求行首直接是 user@host，前缀会导致漏判）
+ * 宁可漏判（退回 2.5s 超时，与旧行为一致），也不要在命令还在跑时提前放行。
+ */
+export const LOOSE_PROMPT_GLYPHS = '❯➜›»λƒψ▶▷❱❭⟩';
+export function isLooseShellPromptLine(text: string) {
+  const t = String(text || '').replace(/[\s\u00a0]+$/g, '')
+  if (!t) return false
+  // 1) 装饰字形在行首（光标通常就停在这行）：starship `❯ ` / oh-my-posh `λ ` 等
+  if (new RegExp('^[' + LOOSE_PROMPT_GLYPHS + ']', 'u').test(t) && t.length <= 120) return true
+  // 2) 行尾是装饰字形，且前面是空白或 = >（排除 `f(λ)` `output»` 这类普通输出）
+  if (new RegExp('(?:^|\\s)[' + LOOSE_PROMPT_GLYPHS + '][=>]?$', 'u').test(t) && t.length <= 80) return true
+  // 3) fish 等 `user@host ~>` 形态（不带冒号，严格版漏判）
+  if (/^[\w.-]+@[\w.-]+\s+[^\n]{0,40}[>#$%]\s*$/.test(t)) return true
+  // 4) 带环境前缀的传统提示符：(venv) / (conda) (base) user@host:~$
+  if (/^(?:\([^)]{1,32}\)\s*)+[\w.-]+@[\w.-]+:[^\n]*?[#$%]/.test(t)) return true
+  return false
+}
+
+if (import.meta.env.DEV) {
+  console.assert(isLooseShellPromptLine('❯ '), 'starship 提示符应识别');
+  console.assert(isLooseShellPromptLine('❯ ls -al'), '带命令的 starship 提示符应识别');
+  console.assert(isLooseShellPromptLine('➜  ~ '), 'oh-my-zsh 默认提示符应识别');
+  console.assert(isLooseShellPromptLine('λ '), 'λ 提示符应识别');
+  console.assert(isLooseShellPromptLine('~/proj on  main ❯'), '单行 starship 提示符应识别');
+  console.assert(isLooseShellPromptLine('user@host ~>'), 'fish 提示符应识别');
+  console.assert(isLooseShellPromptLine('(venv) user@host:~$ ls'), '带虚拟环境前缀的提示符应识别');
+  console.assert(!isLooseShellPromptLine('123456'), '普通输出不应识别');
+  console.assert(!isLooseShellPromptLine('✓ built in 4.90s'), '构建输出不应识别');
+  console.assert(!isLooseShellPromptLine('$ hello'), '行首 $ 的普通输出不应识别');
+  console.assert(!isLooseShellPromptLine('f(λ)'), '括号内 λ 不应识别');
+  console.assert(!isLooseShellPromptLine('output»'), '紧贴文字的 » 不应识别');
+  console.assert(!isLooseShellPromptLine('❯ ' + 'x'.repeat(150)), '超长行不应识别');
+  console.assert(!isLooseShellPromptLine(''), '空行不应识别');
+}
+
 export function splitTrailingIncompleteEscapeSequence(input: string) {
   if (!input) {
     return { complete: '', carry: '' }

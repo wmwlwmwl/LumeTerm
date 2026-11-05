@@ -20,6 +20,7 @@ import {
   getTerminalBufferSnapshotText,
   isInteractivePromptText,
   isShellContinuationPromptLine,
+  isLooseShellPromptLine,
   normalizeTerminalPasteText,
   planTerminalPaste,
   startsInteractiveScreen,
@@ -451,6 +452,14 @@ export function useTerminalSession(deps: {
         if (promptLine === lastContinuationPromptLine) return;
         lastContinuationPromptLine = promptLine;
         window.dispatchEvent(new CustomEvent('ssh-continuation-ready', {
+          detail: { sessionId: serverIdRef.current, terminalId: sessionId }
+        }));
+      } else if (isLooseShellPromptLine(text)) {
+        // 自定义提示符（starship ❯ / oh-my-posh λ 等）：严格版识别不到时兜底，
+        // 否则逐行门控发送每行都要干等 2.5s 超时。只用于本事件判定，不改命令块分块。
+        awaitingCommandFinishRef.current = false;
+        lastContinuationPromptLine = -1;
+        window.dispatchEvent(new CustomEvent('ssh-command-finished', {
           detail: { sessionId: serverIdRef.current, terminalId: sessionId }
         }));
       }
