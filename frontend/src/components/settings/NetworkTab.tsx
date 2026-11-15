@@ -306,7 +306,7 @@ export default function NetworkTab({ pingEnabled, onTogglePingEnabled, pingMode,
                     <div className={cn('text-base font-bold text-primary overflow-hidden text-ellipsis [overflow-wrap:anywhere]', isMobileLayout ? 'whitespace-normal' : 'whitespace-nowrap')}>{String(node?.name || $t('未命名节点'))}</div>
                     <div className={cn('text-xs text-tertiary mt-0.5 overflow-hidden text-ellipsis [overflow-wrap:anywhere] leading-[1.6]', isMobileLayout ? 'whitespace-normal' : 'whitespace-nowrap')}>
                       {[
-                        node?.type === 'http' ? $t('HTTP 代理') : $t('SOCKS5 代理'),
+                        node?.type === 'https' ? $t('HTTPS 代理') : node?.type === 'http' ? $t('HTTP 代理') : $t('SOCKS5 代理'),
                         `${String(node?.host)}:${String(node?.port)}`,
                         ...(node?.username ? [`${$t('用户名')}: ${String(node?.username)}`] : []),
                         ...(node?.password ? [`${$t('密码')}: ••••••`] : []),
@@ -339,6 +339,7 @@ export default function NetworkTab({ pingEnabled, onTogglePingEnabled, pingMode,
                   options={[
                     { value: 'socks5', label: $t('SOCKS5 代理') },
                     { value: 'http', label: $t('HTTP 代理') },
+                    { value: 'https', label: $t('HTTPS 代理') },
                   ]}
                 />
               </div>

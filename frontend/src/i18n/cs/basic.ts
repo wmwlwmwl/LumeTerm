@@ -957,6 +957,7 @@ export default {
   "协议类型": "typ protokolu",
   "SOCKS5 代理": "SOCKS5 proxy",
   "HTTP 代理": "HTTP proxy",
+  "HTTPS 代理": "HTTPS proxy",
   "请输入代理主机地址": "Zadejte adresu hostitele proxy",
   "请输入有效端口": "Zadejte prosím platný port",
   "未命名节点": "nejmenovaný uzel",

@@ -370,10 +370,7 @@ func normalizeSyncAIProxyNodes(nodes []aitypes.AIProxyNode) []aitypes.AIProxyNod
 		}
 		seen[node.ID] = struct{}{}
 		node.Name = strings.TrimSpace(node.Name)
-		node.Type = strings.ToLower(strings.TrimSpace(node.Type))
-		if node.Type != "http" {
-			node.Type = "socks5"
-		}
+		node.Type = aitypes.NormalizeAIProxyType(node.Type)
 		if node.Port <= 0 || node.Port > 65535 {
 			node.Port = 1080
 		}

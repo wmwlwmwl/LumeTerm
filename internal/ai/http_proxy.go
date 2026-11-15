@@ -73,7 +73,7 @@ func buildAIHTTPProxyURL(node AIProxyNode) (*url.URL, error) {
 		return nil, fmt.Errorf("AI 代理端口无效")
 	}
 	proxyURL := &url.URL{
-		Scheme: "http",
+		Scheme: normalizeAIProxyType(node.Type),
 		Host:   net.JoinHostPort(strings.Trim(host, "[]"), strconv.Itoa(port)),
 	}
 	username := strings.TrimSpace(node.Username)
@@ -168,7 +168,7 @@ func (a *Service) buildAIHTTPTransportForProfile(profile *AIProviderProfile) (*h
 		return transport, nil
 	}
 	switch normalizeAIProxyType(selectedProxy.Type) {
-	case "http":
+	case "http", "https":
 		proxyURL, err := buildAIHTTPProxyURL(*selectedProxy)
 		if err != nil {
 			return nil, err

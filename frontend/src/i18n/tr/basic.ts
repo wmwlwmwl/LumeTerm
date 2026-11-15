@@ -957,6 +957,7 @@ export default {
   "协议类型": "protokol türü",
   "SOCKS5 代理": "SOCKS5 proxy'si",
   "HTTP 代理": "HTTP proxy'si",
+  "HTTPS 代理": "HTTPS proxy'si",
   "请输入代理主机地址": "Lütfen proxy ana bilgisayar adresini girin",
   "请输入有效端口": "Lütfen geçerli bir bağlantı noktası girin",
   "未命名节点": "adsız düğüm",

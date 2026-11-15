@@ -288,6 +288,8 @@ func NormalizeAIProxyType(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "http":
 		return "http"
+	case "https":
+		return "https"
 	default:
 		return "socks5"
 	}

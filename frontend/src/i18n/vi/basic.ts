@@ -957,6 +957,7 @@ export default {
   "协议类型": "loại giao thức",
   "SOCKS5 代理": "Proxy SOCKS5",
   "HTTP 代理": "Proxy HTTP",
+  "HTTPS 代理": "Proxy HTTPS",
   "请输入代理主机地址": "Vui lòng nhập địa chỉ máy chủ proxy",
   "请输入有效端口": "Vui lòng nhập một cổng hợp lệ",
   "未命名节点": "nút không tên",

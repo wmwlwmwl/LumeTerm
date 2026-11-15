@@ -197,8 +197,9 @@ function normalizeConversationAutoBackupRetentionCount(value: unknown): number {
   return Math.min(MAX_CONVERSATION_AUTO_BACKUP_RETENTION_COUNT, Math.max(1, Math.trunc(parsed)))
 }
 
-function normalizeProxyType(value: unknown): 'http' | 'socks5' {
-  return String(value || '').trim().toLowerCase() === 'http' ? 'http' : 'socks5'
+function normalizeProxyType(value: unknown): 'http' | 'https' | 'socks5' {
+  const type = String(value || '').trim().toLowerCase()
+  return type === 'http' || type === 'https' ? type : 'socks5'
 }
 
 function normalizeProxyNode(node: unknown, index = 0): ProxyNode | null {

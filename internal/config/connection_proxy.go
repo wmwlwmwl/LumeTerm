@@ -3,6 +3,7 @@ package config
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -37,10 +38,14 @@ func normalizeConnectionProxyMode(value string) string {
 }
 
 func normalizeConnectionProxyType(value string) string {
-	if strings.ToLower(strings.TrimSpace(value)) == "http" {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "http":
 		return "http"
+	case "https":
+		return "https"
+	default:
+		return "socks5"
 	}
-	return "socks5"
 }
 
 func normalizeConnectionProxyPort(port int) int {
@@ -202,7 +207,7 @@ func dialConnectionTargetContext(ctx context.Context, conn Connection, target st
 	}
 
 	switch normalizeConnectionProxyType(conn.ProxyType) {
-	case "http":
+	case "http", "https":
 		return dialHTTPProxyContext(ctx, conn, target, timeout)
 	default:
 		return dialSOCKS5ProxyContext(ctx, conn, target, timeout)
@@ -218,6 +223,22 @@ func dialHTTPProxyContext(ctx context.Context, conn Connection, target string, t
 	netConn, err := d.DialContext(ctx, "tcp", proxyTarget)
 	if err != nil {
 		return nil, err
+	}
+
+	// HTTPS 代理：先与代理完成 TLS 握手，再在加密通道内发 CONNECT。
+	if normalizeConnectionProxyType(conn.ProxyType) == "https" {
+		handshakeCtx := ctx
+		if timeout > 0 {
+			var cancel context.CancelFunc
+			handshakeCtx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+		tlsConn := tls.Client(netConn, &tls.Config{ServerName: strings.Trim(conn.ProxyHost, "[]")})
+		if err := tlsConn.HandshakeContext(handshakeCtx); err != nil {
+			netConn.Close()
+			return nil, err
+		}
+		netConn = tlsConn
 	}
 
 	var builder strings.Builder

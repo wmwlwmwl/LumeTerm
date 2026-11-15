@@ -957,6 +957,7 @@ export default {
   "协议类型": "protocoltype",
   "SOCKS5 代理": "SOCKS5-proxy",
   "HTTP 代理": "HTTP-proxy",
+  "HTTPS 代理": "HTTPS-proxy",
   "请输入代理主机地址": "Voer het proxyhostadres in",
   "请输入有效端口": "Voer een geldige poort in",
   "未命名节点": "naamloos knooppunt",

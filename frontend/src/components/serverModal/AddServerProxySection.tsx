@@ -99,7 +99,7 @@ export function AddServerProxySection({
                     value: node.id || '',
                     label: [
                       node.name || t('未命名节点'),
-                      node.type === 'http' ? t('HTTP 代理') : t('SOCKS5 代理'),
+                      node.type === 'https' ? t('HTTPS 代理') : node.type === 'http' ? t('HTTP 代理') : t('SOCKS5 代理'),
                       `${node.host}:${node.port}`,
                     ].join(' · '),
                   })),
@@ -120,6 +120,7 @@ export function AddServerProxySection({
                 options={[
                   { value: 'socks5', label: t('SOCKS5 代理') },
                   { value: 'http', label: t('HTTP 代理') },
+                  { value: 'https', label: t('HTTPS 代理') },
                 ]}
               />
             </div>

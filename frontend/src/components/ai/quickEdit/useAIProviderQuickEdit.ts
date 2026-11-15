@@ -238,7 +238,7 @@ export function useAIProviderQuickEdit({
       value: node.id || '',
       label: [
         node.name || t('未命名节点'),
-        `${node.type === 'http' ? 'http' : 'socks5'}://${node.host}:${node.port}`,
+        `${node.type === 'http' || node.type === 'https' ? node.type : 'socks5'}://${node.host}:${node.port}`,
       ].join(' · '),
     })),
   ]), [proxyNodes, t]);

@@ -11,7 +11,7 @@ function createProxyId() {
 export interface ProxyNode {
   id: string;
   name: string;
-  type: 'http' | 'socks5';
+  type: 'http' | 'https' | 'socks5';
   host: string;
   port: number;
   username: string;
@@ -25,7 +25,7 @@ export function normalizeProxyNode(node: unknown): ProxyNode {
   return {
     id: String(p.id || createProxyId()).trim(),
     name: String(p.name || '').trim(),
-    type: p.type === 'http' ? 'http' : 'socks5',
+    type: p.type === 'http' || p.type === 'https' ? p.type : 'socks5',
     host: String(p.host || '').trim(),
     port: Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 1080,
     username: String(p.username || '').trim(),
