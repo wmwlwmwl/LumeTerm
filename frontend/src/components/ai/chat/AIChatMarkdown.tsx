@@ -8,7 +8,7 @@ import * as runtime from '../../../../wailsjs/runtime/runtime.js'
 import { useAIWorkspaceTabContext } from '../aiWorkspaceTabContext.ts'
 
 // 清理 GFM 自动链接中误吞的非 URL 字符
-// 1. 硬截断：HTML 定界符/引号/反斜杠不应出现在 URL 中
+// 1. 硬截断：HTML 定界符/引号/反斜杠，以及中文/全角字符（GFM 自动链接不认全角标点，会把后续中文一起吞掉）
 // 2. 不匹配的括号：右括号无左括号 → 截断；左括号无右括号 → 截断
 // 3. 尾部标点剥离
 // 返回 { cleaned, removed } — removed 是被截断的文本，需作为纯文本插回
@@ -16,7 +16,7 @@ function cleanAutolinkUrl(url: string) {
   if (!url) return { cleaned: url, removed: '' }
   let cleaned = url
   let removed = ''
-  const hardStop = cleaned.search(/["'<>\\]/)
+  const hardStop = cleaned.search(/["'<>\\]|[\u3000-\u303F\u3400-\u4DBF\u4E00-\u9FFF\uFF00-\uFFEF]/)
   if (hardStop >= 0) {
     removed = cleaned.slice(hardStop) + removed
     cleaned = cleaned.slice(0, hardStop)
