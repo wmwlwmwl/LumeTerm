@@ -229,7 +229,9 @@ export default function AppOverlays({ dialogs, importExport, notifications, menu
         <TabContextMenuOverlay
           tabContextMenu={tabContextMenu}
           sessions={sessions}
+          servers={servers}
           t={t}
+          addToast={addToast}
           canCopySessionPassword={canCopySessionPassword}
           setTabContextMenu={setTabContextMenu}
           handleCopySessionPassword={handleCopySessionPassword}

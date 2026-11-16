@@ -78,6 +78,24 @@ export function useAddServerForm({
     }
   }, [server]);
 
+  // 编辑时回填当前密码，点击眼睛即可查看
+  useEffect(() => {
+    if (!server?.id || server.credentialId) return;
+    const authType = server.authMethod ? (server.authMethod === 'privateKey' ? 'key' : 'password') : (server.authType || 'password');
+    if (authType !== 'password') return;
+    let cancelled = false;
+    AppGo.GetConnectionByID(server.id)
+      .then((conn) => {
+        const password = conn.password || '';
+        if (cancelled || !password) return;
+        setForm((f) => (f.password ? f : { ...f, password }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [server]);
+
   useEffect(() => {
     let cancelled = false;
     const loadProxyNodes = () => {

@@ -137,7 +137,7 @@ export function AddServerAuthSection({
             {form.authType === 'password' ? (
               <div className="form-group">
                 <label className="form-label" htmlFor="server-password">
-                  {isEditing ? t('新密码（留空则不修改）') : t('密码')} *
+                  {isEditing ? `${t('密码')}（${t('留空不修改')}）` : t('密码')} *
                 </label>
                 <div className="relative">
                   <input

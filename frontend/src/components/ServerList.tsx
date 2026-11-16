@@ -183,6 +183,7 @@ export default function ServerList(props: ServerListProps) {
         onDelete={onDelete}
         groupMenu={groupMenu}
         existingGroups={existingGroups}
+        addToast={props.addToast}
       />
     </>
   );

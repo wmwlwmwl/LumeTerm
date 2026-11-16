@@ -1,11 +1,14 @@
 import { createPortal } from 'react-dom';
 import { Copy, Folder, Link, PenLine, SquarePen, Trash2, X } from 'lucide-react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type React from 'react';
 import type { config } from '../../../wailsjs/go/models.ts';
 import { Z } from '../../constants/zIndex.ts';
 import { useTranslation } from '../../i18n.ts';
 import { ContextMenu, MenuList, MenuPanel } from '../ui';
 import { useOverlayScrollLock } from '../../hooks/useOverlayScrollLock.ts';
+import { clampMenuPosition } from '../../utils/menuPosition.ts';
+import { buildSSHLink, resolveServerPassword } from '../../utils/serverLink.ts';
 import type { MenuItem } from '../ui';
 import { MENU_ESTIMATED_WIDTH } from './serverListTypes.ts';
 
@@ -27,6 +30,7 @@ export interface ServerContextMenuProps {
   onDelete: (id: string) => void;
   groupMenu: boolean;
   existingGroups: string[];
+  addToast: (message: string | Error, type?: string, duration?: number, actions?: unknown[]) => number;
 }
 
 export function ServerContextMenu({
@@ -47,9 +51,48 @@ export function ServerContextMenu({
   onDelete,
   groupMenu,
   existingGroups,
+  addToast,
 }: ServerContextMenuProps) {
   const { t } = useTranslation();
   useOverlayScrollLock(!!groupHeaderMenu || !!menuServer);
+
+  // 右键菜单实际高度远超估算值，按真实渲染尺寸重新钳制，避免贴近屏幕底部时溢出
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelPos, setPanelPos] = useState(menuPos);
+
+  useLayoutEffect(() => {
+    const el = panelRef.current;
+    if (!el) {
+      setPanelPos(menuPos);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    setPanelPos(clampMenuPosition(menuPos.x, menuPos.y, rect.width, rect.height));
+  }, [menuPos, menuServer]);
+
+  const copyText = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      addToast(t('已复制'), 'success', 2000);
+    } catch {
+      addToast(t('复制失败'), 'error', 3000);
+    }
+  };
+
+  const copyPassword = async (server: config.Connection) => {
+    try {
+      const password = await resolveServerPassword(server.id);
+      if (!password) throw new Error('empty password');
+      await copyText(password);
+    } catch {
+      addToast(t('复制失败'), 'error', 3000);
+    }
+  };
+
+  const copySSHLink = async (server: config.Connection) => {
+    const password = await resolveServerPassword(server.id);
+    await copyText(buildSSHLink(server, password));
+  };
 
   const menuServerNode = menuServer ? (
     <>
@@ -66,14 +109,18 @@ export function ServerContextMenu({
         minWidth={MENU_ESTIMATED_WIDTH}
         data-context-menu="true"
         className="fixed overflow-visible animate-[fadeIn_0.12s_ease]"
-        style={{ left: menuPos.x, top: menuPos.y, zIndex: Z.MENU }}
+        style={{ left: panelPos.x, top: panelPos.y, zIndex: Z.MENU }}
       >
-        <div className="relative">
+        <div className="relative" ref={panelRef}>
           <MenuList
             items={[
               { label: t('连接'), icon: <Link size={14} />, onSelect: () => { onConnect(menuServer); } },
               { label: t('编辑配置'), icon: <SquarePen size={14} />, onSelect: () => { triggerEdit(menuServer, menuSourceRef.current); } },
               { label: t('克隆'), icon: <Copy size={14} />, onSelect: () => { onClone(menuServer, getEditAnimationPayload(menuServer, menuSourceRef.current)); } },
+              { label: t('复制 IP'), icon: <Copy size={14} />, onSelect: () => { void copyText(menuServer.host); } },
+              { label: t('复制密码'), icon: <Copy size={14} />, onSelect: () => { void copyPassword(menuServer); } },
+              { label: t('复制端口'), icon: <Copy size={14} />, onSelect: () => { void copyText(String(menuServer.port || 22)); } },
+              { label: t('复制 SSH 链接'), icon: <Link size={14} />, onSelect: () => { void copySSHLink(menuServer); } },
               ...(onMoveGroup ? [{
                 label: t('移动到分组'),
                 icon: <Folder size={14} />,
