@@ -467,6 +467,66 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
     }
   }, [addToast, t]);
 
+  // 连接建立后恢复终端布局：重开子终端、重映射工作区/分屏并写回会话状态。
+  // 重连与「主机密钥变更确认」两条路径共用——后者后端只重建根会话，
+  // 若不在此补齐，第二个终端会一直停在断开态。
+  const restoreSessionTerminals = useCallback(async (
+    session: SessionLike,
+    options: { deferState?: boolean; suppressToast?: boolean; requestingTerminalId?: string } = {},
+  ): Promise<ReconnectSessionResult> => {
+    const deferState = options.deferState === true;
+    const suppressToast = options.suppressToast === true;
+    const { requestingTerminalId } = options;
+    const hasSavedTerminals = Array.isArray(session.terminals) && session.terminals.length > 0;
+    const savedTerminals = hasSavedTerminals ? session.terminals! : [{ id: session.id!, label: `${t('终端')}1` }];
+    const rootTerminal = savedTerminals.find(term => term.id === session.id) || savedTerminals[0] || { id: session.id!, label: `${t('终端')}1` };
+    const subTerminals = savedTerminals.filter(term => term.id !== rootTerminal.id);
+    const oldToNew: Record<string, string> = { [rootTerminal.id!]: session.id!, [session.id!]: session.id! };
+    // 子终端逐个重开：沿用旧 id，前端 xterm 不重挂，滚动历史与布局保留。
+    // 失败必须显式提示——静默吞掉会让界面只剩根终端且无从排查。
+    for (const sub of subTerminals) {
+      try {
+        oldToNew[sub.id!] = await AppGo.OpenTerminalWithID(session.id!, sub.id!);
+      } catch (err) {
+        console.error('[reconnect] 子终端重开失败', sub.id, err);
+        if (!suppressToast) {
+          addToast(`${t('重新连接失败')}: ${String(err)}`, 'error', 5000);
+        }
+      }
+    }
+    const newTerminals = savedTerminals
+      .map(term => ({
+        id: oldToNew[term.id!],
+        label: String(term.label || `${t('终端')}1`),
+      }))
+      .filter(term => !!term.id);
+
+    if (!deferState && Object.keys(oldToNew).length > 0) {
+      remapSessionFileManagerWorkspaces(oldToNew);
+      remapAIWorkspaceTabGroups(oldToNew);
+      const remappedLayouts = remapTerminalPaneLayouts(terminalPaneLayoutsRef.current, oldToNew, session.id!);
+      terminalPaneLayoutsRef.current = remappedLayouts;
+      setTerminalPaneLayouts(remappedLayouts);
+      if (lastTerminalRef.current[session.id!] && oldToNew[lastTerminalRef.current[session.id!]]) {
+        lastTerminalRef.current[session.id!] = oldToNew[lastTerminalRef.current[session.id!]];
+      }
+    }
+
+    if (!deferState) {
+      setSessions((prev) =>
+        prev.map((s) => (s.id === session.id ? { ...s, status: 'connected', terminals: newTerminals } : s))
+      );
+    }
+    setConnectingServers((prev) => prev.filter((s) => s.sessionId !== session.id));
+
+    if (requestingTerminalId && oldToNew[requestingTerminalId]) {
+      setActiveTerminalId(oldToNew[requestingTerminalId]);
+    }
+
+    await postConnectSetup(session.id!, String(session.serverId));
+    return { oldToNew, newTerminals };
+  }, [addToast, lastTerminalRef, postConnectSetup, remapAIWorkspaceTabGroups, remapSessionFileManagerWorkspaces, remapTerminalPaneLayouts, setActiveTerminalId, setConnectingServers, setSessions, setTerminalPaneLayouts, t, terminalPaneLayoutsRef]);
+
   // ── 重连会话核心逻辑 ────────────────────────────────────────
   const reconnectSession = useCallback(async (
     session: SessionLike,
@@ -556,48 +616,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
 
       await AppGo.ConnectSSH(session.id!, String(session.serverId));
 
-      const hasSavedTerminals = Array.isArray(session.terminals) && session.terminals.length > 0;
-      const savedTerminals = hasSavedTerminals ? session.terminals! : [{ id: session.id!, label: `${t('终端')}1` }];
-      const rootTerminal = savedTerminals.find(term => term.id === session.id) || savedTerminals[0] || { id: session.id!, label: `${t('终端')}1` };
-      const subTerminals = savedTerminals.filter(term => term.id !== rootTerminal.id);
-      const oldToNew: Record<string, string> = { [rootTerminal.id!]: session.id!, [session.id!]: session.id! };
-      for (const sub of subTerminals) {
-        try {
-          const newTermId = await AppGo.OpenTerminal(session.id!);
-          oldToNew[sub.id!] = newTermId;
-        } catch { }
-      }
-      const newTerminals = savedTerminals
-        .map(term => ({
-          id: oldToNew[term.id!],
-          label: String(term.label || `${t('终端')}1`),
-        }))
-        .filter(term => !!term.id);
-
-      if (!deferState && Object.keys(oldToNew).length > 0) {
-        remapSessionFileManagerWorkspaces(oldToNew);
-        remapAIWorkspaceTabGroups(oldToNew);
-        const remappedLayouts = remapTerminalPaneLayouts(terminalPaneLayoutsRef.current, oldToNew, session.id!);
-        terminalPaneLayoutsRef.current = remappedLayouts;
-        setTerminalPaneLayouts(remappedLayouts);
-        if (lastTerminalRef.current[session.id!] && oldToNew[lastTerminalRef.current[session.id!]]) {
-          lastTerminalRef.current[session.id!] = oldToNew[lastTerminalRef.current[session.id!]];
-        }
-      }
-
-      if (!deferState) {
-        setSessions((prev) =>
-          prev.map((s) => (s.id === session.id ? { ...s, status: 'connected', terminals: newTerminals } : s))
-        );
-      }
-      setConnectingServers((prev) => prev.filter((s) => s.sessionId !== session.id));
-
-      if (requestingTerminalId && oldToNew[requestingTerminalId]) {
-        setActiveTerminalId(oldToNew[requestingTerminalId]);
-      }
-
-      await postConnectSetup(session.id!, String(session.serverId));
-      return { oldToNew, newTerminals };
+      return await restoreSessionTerminals(session, { deferState, suppressToast, requestingTerminalId });
     } catch (err) {
       const errMsg = String(err);
       const isHostKeyChange = errMsg.includes('主机密钥已变更');
@@ -612,7 +631,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
       }
       return null;
     }
-  }, [addToast, awaitDisconnectTerminals, t, postConnectSetup]);
+  }, [addToast, awaitDisconnectTerminals, restoreSessionTerminals, t]);
 
   // ── 断线自动重连(按服务器开关,默认关;指数退避,最多 10 次)────
   const AUTO_RECONNECT_MAX_ATTEMPTS = 10;
@@ -1032,19 +1051,24 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
     try {
       await AppGo.AcceptHostKeyChange(sessionId, chosen);
       if (chosen >= 1) {
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === sessionId ? { ...s, status: 'connected' } : s
-          )
-        );
-        setConnectingServers((prev) => prev.filter((s) => s.sessionId !== sessionId));
+        // 后端接受密钥后只重建了根会话，这里补齐子终端与工作区映射，
+        // 否则多终端会话重连后只有第一个终端能连上。
+        const matched = sessionsRef.current.find((s) => s.id === sessionId);
+        if (matched) {
+          await restoreSessionTerminals(matched, { suppressToast: true });
+        } else {
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === sessionId ? { ...s, status: 'connected' } : s
+            )
+          );
+          setConnectingServers((prev) => prev.filter((s) => s.sessionId !== sessionId));
+          await postConnectSetup(sessionId, '');
+        }
         addToast(
           chosen === 2 ? t('主机密钥已保存，连接成功') : t('本次已接受，连接成功'),
           'success'
         );
-
-        const matched = sessionsRef.current.find((s) => s.id === sessionId);
-        await postConnectSetup(sessionId, String(matched?.serverId || ''));
       } else {
         updateSessionStatus(sessionId, 'error');
         setConnectingServers((prev) => prev.filter((s) => s.sessionId !== sessionId));
@@ -1060,7 +1084,7 @@ export default function useSessionConnections(deps: UseSessionConnectionsDeps): 
       updateSessionStatus(sessionId, 'error');
       setConnectingServers((prev) => prev.filter((s) => s.sessionId !== sessionId));
     }
-  }, [addToast, clearSessionAuthPrompt, postConnectSetup, t, updateSessionStatus]);
+  }, [addToast, clearSessionAuthPrompt, postConnectSetup, restoreSessionTerminals, t, updateSessionStatus]);
 
   // ── 监听主机密钥变更事件 ────────────────────────────────────
   // 只写入该会话的待确认状态，由会话面板内的 SessionAuthCard 呈现，

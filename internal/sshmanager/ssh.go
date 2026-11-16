@@ -1017,6 +1017,8 @@ func (m *SSHManager) setupSession(ctx context.Context, client *ssh.Client, connK
 	}
 	m.sessions[sessionId] = sd
 	m.connTerminals[connKey] = append(m.connTerminals[connKey], sessionId)
+	// 重连复用旧 terminal id 时清掉断连现场记录，避免 MCP「终端跟随」把它当已关闭终端。
+	delete(m.recentClosed, sessionId)
 	m.mu.Unlock()
 	if staleSession != nil {
 		if staleStdin != nil {
@@ -1493,6 +1495,13 @@ func (m *SSHManager) DisconnectAll() {
 // OpenTerminal 为已有连接创建新的终端通道
 // 复用同一个 SSH 客户端，创建新的 shell session
 func (m *SSHManager) OpenTerminal(sessionId string) (string, error) {
+	return m.OpenTerminalWithID(sessionId, "")
+}
+
+// OpenTerminalWithID 同 OpenTerminal，但可用指定 id 重开终端：
+// 断线重连时沿用旧 id，前端 xterm 不重挂，滚动历史与分屏布局得以保留。
+// preferredId 为空时随机生成。
+func (m *SSHManager) OpenTerminalWithID(sessionId string, preferredId string) (string, error) {
 	m.mu.RLock()
 	existing, ok := m.sessions[sessionId]
 	if !ok {
@@ -1508,12 +1517,19 @@ func (m *SSHManager) OpenTerminal(sessionId string) (string, error) {
 	terminalEncoding := existing.TerminalEncoding
 	m.mu.RUnlock()
 
-	// 生成新 session ID
-	randomId := make([]byte, 8)
-	if _, err := rand.Read(randomId); err != nil {
-		return "", fmt.Errorf("生成 session ID 失败: %w", err)
+	newId := strings.TrimSpace(preferredId)
+	if newId != "" {
+		if !validTerminalID(newId) {
+			return "", fmt.Errorf("终端 id 不合法")
+		}
+	} else {
+		// 生成新 session ID
+		randomId := make([]byte, 8)
+		if _, err := rand.Read(randomId); err != nil {
+			return "", fmt.Errorf("生成 session ID 失败: %w", err)
+		}
+		newId = fmt.Sprintf("term_%x", randomId)
 	}
-	newId := fmt.Sprintf("term_%x", randomId)
 	launchCmd, remoteHistoryActive := buildShellLaunchCommand(existing.ShellPath, existing.TerminalInitPath)
 
 	err := m.setupSession(context.Background(), entry.Client, connKey, newId, sessionId, launchCmd, remoteHistoryActive, existing.ShellPath, existing.TerminalInitPath, terminalEncoding)
@@ -1522,6 +1538,22 @@ func (m *SSHManager) OpenTerminal(sessionId string) (string, error) {
 	}
 
 	return newId, nil
+}
+
+// validTerminalID 限制终端 id 字符集：它会成为 map key 与 WebSocket 路径段，
+// 只允许字母数字与 _-，长度上限 64。
+func validTerminalID(id string) bool {
+	if id == "" || len(id) > 64 {
+		return false
+	}
+	for _, r := range id {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_', r == '-':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func (m *SSHManager) executeCmdWithClient(client *ssh.Client, cmd string) (string, error) {

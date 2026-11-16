@@ -820,7 +820,28 @@ func (a *App) OpenTerminal(sessionId string) (string, error) {
 		return newId, nil
 	}
 
-	return a.sshManager.OpenTerminal(sessionId)
+	newTermId, err := a.sshManager.OpenTerminal(sessionId)
+	if err != nil {
+		log.Printf("[OpenTerminal] 打开新终端失败 sessionId=%s err=%v", sessionId, err)
+	}
+	return newTermId, err
+}
+
+// OpenTerminalWithID 在当前服务器连接上以指定 id 打开终端。
+// 断线重连沿用旧 id，前端终端实例不重建，滚动历史与分屏布局得以保留。
+func (a *App) OpenTerminalWithID(sessionId, terminalId string) (string, error) {
+	existing, ok := a.sshManager.GetSession(sessionId)
+	if !ok {
+		return "", fmt.Errorf("session not found")
+	}
+	if existing.IsLocal {
+		return a.OpenTerminal(sessionId)
+	}
+	newTermId, err := a.sshManager.OpenTerminalWithID(sessionId, terminalId)
+	if err != nil {
+		log.Printf("[OpenTerminal] 复用 id 打开终端失败 sessionId=%s terminalId=%s err=%v", sessionId, terminalId, err)
+	}
+	return newTermId, err
 }
 
 // WriteTerminal sends input to the SSH PTY (fallback, primary path is WebSocket)

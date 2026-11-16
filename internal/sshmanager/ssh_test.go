@@ -810,3 +810,44 @@ func TestDisconnectRemovesAllDuplicateIds(t *testing.T) {
 		t.Fatalf("断开后 connTerminals 应为空，实际 %d 个残留", terms)
 	}
 }
+
+// TestOpenTerminalWithIDReusesId 重连复用旧终端 id：新会话以旧 id 登记，
+// 且该 id 的断连现场记录要被清掉；非法 id 直接拒绝。
+func TestOpenTerminalWithIDReusesId(t *testing.T) {
+	host, port, hostKeyLine, cleanup := newCycleTestServer(t)
+	defer cleanup()
+	manager := setupCycleTestManager(t, host, port, hostKeyLine)
+	conn := Connection{ID: "server-reuse", Username: "test", Host: host, Port: port, AuthMethod: ""}
+
+	if err := manager.Connect("session-1", conn); err != nil {
+		t.Fatal(err)
+	}
+	defer manager.DisconnectConnection("session-1", []string{"session-1", "term_reuse_1"})
+
+	// 先登记一次断连现场，模拟整机断线后的状态
+	manager.mu.Lock()
+	manager.rememberClosedTerminal("term_reuse_1", conn.ID)
+	manager.mu.Unlock()
+
+	newId, err := manager.OpenTerminalWithID("session-1", "term_reuse_1")
+	if err != nil {
+		t.Fatalf("复用 id 打开终端失败: %v", err)
+	}
+	if newId != "term_reuse_1" {
+		t.Fatalf("应返回传入的 id，实际 %q", newId)
+	}
+	manager.mu.RLock()
+	_, sessionOK := manager.sessions["term_reuse_1"]
+	_, closedRecordLeft := manager.recentClosed["term_reuse_1"]
+	manager.mu.RUnlock()
+	if !sessionOK {
+		t.Fatal("复用 id 后应登记新会话")
+	}
+	if closedRecordLeft {
+		t.Fatal("复用 id 后不应残留断连现场记录")
+	}
+
+	if _, err := manager.OpenTerminalWithID("session-1", "bad id!"); err == nil {
+		t.Fatal("非法终端 id 应被拒绝")
+	}
+}
