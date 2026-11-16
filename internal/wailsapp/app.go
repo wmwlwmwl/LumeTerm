@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1559,7 +1560,7 @@ func (a *App) GetR2Config() map[string]interface{} {
 		"endpoint":        conf.Endpoint,
 		"region":          conf.Region,
 		"prefix":          conf.Prefix,
-		"maxBackups":      conf.MaxBackups,
+		"maxBackups":      strconv.Itoa(conf.MaxBackups),
 	}
 }
 
