@@ -132,7 +132,8 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
     try {
       const data = await AppGo.ListDir(sessionId, normalizedPath);
       if (!canApplyResult()) {
-        return false;
+        // 结果被更新的加载或标签切换接管：这不算读取失败，调用方不能再当成「目录不存在」回落根目录
+        return true;
       }
       if (trackDiff) {
         updateItemsPreservingView((current) => buildItemsWithTrackedDiff(current, (data || []) as FileManagerFileItem[], normalizedPath));
@@ -151,7 +152,8 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
       return true;
     } catch (err) {
       getPaneViewState(activePaneKey).pendingRestore = null;
-      if (!canApplyResult()) return false;
+      // 同上：结果已被更新的加载接管时，错误也属于过期请求，不能触发调用方回落根目录
+      if (!canApplyResult()) return true;
       setLoading(false);
       if (!resolvedOptions.silent) {
         const rawMsg = String(err);
@@ -445,7 +447,9 @@ export function useFileManagerDirectoryLoader(deps: ReturnType<typeof useFileMan
     (async () => {
       try {
         let systemTerminalCwdPath = normalizePath(pendingTerminalCwdRef.current);
-        if (!systemTerminalCwdPath) {
+        // 已恢复标签时目录路径来自工作区，不必等终端 cwd：重连后新会话的 cwd 查询会走 /proc 扫描脚本，
+        // 可能阻塞数秒，等它会让文件管理器先空着再出内容。此时改用「忽略首个 cwd 事件」兜底。
+        if (!systemTerminalCwdPath && !hasRememberedTabs) {
           try {
             systemTerminalCwdPath = normalizePath(await AppGo.GetTerminalCwd(sessionId));
           } catch (_) {

@@ -212,11 +212,11 @@ export function useFileManagerWorkspaceSync(deps: ReturnType<typeof useFileManag
     });
   }, [currentPath, isActive, syncCurrentTabToWorkspace]);
   useEffect(() => {
-    if (!isActive || !activeFileManagerTabIdRef.current) return;
+    if (!isActive || !activeFileManagerTabIdRef.current || !currentPathHydratedRef.current) return;
     syncCurrentTabToWorkspace({ sortField, sortDir, reason: 'sort-effect' });
   }, [isActive, sortField, sortDir, syncCurrentTabToWorkspace]);
   useEffect(() => {
-    if (!isActive || !activeFileManagerTabIdRef.current) return;
+    if (!isActive || !activeFileManagerTabIdRef.current || !currentPathHydratedRef.current) return;
     syncCurrentTabToWorkspace({ selectedPaths, reason: 'selectedPaths-effect' });
   }, [isActive, selectedPaths, syncCurrentTabToWorkspace]);
   return {
