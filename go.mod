@@ -15,7 +15,7 @@ require (
 	github.com/studio-b12/gowebdav v0.13.0
 	github.com/wailsapp/wails/v2 v2.17.1
 	go.bug.st/serial v1.8.0
-	golang.org/x/crypto v0.58.0
+	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.62.0
 	golang.org/x/text v0.44.0
 	modernc.org/sqlite v1.62.0
@@ -61,7 +61,7 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
 	modernc.org/libc v1.80.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
