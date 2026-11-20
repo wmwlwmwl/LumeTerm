@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Öffnen Sie das Verzeichnis",
   "打开所在目录失败": "Verzeichnis konnte nicht geöffnet werden",
   "复制失败": "Das Kopieren ist fehlgeschlagen",
-  "复制 IP": "IP kopieren",
+  "复制主机地址": "Hostadresse kopieren",
   "复制端口": "Port kopieren",
   "复制 SSH 链接": "SSH-Link kopieren",
   "显示 IP": "IP anzeigen",

@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Open de map",
   "打开所在目录失败": "Kan map niet openen",
   "复制失败": "Kopiëren mislukt",
-  "复制 IP": "Kopieer IP",
+  "复制主机地址": "Hostadres kopiëren",
   "复制端口": "Poort kopiëren",
   "复制 SSH 链接": "SSH-link kopiëren",
   "显示 IP": "Toon IP",

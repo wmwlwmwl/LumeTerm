@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Buka direktori",
   "打开所在目录失败": "Gagal membuka direktori",
   "复制失败": "Penyalinan gagal",
-  "复制 IP": "Salin IP",
+  "复制主机地址": "Salin alamat host",
   "复制端口": "Salin port",
   "复制 SSH 链接": "Salin tautan SSH",
   "显示 IP": "Tampilkan IP",

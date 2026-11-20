@@ -83,7 +83,7 @@ export default function TabContextMenuOverlay({
               void copyText(server.host);
             }}
           >
-            <Copy size={14} /> {t('复制 IP')}
+            <Copy size={14} /> {t('复制主机地址')}
           </div>
           {showCopySessionPassword && (
             <div

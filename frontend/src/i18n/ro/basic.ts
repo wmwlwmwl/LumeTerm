@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Deschide directorul",
   "打开所在目录失败": "Nu s-a putut deschide directorul",
   "复制失败": "Copierea eșuată",
-  "复制 IP": "Copiați IP-ul",
+  "复制主机地址": "Copiați adresa gazdei",
   "复制端口": "Copiază portul",
   "复制 SSH 链接": "Copiază linkul SSH",
   "显示 IP": "Arată IP",

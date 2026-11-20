@@ -117,7 +117,7 @@ export function ServerContextMenu({
               { label: t('连接'), icon: <Link size={14} />, onSelect: () => { onConnect(menuServer); } },
               { label: t('编辑配置'), icon: <SquarePen size={14} />, onSelect: () => { triggerEdit(menuServer, menuSourceRef.current); } },
               { label: t('克隆'), icon: <Copy size={14} />, onSelect: () => { onClone(menuServer, getEditAnimationPayload(menuServer, menuSourceRef.current)); } },
-              { label: t('复制 IP'), icon: <Copy size={14} />, onSelect: () => { void copyText(menuServer.host); } },
+              { label: t('复制主机地址'), icon: <Copy size={14} />, onSelect: () => { void copyText(menuServer.host); } },
               { label: t('复制密码'), icon: <Copy size={14} />, onSelect: () => { void copyPassword(menuServer); } },
               { label: t('复制端口'), icon: <Copy size={14} />, onSelect: () => { void copyText(String(menuServer.port || 22)); } },
               { label: t('复制 SSH 链接'), icon: <Link size={14} />, onSelect: () => { void copySSHLink(menuServer); } },

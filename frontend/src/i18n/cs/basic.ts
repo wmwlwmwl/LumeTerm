@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Otevřete adresář",
   "打开所在目录失败": "Nepodařilo se otevřít adresář",
   "复制失败": "Kopírování se nezdařilo",
-  "复制 IP": "Kopírovat IP",
+  "复制主机地址": "Kopírovat adresu hostitele",
   "复制端口": "Kopírovat port",
   "复制 SSH 链接": "Kopírovat odkaz SSH",
   "显示 IP": "Zobrazit IP",

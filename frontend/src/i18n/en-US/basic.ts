@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Open Containing Folder",
   "打开所在目录失败": "Failed to open containing folder",
   "复制失败": "Copy failed",
-  "复制 IP": "Copy IP",
+  "复制主机地址": "Copy Host",
   "复制端口": "Copy port",
   "复制 SSH 链接": "Copy SSH link",
   "显示 IP": "Show IP",

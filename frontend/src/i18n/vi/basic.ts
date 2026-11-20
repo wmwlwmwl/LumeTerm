@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Mở thư mục",
   "打开所在目录失败": "Không mở được thư mục",
   "复制失败": "Sao chép không thành công",
-  "复制 IP": "Sao chép IP",
+  "复制主机地址": "Sao chép địa chỉ máy chủ",
   "复制端口": "Sao chép cổng",
   "复制 SSH 链接": "Sao chép liên kết SSH",
   "显示 IP": "Hiển thị IP",

@@ -40,8 +40,8 @@ export function ProbeHeader({
           <span className="probe-ip-chip" title={hideIP ? '' : displayIP}>
             {hideIP ? maskAddress(displayIP) : displayIP}
           </span>
-          <Tiptop text={t('复制 IP')} placement="bottom">
-            <button onClick={handleCopyIP} aria-label={t('复制 IP')} className="probe-icon-btn">
+          <Tiptop text={t('复制主机地址')} placement="bottom">
+            <button onClick={handleCopyIP} aria-label={t('复制主机地址')} className="probe-icon-btn">
               <Clipboard size={13} />
             </button>
           </Tiptop>

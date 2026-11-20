@@ -324,7 +324,7 @@ export default {
   "打开所在目录": "Dizini aç",
   "打开所在目录失败": "Dizin açılamadı",
   "复制失败": "Kopyalama başarısız oldu",
-  "复制 IP": "IP'yi kopyala",
+  "复制主机地址": "Ana bilgisayar adresini kopyala",
   "复制端口": "Portu kopyala",
   "复制 SSH 链接": "SSH bağlantısını kopyala",
   "显示 IP": "IP'yi göster",
