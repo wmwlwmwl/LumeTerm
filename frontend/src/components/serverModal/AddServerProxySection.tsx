@@ -180,6 +180,21 @@ export function AddServerProxySection({
                 </button>
               </div>
             </div>
+            {form.proxyType === 'https' ? (
+              <label className="server-editor-compat-check" htmlFor="server-proxy-insecure-tls">
+                <input
+                  id="server-proxy-insecure-tls"
+                  name="proxyAllowInsecureTLS"
+                  type="checkbox"
+                  checked={!!form.proxyAllowInsecureTLS}
+                  onChange={(e) => set('proxyAllowInsecureTLS')({ target: { value: e.target.checked } } as unknown as ChangeEvent<HTMLInputElement>)}
+                />
+                <span>
+                  <strong>{t('允许自签证书')}</strong>
+                  <small>{t('仅跳过代理证书校验，隧道内目标服务器证书仍正常校验')}</small>
+                </span>
+              </label>
+            ) : null}
           </>
         ) : null}
       </div>

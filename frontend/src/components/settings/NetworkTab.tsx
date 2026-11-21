@@ -18,6 +18,7 @@ interface ProxyFormState {
   port: string;
   username: string;
   password: string;
+  allowInsecureTls: boolean;
 }
 
 /** 代理节点（来自 proxyNodesBridge.ts（已类型化桥接），字段按需取用） */
@@ -29,6 +30,7 @@ interface ProxyNodeLike {
   port?: unknown;
   username?: unknown;
   password?: unknown;
+  allowInsecureTls?: unknown;
 }
 
 const defaultProxyForm: ProxyFormState = {
@@ -38,6 +40,7 @@ const defaultProxyForm: ProxyFormState = {
   port: '1080',
   username: '',
   password: '',
+  allowInsecureTls: false,
 };
 
 function createProxyId() {
@@ -176,6 +179,7 @@ export default function NetworkTab({ pingEnabled, onTogglePingEnabled, pingMode,
       port: String(node.port || 1080),
       username: String(node.username || ''),
       password: String(node.password || ''),
+      allowInsecureTls: node.allowInsecureTls === true,
     });
   };
 
@@ -359,6 +363,15 @@ export default function NetworkTab({ pingEnabled, onTogglePingEnabled, pingMode,
                 <label className="form-label" htmlFor="network-proxy-password">{$t('密码')}</label>
                 <input id="network-proxy-password" name="network-proxy-password" autoComplete="off" className="input" type="password" value={proxyForm.password} onChange={setProxyField('password')} placeholder={$t('密码')} />
               </div>
+              {proxyForm.type === 'https' ? (
+                <div className="flex items-center justify-between gap-2.5 px-1 py-0.5">
+                  <div className="min-w-0">
+                    <div className="text-sm text-secondary">{$t('允许自签证书')}</div>
+                    <div className="text-xs text-tertiary mt-0.5">{$t('仅跳过代理证书校验，隧道内目标服务器证书仍正常校验')}</div>
+                  </div>
+                  <ToggleSwitch checked={proxyForm.allowInsecureTls} onChange={() => setProxyForm((current) => ({ ...current, allowInsecureTls: !current.allowInsecureTls }))} />
+                </div>
+              ) : null}
               <div className="flex gap-2.5 justify-end mt-0.5 flex-wrap">
                 {editingProxyId ? <Button onClick={resetProxyForm}>{$t('取消编辑')}</Button> : null}
                 <Button type="submit" variant="primary">{editingProxyId ? $t('保存配置') : $t('添加')}</Button>

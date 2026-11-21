@@ -94,7 +94,10 @@ type Connection struct {
 	ProxyPort     int    `json:"proxyPort,omitempty"`
 	ProxyUsername string `json:"proxyUsername,omitempty"`
 	ProxyPassword string `json:"proxyPassword,omitempty"`
-	LastModified  int64  `json:"last_modified,omitempty"` // Unix 毫秒时间戳，合并时判断新旧
+	// ProxyAllowInsecureTLS 允许 HTTPS 代理使用自签/不受信任证书：仅跳过代理本身的 TLS 校验，
+	// 隧道内的 SSH 握手与 AI 请求的目标证书仍正常校验。
+	ProxyAllowInsecureTLS bool  `json:"proxyAllowInsecureTls,omitempty"`
+	LastModified          int64 `json:"last_modified,omitempty"` // Unix 毫秒时间戳，合并时判断新旧
 }
 
 // Credential 可复用的认证凭据，多个 Connection 可引用同一 Credential

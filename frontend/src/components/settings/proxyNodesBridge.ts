@@ -16,6 +16,8 @@ export interface ProxyNode {
   port: number;
   username: string;
   password: string;
+  /** 允许 HTTPS 代理使用自签/不受信任证书（仅跳过代理证书校验） */
+  allowInsecureTls: boolean;
   updatedAt: number;
 }
 
@@ -30,6 +32,7 @@ export function normalizeProxyNode(node: unknown): ProxyNode {
     port: Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort <= 65535 ? parsedPort : 1080,
     username: String(p.username || '').trim(),
     password: String(p.password || ''),
+    allowInsecureTls: p.allowInsecureTls === true,
     updatedAt: Number.isFinite(Number(p.updatedAt)) && Number(p.updatedAt) > 0 ? Number(p.updatedAt) : Date.now(),
   };
 }

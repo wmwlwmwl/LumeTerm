@@ -960,6 +960,8 @@ export default {
   "SOCKS5 代理": "Proksi SOCKS5",
   "HTTP 代理": "Proksi HTTP",
   "HTTPS 代理": "Proksi HTTPS",
+  "允许自签证书": "Izinkan sertifikat yang ditandatangani sendiri",
+  "仅跳过代理证书校验，隧道内目标服务器证书仍正常校验": "Hanya melewati verifikasi sertifikat proxy; sertifikat server tujuan di dalam tunnel tetap diverifikasi",
   "请输入代理主机地址": "Silakan masukkan alamat host proxy",
   "请输入有效端口": "Silakan masukkan port yang valid",
   "未命名节点": "simpul tanpa nama",

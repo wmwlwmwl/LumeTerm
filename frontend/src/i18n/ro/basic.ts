@@ -960,6 +960,8 @@ export default {
   "SOCKS5 代理": "SOCKS5 proxy",
   "HTTP 代理": "Proxy HTTP",
   "HTTPS 代理": "Proxy HTTPS",
+  "允许自签证书": "Permiteți certificatul autosemnat",
+  "仅跳过代理证书校验，隧道内目标服务器证书仍正常校验": "Se omite doar verificarea certificatului proxy; certificatele serverelor țintă sunt în continuare verificate",
   "请输入代理主机地址": "Vă rugăm să introduceți adresa gazdei proxy",
   "请输入有效端口": "Vă rugăm să introduceți un port valid",
   "未命名节点": "nod nenumit",

@@ -70,6 +70,7 @@ export function useAddServerForm({
         proxyPort: server.proxyPort ? String(server.proxyPort) : '1080',
         proxyUsername: server.proxyUsername || '',
         proxyPassword: '',
+        proxyAllowInsecureTLS: server.proxyAllowInsecureTls ?? false,
         terminalEncoding: server.terminalEncoding || 'utf-8',
       });
       setShowProxyPassword(false);
@@ -146,6 +147,7 @@ export function useAddServerForm({
       data.proxyHost = String(data.proxyHost || '').trim();
       data.proxyPort = parseInt(String(data.proxyPort || '').trim(), 10) || 1080;
       data.proxyUsername = String(data.proxyUsername || '').trim();
+      data.proxyAllowInsecureTls = form.proxyMode === 'custom' && form.proxyType === 'https' && !!form.proxyAllowInsecureTLS;
 
       if (authMode === 'credential') {
         data.credentialId = selectedCredId;

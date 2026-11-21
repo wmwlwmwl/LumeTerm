@@ -960,6 +960,8 @@ export default {
   "SOCKS5 代理": "SOCKS5-Proxy",
   "HTTP 代理": "HTTP-Proxy",
   "HTTPS 代理": "HTTPS-Proxy",
+  "允许自签证书": "Selbstsigniertes Zertifikat zulassen",
+  "仅跳过代理证书校验，隧道内目标服务器证书仍正常校验": "Überspringt nur die Proxy-Zertifikatsprüfung; Zielserver-Zertifikate im Tunnel werden weiterhin geprüft",
   "请输入代理主机地址": "Bitte geben Sie die Proxy-Hostadresse ein",
   "请输入有效端口": "Bitte geben Sie einen gültigen Port ein",
   "未命名节点": "unbenannter Knoten",

@@ -22,6 +22,7 @@ export interface ServerEditorForm {
   proxyPort: string;
   proxyUsername: string;
   proxyPassword: string;
+  proxyAllowInsecureTLS: boolean;
   group?: string;
   [key: string]: unknown;
 }
@@ -56,4 +57,5 @@ export const defaultForm: ServerEditorForm = {
   proxyPort: '1080',
   proxyUsername: '',
   proxyPassword: '',
+  proxyAllowInsecureTLS: false,
 };

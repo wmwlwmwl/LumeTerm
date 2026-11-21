@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"lumeterm/internal/config"
+
 	xproxy "golang.org/x/net/proxy"
 )
 
@@ -169,6 +171,17 @@ func (a *Service) buildAIHTTPTransportForProfile(profile *AIProviderProfile) (*h
 	}
 	switch normalizeAIProxyType(selectedProxy.Type) {
 	case "http", "https":
+		// 自签证书场景改走自建隧道：Transport 的 TLSClientConfig 会同时作用于代理和目标 API，
+		// 只有自己完成代理 TLS + CONNECT 才能做到只跳过代理证书校验。
+		if normalizeAIProxyType(selectedProxy.Type) == "https" && selectedProxy.AllowInsecureTLS {
+			dialContext, err := buildAIInsecureHTTPSProxyDialContext(*selectedProxy)
+			if err != nil {
+				return nil, err
+			}
+			transport.Proxy = nil
+			transport.DialContext = dialContext
+			return transport, nil
+		}
 		proxyURL, err := buildAIHTTPProxyURL(*selectedProxy)
 		if err != nil {
 			return nil, err
@@ -183,6 +196,29 @@ func (a *Service) buildAIHTTPTransportForProfile(profile *AIProviderProfile) (*h
 		transport.DialContext = dialContext
 	}
 	return transport, nil
+}
+
+// buildAIInsecureHTTPSProxyDialContext 用自建 TLS 隧道连接 HTTPS 代理，仅跳过代理证书校验；
+// 目标 API 的 TLS 仍由 Transport 走默认校验，不受该开关影响。
+func buildAIInsecureHTTPSProxyDialContext(node AIProxyNode) (func(context.Context, string, string) (net.Conn, error), error) {
+	conn := config.Connection{
+		ProxyMode:             "custom",
+		ProxyType:             "https",
+		ProxyHost:             strings.TrimSpace(node.Host),
+		ProxyPort:             node.Port,
+		ProxyUsername:         strings.TrimSpace(node.Username),
+		ProxyPassword:         node.Password,
+		ProxyAllowInsecureTLS: true,
+	}
+	if conn.ProxyHost == "" {
+		return nil, fmt.Errorf("AI 代理主机地址不能为空")
+	}
+	if conn.ProxyPort <= 0 || conn.ProxyPort > 65535 {
+		return nil, fmt.Errorf("AI 代理端口无效")
+	}
+	return func(ctx context.Context, network string, addr string) (net.Conn, error) {
+		return config.DialConnectionTargetContext(ctx, conn, addr, 10*time.Second)
+	}, nil
 }
 
 func aiHTTPClientCacheKey(proxyNodeID string, timeout time.Duration) string {

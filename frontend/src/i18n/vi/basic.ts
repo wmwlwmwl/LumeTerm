@@ -960,6 +960,8 @@ export default {
   "SOCKS5 代理": "Proxy SOCKS5",
   "HTTP 代理": "Proxy HTTP",
   "HTTPS 代理": "Proxy HTTPS",
+  "允许自签证书": "Cho phép chứng chỉ tự ký",
+  "仅跳过代理证书校验，隧道内目标服务器证书仍正常校验": "Chỉ bỏ qua xác minh chứng chỉ proxy; chứng chỉ máy chủ đích trong đường hầm vẫn được xác minh bình thường",
   "请输入代理主机地址": "Vui lòng nhập địa chỉ máy chủ proxy",
   "请输入有效端口": "Vui lòng nhập một cổng hợp lệ",
   "未命名节点": "nút không tên",

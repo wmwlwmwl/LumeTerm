@@ -38,7 +38,9 @@ type AIProxyNode struct {
 	Port      int    `json:"port"`
 	Username  string `json:"username,omitempty"`
 	Password  string `json:"password,omitempty"`
-	UpdatedAt int64  `json:"updatedAt,omitempty"`
+	// AllowInsecureTLS 允许 HTTPS 代理使用自签/不受信任证书（仅跳过代理 TLS 校验）。
+	AllowInsecureTLS bool  `json:"allowInsecureTls,omitempty"`
+	UpdatedAt        int64 `json:"updatedAt,omitempty"`
 }
 
 type AIGlobalSettings struct {
@@ -343,14 +345,15 @@ func NormalizeAIProxyNodes(nodes []AIProxyNode) []AIProxyNode {
 		}
 		seen[id] = struct{}{}
 		normalized = append(normalized, AIProxyNode{
-			ID:        id,
-			Name:      strings.TrimSpace(node.Name),
-			Type:      proxyType,
-			Host:      host,
-			Port:      port,
-			Username:  strings.TrimSpace(node.Username),
-			Password:  node.Password,
-			UpdatedAt: updatedAt,
+			ID:               id,
+			Name:             strings.TrimSpace(node.Name),
+			Type:             proxyType,
+			Host:             host,
+			Port:             port,
+			Username:         strings.TrimSpace(node.Username),
+			Password:         node.Password,
+			AllowInsecureTLS: node.AllowInsecureTLS && proxyType == "https",
+			UpdatedAt:        updatedAt,
 		})
 	}
 	return normalized

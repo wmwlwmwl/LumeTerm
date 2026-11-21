@@ -960,6 +960,8 @@ export default {
   "SOCKS5 代理": "SOCKS5 proxy'si",
   "HTTP 代理": "HTTP proxy'si",
   "HTTPS 代理": "HTTPS proxy'si",
+  "允许自签证书": "Kendinden imzalı sertifikaya izin ver",
+  "仅跳过代理证书校验，隧道内目标服务器证书仍正常校验": "Yalnızca proxy sertifika doğrulaması atlanır; hedef sunucu sertifikaları yine doğrulanır",
   "请输入代理主机地址": "Lütfen proxy ana bilgisayar adresini girin",
   "请输入有效端口": "Lütfen geçerli bir bağlantı noktası girin",
   "未命名节点": "adsız düğüm",

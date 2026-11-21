@@ -73,15 +73,20 @@ func sanitizeConnectionProxyConfig(conn *Connection) {
 		conn.ProxyPort = 0
 		conn.ProxyUsername = ""
 		conn.ProxyPassword = ""
+		conn.ProxyAllowInsecureTLS = false
 	case "node":
 		conn.ProxyType = ""
 		conn.ProxyHost = ""
 		conn.ProxyPort = 0
 		conn.ProxyUsername = ""
 		conn.ProxyPassword = ""
+		conn.ProxyAllowInsecureTLS = false
 	case "custom":
 		conn.ProxyNodeID = ""
 		conn.ProxyPort = normalizeConnectionProxyPort(conn.ProxyPort)
+		if conn.ProxyType != "https" {
+			conn.ProxyAllowInsecureTLS = false
+		}
 	}
 }
 
@@ -184,6 +189,7 @@ func (c *ConfigManager) ResolveConnectionProxy(conn Connection) (Connection, err
 			conn.ProxyPort = normalizeConnectionProxyPort(node.Port)
 			conn.ProxyUsername = strings.TrimSpace(node.Username)
 			conn.ProxyPassword = node.Password
+			conn.ProxyAllowInsecureTLS = node.AllowInsecureTLS
 			return conn, nil
 		}
 		return conn, fmt.Errorf("所选代理节点不存在或已被删除")
@@ -233,7 +239,11 @@ func dialHTTPProxyContext(ctx context.Context, conn Connection, target string, t
 			handshakeCtx, cancel = context.WithTimeout(ctx, timeout)
 			defer cancel()
 		}
-		tlsConn := tls.Client(netConn, &tls.Config{ServerName: strings.Trim(conn.ProxyHost, "[]")})
+		// 用户显式开启「允许自签证书」时跳过代理证书校验；隧道内 SSH/AI 目标证书仍由各自握手校验。
+		tlsConn := tls.Client(netConn, &tls.Config{ //nolint:gosec -- 用户显式开启的自签代理证书选项
+			ServerName:         strings.Trim(conn.ProxyHost, "[]"),
+			InsecureSkipVerify: conn.ProxyAllowInsecureTLS,
+		})
 		if err := tlsConn.HandshakeContext(handshakeCtx); err != nil {
 			netConn.Close()
 			return nil, err

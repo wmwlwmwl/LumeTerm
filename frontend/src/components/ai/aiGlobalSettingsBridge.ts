@@ -221,6 +221,7 @@ function normalizeProxyNode(node: unknown, index = 0): ProxyNode | null {
     port,
     username: typeof n.username === 'string' ? n.username.trim() : '',
     password: typeof n.password === 'string' ? n.password : '',
+    allowInsecureTls: n.allowInsecureTls === true,
     updatedAt: Number.isFinite(Number(n.updatedAt)) && Number(n.updatedAt) > 0 ? Number(n.updatedAt) : Date.now(),
   }
 }
