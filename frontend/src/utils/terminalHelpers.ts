@@ -73,7 +73,8 @@ export function getTerminalBufferSnapshotText(term: XTerm | null) {
 // 手写 URL 规则（不依赖 addon-web-links）；provider 负责点击，覆盖层负责常驻下划线
 // 排除 ; | 等 shell 分隔符，避免 curl ...sh;else 把后续命令粘进链接
 // 尾字符排除 ASCII 与全角标点：提示文案里的 `url`、url）： 不留进链接
-export const TERMINAL_URL_REGEX = /(https?|HTTPS?):[/]{2}[^\s"'!*(){}|\\^<>`;]*[^\s"':,.!?{}|\\^~[\]`()<>;。，、；：！？）】》」]/;
+// 主体同样排除全角标点：不如「https://x/y；后续中文说明」会整段被吞进链接
+export const TERMINAL_URL_REGEX = /(https?|HTTPS?):[/]{2}[^\s"'!*(){}|\\^<>`;。，、；：！？（）【】《》「」『』“”‘’]*[^\s"':,.!?{}|\\^~[\]`()<>;。，、；：！？（）【】《》「」『』“”‘’]/;
 
 export function isTerminalHttpUrl(urlString: string) {
   try {

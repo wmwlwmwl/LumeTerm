@@ -2,6 +2,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import { cn } from '../../../../utils/cn.ts';
+import { remarkCleanAutolinks } from '../AIChatMarkdown.tsx';
 
 export const suggestionMarkdownComponents: Components = {
   p: ({ children }) => <span>{children}</span>,
@@ -37,7 +38,7 @@ export interface FollowUpSuggestionMarkdownProps {
 export function FollowUpSuggestionMarkdown({ text, inline = false }: FollowUpSuggestionMarkdownProps) {
   return (
     <span className={cn('leading-[1.6] [word-break:break-word]', inline ? 'inline w-auto' : 'block w-full')}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={suggestionMarkdownComponents}>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkCleanAutolinks]} rehypePlugins={[rehypeSanitize]} components={suggestionMarkdownComponents}>
         {text || ''}
       </ReactMarkdown>
     </span>

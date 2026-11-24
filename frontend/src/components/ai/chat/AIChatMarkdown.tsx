@@ -53,7 +53,7 @@ interface MarkdownAstNode {
   children?: MarkdownAstNode[];
 }
 
-function remarkCleanAutolinks() {
+export function remarkCleanAutolinks() {
   return (tree: MarkdownAstNode) => {
     const walk = (node: MarkdownAstNode) => {
       if (!node.children) return
