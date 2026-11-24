@@ -3,6 +3,7 @@ import type * as React from 'react';
 import type { IMarker, Terminal as XTerm } from '@xterm/xterm';
 import type { I18nKey } from '../../i18n.ts';
 import type { CommandBlockState } from './terminalTypes.ts';
+import { isCollapseSummaryLine, isShellPromptLine } from '../../utils/terminalHelpers.ts';
 
 type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
 
@@ -38,24 +39,6 @@ export function useTerminalGutter(deps: {
   }
   const cbIdSeqRef = useRef(1);
   const cbRewriteLockRef = useRef(false);
-  const isCollapseSummaryLine = (text: string) => /^⋯\s+\d+\s+lines\s*$/.test(String(text || '').trim());
-  // 行首是 shell 提示符（后面可跟命令）。不能要求「整行以 # 结尾」，否则 `root@host:~# ping` 识别不到
-  const isShellPromptLine = (text: string) => {
-    const t = String(text || '').replace(/\s+$/g, '');
-    if (!t || t.length < 2 || isCollapseSummaryLine(t)) return false;
-    // user@host:path# cmd  /  user@host:path$ cmd
-    if (/^[\w.-]+@[\w.-]+:[^\n]*?[#$](?:\s+|$)/.test(t)) return true;
-    // [user@host dir]$ cmd
-    if (/^\[[^\]]+\][#$%](?:\s+|$)/.test(t)) return true;
-    // root@host ~]# cmd  一类
-    if (/^[\w.-]+@[\w.-]+\s+[^\n]*[#$%](?:\s+|$)/.test(t)) return true;
-    // Windows 本机终端：PowerShell "PS C:\path> cmd" / CMD "C:\path> cmd"。
-    // 不识别时多行粘贴/命令输入栏的逐行门控只能干等 2.5s 超时（每行一次）。
-    if (/^(?:PS\s+)?[A-Za-z]:[\\/][^\n]*?>(?:\s|$)/.test(t)) return true;
-    // 极简：以 #/$ 单独起命令（少见）
-    if (/^[#$]\s+\S/.test(t)) return true;
-    return false;
-  };
   // 空提示符可以显示时间；真正执行（回车）时再更新该行时间戳
   const normalizeCmdLineKey = (text: string) => String(text || '').replace(/\s+$/g, '');
   const blockStateKey = (commandLineText: string, occurrence: number) => `${normalizeCmdLineKey(commandLineText)}#${occurrence}`;
