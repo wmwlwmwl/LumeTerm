@@ -14,7 +14,7 @@ import {
 import type { ChmodDialogProps } from './fileManagerTypes.ts';
 
 // ── Chmod Dialog ──────────────────────────────────────────────
-export default function ChmodDialog({ path, permission, mode, rememberedMode = '', autoApplyLastSettings = false, uid, gid, ownerCandidates = [], groupCandidates = [], includeSubdirectories = false, showIncludeSubdirectories = false, onSave, onClose, t }: ChmodDialogProps) {
+export default function ChmodDialog({ path, permission, mode, rememberedMode = '', autoApplyLastSettings = false, uid, gid, metadataLoading = false, ownerCandidates = [], groupCandidates = [], includeSubdirectories = false, showIncludeSubdirectories = false, onSave, onClose, t }: ChmodDialogProps) {
   const parsePerms = (permStr: unknown) => {
     const normalizedPermStr = String(permStr || '');
     const p = normalizedPermStr.length >= 10 ? normalizedPermStr.slice(1) : '---------';
@@ -127,12 +127,12 @@ export default function ChmodDialog({ path, permission, mode, rememberedMode = '
                   className="input"
                   list="chmod-owner-options"
                   autoComplete="off"
-                  value={ownerInput}
+                  value={metadataLoading && ownerInput === '-' ? '' : ownerInput}
                   onChange={(e) => {
                     setOwnerTouched(true);
                     setOwnerInput(e.target.value);
                   }}
-                  placeholder={t('搜索或输入属主...')}
+                  placeholder={metadataLoading ? t('加载中...') : t('搜索或输入属主...')}
                 />
               </div>
               <datalist id="chmod-owner-options">
@@ -148,12 +148,12 @@ export default function ChmodDialog({ path, permission, mode, rememberedMode = '
                   className="input"
                   list="chmod-group-options"
                   autoComplete="off"
-                  value={groupInput}
+                  value={metadataLoading && groupInput === '-' ? '' : groupInput}
                   onChange={(e) => {
                     setGroupTouched(true);
                     setGroupInput(e.target.value);
                   }}
-                  placeholder={t('搜索或输入属组...')}
+                  placeholder={metadataLoading ? t('加载中...') : t('搜索或输入属组...')}
                 />
               </div>
               <datalist id="chmod-group-options">
@@ -211,7 +211,7 @@ export default function ChmodDialog({ path, permission, mode, rememberedMode = '
         </div>
         <div className="modal-footer">
           <Button variant="ghost" onClick={onClose}>{t('取消')}</Button>
-          <Button variant="primary" onClick={() => onSave(octal.length === 3 ? octal : calcChmodOctal(perms), includeChildren, ownerInput, groupInput)}>{t('确定')}</Button>
+          <Button variant="primary" disabled={metadataLoading} onClick={() => onSave(octal.length === 3 ? octal : calcChmodOctal(perms), includeChildren, ownerInput, groupInput)}>{t('确定')}</Button>
         </div>
       </div>
     </div>,

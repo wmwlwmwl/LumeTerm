@@ -93,6 +93,8 @@ export interface FileManagerChmodTarget {
   mode: string
   includeSubdirectories?: boolean
   showIncludeSubdirectories?: boolean
+  /** 属主/属组元数据仍在后台补全（列表项缺 uid/gid 时） */
+  metadataLoading?: boolean
   rememberedMode?: string
   autoApplyLastSettings?: boolean
   ownerCandidates?: IdentityPresetOption[]
@@ -178,6 +180,8 @@ export interface ChmodDialogProps {
   autoApplyLastSettings?: boolean
   uid: string
   gid: string
+  /** 属主/属组仍在加载，输入框显示「加载中...」占位 */
+  metadataLoading?: boolean
   ownerCandidates?: IdentityPresetOption[]
   groupCandidates?: IdentityPresetOption[]
   includeSubdirectories?: boolean

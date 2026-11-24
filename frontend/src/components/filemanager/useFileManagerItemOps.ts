@@ -614,10 +614,7 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
       return resolvedTargetItem;
     };
 
-    const resolvedTargets: FileManagerChmodBatchItem[] = [{
-      item: await resolveItemOwnership(primaryPath, item),
-      path: primaryPath,
-    }];
+    const uniqueTargets: FileManagerChmodBatchItem[] = [{ item, path: primaryPath }];
     const seenPaths = new Set([primaryPath]);
     for (const target of Array.isArray(batchItems) ? batchItems : []) {
       const targetPath = String(target?.path || '');
@@ -625,45 +622,79 @@ export function useFileManagerItemOps(deps: ReturnType<typeof useFileManagerCore
         continue;
       }
       seenPaths.add(targetPath);
-      resolvedTargets.push({
-        item: await resolveItemOwnership(targetPath, target.item),
-        path: targetPath,
+      uniqueTargets.push({ item: target.item, path: targetPath });
+    }
+    const initialMode = normalizeChmodMode(item?.mode);
+    // 列表里已有权限信息时立刻弹窗（多选 13 个文件逐个远程 stat 会让对话框明显迟到），
+    // 缺失的属主/权限元数据在后台并行补全后再合并。列表没有权限时才等解析完，避免显示错误权限。
+    const hasLocalMetadata = Boolean(initialMode || item?.permission);
+    const hasLocalOwnership = Boolean(item?.uid && item?.uid !== '-' && item?.gid && item?.gid !== '-');
+    if (hasLocalMetadata) {
+      setChmodTarget({
+        item,
+        path: primaryPath,
+        mode: initialMode || '',
+        rememberedMode,
+        autoApplyLastSettings: rememberedAutoApplyLastSettings,
+        ownerCandidates: [],
+        groupCandidates: [],
+        includeSubdirectories: rememberedIncludeSubdirectories,
+        showIncludeSubdirectories: uniqueTargets.some((target) => target.item.isDirectory),
+        metadataLoading: !hasLocalOwnership,
+        items: uniqueTargets,
       });
     }
-
-    const resolvedItem = resolvedTargets[0].item;
-    const actualMode = normalizeChmodMode(resolvedItem?.mode);
-    setChmodTarget({
-      item: resolvedItem,
-      path: primaryPath,
-      mode: actualMode || '',
-      rememberedMode,
-      autoApplyLastSettings: rememberedAutoApplyLastSettings,
-      ownerCandidates: [],
-      groupCandidates: [],
-      includeSubdirectories: rememberedIncludeSubdirectories,
-      showIncludeSubdirectories: resolvedTargets.some((target) => target.item.isDirectory),
-      items: resolvedTargets,
-    });
     const listOwnershipCandidates = window?.go?.wailsapp?.App?.ListOwnershipCandidates;
-    if (typeof listOwnershipCandidates !== 'function') {
-      return;
+    // 逐个 stat 与账号列表互不依赖，一起并行跑，不再串行叠加往返延迟。
+    // 兜底超时：断线或 SSH 卡住时调用可能长时间不返回，不能让「确定」一直不可点；
+    // 超时后按「无元数据」放行，用户可手动输入属主/属组后提交。
+    let metadataTimer: ReturnType<typeof setTimeout> | undefined;
+    const metadataResult = await Promise.race([
+      Promise.all([
+        Promise.all(uniqueTargets.map(async (target) => ({
+          item: await resolveItemOwnership(target.path, target.item),
+          path: target.path,
+        }))),
+        typeof listOwnershipCandidates === 'function'
+          ? listOwnershipCandidates(sessionId).catch((error) => {
+              warnDev('ListOwnershipCandidates failed:', error);
+              return null;
+            })
+          : Promise.resolve(null),
+      ]),
+      new Promise<null>((resolve) => {
+        metadataTimer = setTimeout(() => resolve(null), 5000);
+      }),
+    ]);
+    if (metadataTimer !== undefined) {
+      clearTimeout(metadataTimer);
     }
-    try {
-      const nextCandidates = await listOwnershipCandidates(sessionId);
-      setChmodTarget((current: FileManagerChmodTarget | null) => {
-        if (!current || current.path !== primaryPath) {
-          return current;
-        }
-        return {
-          ...current,
-          ownerCandidates: Array.isArray(nextCandidates?.users) ? nextCandidates.users : [],
-          groupCandidates: Array.isArray(nextCandidates?.groups) ? nextCandidates.groups : [],
-        };
-      });
-    } catch (error) {
-      warnDev('ListOwnershipCandidates failed:', error);
-    }
+    const resolvedTargets = metadataResult ? metadataResult[0] : uniqueTargets;
+    const nextCandidates = metadataResult ? metadataResult[1] : null;
+    setChmodTarget((current: FileManagerChmodTarget | null) => {
+      // 弹窗已被用户关闭（已经秒开过），或已被切换成别的目标：不要再弹回来。
+      if (current && current.path !== primaryPath) {
+        return current;
+      }
+      if (!current && hasLocalMetadata) {
+        return current;
+      }
+      const resolvedItem = resolvedTargets[0].item;
+      const resolvedMode = normalizeChmodMode(resolvedItem?.mode);
+      return {
+        item: resolvedItem,
+        path: primaryPath,
+        mode: resolvedMode || current?.mode || '',
+        rememberedMode,
+        autoApplyLastSettings: rememberedAutoApplyLastSettings,
+        ownerCandidates: Array.isArray(nextCandidates?.users) ? nextCandidates.users : [],
+        groupCandidates: Array.isArray(nextCandidates?.groups) ? nextCandidates.groups : [],
+        includeSubdirectories: rememberedIncludeSubdirectories,
+        showIncludeSubdirectories: resolvedTargets.some((target) => target.item.isDirectory),
+        metadataLoading: false,
+        items: resolvedTargets,
+      };
+    });
   }, [sessionId]);
 
   // Chmod

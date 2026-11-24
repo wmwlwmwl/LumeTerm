@@ -313,6 +313,7 @@ export function renderFileManagerOverlays(fm: FileManagerController) {
           autoApplyLastSettings={chmodTarget.autoApplyLastSettings}
           uid={(chmodTarget.item as FileManagerFileItem).uid ?? ''}
           gid={(chmodTarget.item as FileManagerFileItem).gid ?? ''}
+          metadataLoading={chmodTarget.metadataLoading === true}
           ownerCandidates={chmodTarget.ownerCandidates}
           groupCandidates={chmodTarget.groupCandidates}
           includeSubdirectories={chmodTarget.includeSubdirectories}
