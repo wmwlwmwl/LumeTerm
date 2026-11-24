@@ -174,8 +174,18 @@ export function useTerminalClipboard(deps: {
       event.stopPropagation();
       return;
     }
+    // 鼠标上报模式下 xterm 的 SelectionService 处于 disabled，点击本身不会清空选区，
+    // 只有上报输入触发 onUserInput 才清。TUI 没有输出时（全选后切走再回来、TUI 静止）
+    // 点左键高亮会一直留着。点击语义即取消选中，这里主动清空；Shift+点击用于扩展选区，保留。
+    // 必须在下面记录左键复制快照之后再清，否则快照读到空文本。
+    const clearSelectionOnClick = () => {
+      if (!event.shiftKey && term && term.modes.mouseTrackingMode !== 'none' && term.getSelection()) {
+        term.clearSelection();
+      }
+    };
     if (event.button !== 0 || !terminalLeftClickCopyOnSelectionRef.current) {
       terminalMouseDownSelectionRef.current = null;
+      clearSelectionOnClick();
       return;
     }
     const mode = terminalLeftClickCopyOnSelectionModeRef.current === 'mouseup' ? 'mouseup' : 'click';
@@ -185,6 +195,7 @@ export function useTerminalClipboard(deps: {
         startClientX: event.clientX,
         startClientY: event.clientY,
       };
+      clearSelectionOnClick();
       return;
     }
     const text = term?.getSelection?.() || '';
@@ -192,14 +203,15 @@ export function useTerminalClipboard(deps: {
     const position = getTerminalBufferCellPositionFromMouseEvent(event, true);
     if (!text || !range || !position || !isTerminalBufferCellWithinRange(position, range)) {
       terminalMouseDownSelectionRef.current = null;
-      return;
+    } else {
+      terminalMouseDownSelectionRef.current = {
+        mode,
+        text,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+      };
     }
-    terminalMouseDownSelectionRef.current = {
-      mode,
-      text,
-      startClientX: event.clientX,
-      startClientY: event.clientY,
-    };
+    clearSelectionOnClick();
   }, [getTerminalBufferCellPositionFromMouseEvent, isTerminalBufferCellWithinRange]);
 
   // issue #422 根因：TUI 开启「无按键移动也上报」(?1003h) 后，xterm 会把每一次鼠标移动都当作用户输入
