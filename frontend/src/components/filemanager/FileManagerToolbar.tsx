@@ -7,6 +7,35 @@ import type { FileManagerController } from './fileManagerController.ts';
 
 // 工具栏：可编辑路径输入、剪贴板粘贴/取消、文件定位器、
 // 新建/上传/传输队列/返回上级/刷新操作
+
+// 刷新按钮需要独立的旋转反馈：同路径刷新时列表走 preserveView/trackDiff，不显示整表 loading，
+// 而目录读取常常几十毫秒就返回，点击后看起来毫无反应。这里给按钮自身加最短 400ms 的旋转动画。
+function RefreshButton({ label, onRefresh }: { label: string; onRefresh: () => void | Promise<unknown> }) {
+  const [refreshing, setRefreshing] = React.useState(false);
+  const handleClick = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([Promise.resolve(onRefresh()), new Promise((resolve) => setTimeout(resolve, 400))]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  return (
+    <Tiptop text={label} placement="bottom">
+      <Button
+        variant="ghost"
+        aria-label={label}
+        disabled={refreshing}
+        onClick={handleClick}
+        className="file-toolbar-outline-btn !w-[30px] !min-w-[30px] !h-[30px] !min-h-[30px] !p-0 rounded-[var(--radius-sm)] inline-flex items-center justify-center"
+      >
+        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+      </Button>
+    </Tiptop>
+  );
+}
+
 export function renderFileManagerToolbar(fm: FileManagerController) {
   const {
     t, sessionId, addToast,
@@ -264,16 +293,7 @@ export function renderFileManagerToolbar(fm: FileManagerController) {
               </Button>
             </Tiptop>
           )}
-          <Tiptop text={t('刷新')} placement="bottom">
-            <Button
-              variant="ghost"
-              aria-label={t('刷新')}
-              onClick={() => { void loadDir(currentPath); }}
-              className="file-toolbar-outline-btn !w-[30px] !min-w-[30px] !h-[30px] !min-h-[30px] !p-0 rounded-[var(--radius-sm)] inline-flex items-center justify-center"
-            >
-              <RefreshCw size={14} />
-            </Button>
-          </Tiptop>
+          <RefreshButton label={t('刷新')} onRefresh={() => loadDir(currentPath)} />
         </div>
       </div>
     </>
