@@ -87,7 +87,9 @@ export function useTerminalSession(deps: {
   setShowTermSearch: React.Dispatch<React.SetStateAction<boolean>>;
   setTermSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   setTermSearchResult: React.Dispatch<React.SetStateAction<{ resultIndex: number; resultCount: number }>>;
-  setContextMenu: React.Dispatch<React.SetStateAction<{ x: number; y: number; source: 'terminal' | 'input' } | null>>;
+  setContextMenu: React.Dispatch<React.SetStateAction<{ x: number; y: number; source: 'terminal' | 'input'; selText?: string } | null>>;
+  /** 最近一次非空选区快照（issue #422）：TUI 反复清空选区时供右键菜单复制兜底 */
+  lastSelectionRef: React.MutableRefObject<{ text: string; at: number } | null>;
   setLinkMenu: React.Dispatch<React.SetStateAction<{ x: number; y: number; url: string } | null>>;
   isShellPromptLine: (text: string) => boolean;
   isCollapseSummaryLine: (text: string) => boolean;
@@ -123,6 +125,7 @@ export function useTerminalSession(deps: {
     gutterRef, gutterSyncRAFRef, linkUnderlineLayerRef, linkUnderlineSyncRAFRef,
     getViewportLinkCache, scheduleGutterSync, scheduleLinkUnderlineSync,
     handleClearScreen, pasteTerminalSelectionToTerminal,
+    lastSelectionRef,
   } = deps;
 
   const connectWebSocketRef = useRef<(() => void) | null>(null);
@@ -324,6 +327,54 @@ export function useTerminalSession(deps: {
     term.open(containerRef.current);
     screenScrollbackRef.current.pending = false;
     screenScrollbackRef.current.active = false;
+
+    // 记录最近一次非空选区：TUI 会在右键前清空选区，右键菜单复制用它兜底（issue #422）
+    const selectionSnapshotDisposable = term.onSelectionChange(() => {
+      const selectionText = term.getSelection();
+      if (selectionText) {
+        lastSelectionRef.current = { text: selectionText, at: performance.now() };
+      }
+    });
+    // TUI 会成组（?1000h ?1002h ?1003h）甚至每帧重发鼠标模式；xterm 每次都会触发
+    // onProtocolChange → SelectionService.disable() → clearSelection()，刚选中的内容立刻消失
+    // （issue #422：全选高亮闪一下就没了）。这里把一串模式请求去抖 30ms，只应用最终模式；
+    // 最终模式与当前一致就不应用，不触发任何清空。真实模式切换仍会生效（只是延后 30ms）。
+    const MOUSE_PROTOCOL_BY_MODE: Record<string, string> = { vt200: 'VT200', drag: 'DRAG', any: 'ANY', none: 'NONE' };
+    const mouseModeOf = (mode: number): 'vt200' | 'drag' | 'any' | null =>
+      mode === 1000 ? 'vt200' : mode === 1002 ? 'drag' : mode === 1003 ? 'any' : null;
+    let pendingMouseMode: 'vt200' | 'drag' | 'any' | 'none' | null = null;
+    let mouseModeTimer: ReturnType<typeof setTimeout> | undefined;
+    const flushMouseMode = () => {
+      const want = pendingMouseMode;
+      pendingMouseMode = null;
+      if (!want || term.modes.mouseTrackingMode === want) return;
+      // ponytail: 直接改 xterm 内部协议字段（App 已固定 @xterm/xterm 6.0.0，且本文件已有读取
+      // _core 的先例）。重放序列会再次进本解析器，需要额外的旁路标记，反而更脆。
+      // 升级 xterm 时需复核该字段名。
+      const service = (term as unknown as { _core?: { coreMouseService?: { activeProtocol: string } } })._core?.coreMouseService;
+      if (service) service.activeProtocol = MOUSE_PROTOCOL_BY_MODE[want];
+    };
+    const queueMouseMode = (want: 'vt200' | 'drag' | 'any' | 'none') => {
+      pendingMouseMode = want;
+      if (mouseModeTimer !== undefined) clearTimeout(mouseModeTimer);
+      mouseModeTimer = setTimeout(flushMouseMode, 30);
+    };
+    const mouseModeDisposables = [
+      term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
+        const mode = params.length === 1 && typeof params[0] === 'number' ? params[0] : 0;
+        const want = mouseModeOf(mode);
+        if (!want) return false;
+        queueMouseMode(want);
+        return true;
+      }),
+      term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) => {
+        const mode = params.length === 1 && typeof params[0] === 'number' ? params[0] : 0;
+        if (!mouseModeOf(mode)) return false;
+        queueMouseMode('none');
+        return true;
+      }),
+    ];
+
     const syncTuiState = (screenActive = screenScrollbackRef.current.active) => {
       const active = term.buffer.active.type === 'alternate' || screenActive;
       alternateBufferActiveRef.current = active;
@@ -346,7 +397,10 @@ export function useTerminalSession(deps: {
     };
     const screenAltModeSetDisposable = term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
       const mode = params.length === 1 && typeof params[0] === 'number' ? params[0] : 0;
-      if ((!screenScrollbackRef.current.pending && !screenScrollbackRef.current.active) || (mode !== 47 && mode !== 1047 && mode !== 1049)) return false;
+      if (mode !== 47 && mode !== 1047 && mode !== 1049) return false;
+      // 已在 alternate buffer 时重复进入只会触发 buffer 激活并清空选区（issue #422），吞掉。
+      if (term.buffer.active.type === 'alternate') return true;
+      if (!screenScrollbackRef.current.pending && !screenScrollbackRef.current.active) return false;
       screenScrollbackRef.current.pending = false;
       screenScrollbackRef.current.active = true;
       syncTuiState(true);
@@ -354,7 +408,9 @@ export function useTerminalSession(deps: {
     });
     const screenAltModeResetDisposable = term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) => {
       const mode = params.length === 1 && typeof params[0] === 'number' ? params[0] : 0;
-      if (!screenScrollbackRef.current.active || (mode !== 47 && mode !== 1047 && mode !== 1049)) return false;
+      if (mode !== 47 && mode !== 1047 && mode !== 1049) return false;
+      // 已经在 normal buffer 时重复退出同理，直接吞掉，避免无意义的 buffer 激活。
+      if (term.buffer.active.type === 'normal' && !screenScrollbackRef.current.active) return true;
       screenScrollbackRef.current.active = false;
       screenScrollbackRef.current.pending = false;
       syncTuiState(false);
@@ -1021,6 +1077,9 @@ export function useTerminalSession(deps: {
       bufferChangeDisposable.dispose();
       screenAltModeSetDisposable.dispose();
       screenAltModeResetDisposable.dispose();
+      selectionSnapshotDisposable.dispose();
+      mouseModeDisposables.forEach((d) => d.dispose());
+      if (mouseModeTimer !== undefined) clearTimeout(mouseModeTimer);
       resizeDisposable.dispose();
       try { linkProviderDisposable.dispose(); } catch (_) {}
       try { searchResultsDisposable.dispose(); } catch (_) {}

@@ -3,7 +3,7 @@ import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import type { IBufferRange } from '@xterm/xterm';
 import type { I18nKey } from '../../i18n.ts';
-import { normalizeTerminalPasteText, readClipboardText } from '../../utils/terminalHelpers.ts';
+import { normalizeTerminalPasteText, readClipboardText, writeClipboardText } from '../../utils/terminalHelpers.ts';
 import { warnDev } from '../../utils/devLog';
 
 type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
@@ -19,11 +19,14 @@ export function useTerminalClipboard(deps: {
   terminalRightClickPasteModeRef: React.RefObject<string>;
   terminalLeftClickCopyOnSelectionRef: React.RefObject<boolean>;
   terminalLeftClickCopyOnSelectionModeRef: React.RefObject<string>;
+  /** 最近一次非空选区快照（issue #422）：TUI 会反复清空选区，右键菜单复制改用它兜底 */
+  lastSelectionRef: React.MutableRefObject<{ text: string; at: number } | null>;
   t: LooseT;
 }) {
   const {
     termRef, containerRef, pasteTextToTerminalRef,
     terminalLeftClickCopyOnSelectionRef, terminalLeftClickCopyOnSelectionModeRef,
+    lastSelectionRef,
     t,
   } = deps;
 
@@ -102,7 +105,7 @@ export function useTerminalClipboard(deps: {
     if (!text) {
       return;
     }
-    navigator.clipboard.writeText(text).then(() => {
+    writeClipboardText(text).then(() => {
       termRef.current?.focus();
     }).catch((err) => {
       warnDev('Failed to write clipboard:', err);
@@ -124,9 +127,9 @@ export function useTerminalClipboard(deps: {
     });
   }, [pasteTextToTerminal, termRef]);
 
-  const pasteTerminalSelectionToTerminal = useCallback(async () => {
+  const pasteTerminalSelectionToTerminal = useCallback(async (fallbackText?: string) => {
     const term = termRef.current;
-    const selectedText = term?.getSelection?.() || '';
+    const selectedText = term?.getSelection?.() || fallbackText || '';
     if (!selectedText || !term) {
       term?.focus();
       return;
@@ -153,12 +156,23 @@ export function useTerminalClipboard(deps: {
     // 直接执行风险高；单行沿用旧语义（带尾换行才执行）。
     pasteTextToTerminal(selectedText, { insertOnly: true });
     term.clearSelection();
+    lastSelectionRef.current = null;
     term.focus();
   }, [t, pasteTextToTerminal, termRef]);
 
   const handleTerminalMouseDownCapture = useCallback((event: React.MouseEvent) => {
+    const term = termRef.current;
     if (event.button === 0) {
       isTerminalPointerDownRef.current = true;
+      // 新的左键交互作废上一次选区快照，避免之后右键复制到过期的内容
+      lastSelectionRef.current = null;
+    }
+    // 鼠标上报模式下（codex/opencode 等 TUI 开启 mouse tracking），xterm 会把右键也作为输入
+    // 上报给远端，onUserInput 随即清空选区，导致右键菜单「复制/粘贴所选项」变灰（issue #422）。
+    // 已有选区时拦截右键，不转发给远端，让外层 contextmenu 正常读取选区。
+    if (event.button === 2 && term?.modes.mouseTrackingMode !== 'none' && term?.getSelection()) {
+      event.stopPropagation();
+      return;
     }
     if (event.button !== 0 || !terminalLeftClickCopyOnSelectionRef.current) {
       terminalMouseDownSelectionRef.current = null;
@@ -173,7 +187,6 @@ export function useTerminalClipboard(deps: {
       };
       return;
     }
-    const term = termRef.current;
     const text = term?.getSelection?.() || '';
     const range = term?.getSelectionPosition?.();
     const position = getTerminalBufferCellPositionFromMouseEvent(event, true);
@@ -188,6 +201,20 @@ export function useTerminalClipboard(deps: {
       startClientY: event.clientY,
     };
   }, [getTerminalBufferCellPositionFromMouseEvent, isTerminalBufferCellWithinRange]);
+
+  // issue #422 根因：TUI 开启「无按键移动也上报」(?1003h) 后，xterm 会把每一次鼠标移动都当作用户输入
+  // （triggerDataEvent → onUserInput → clearSelection），导致 Shift 拖选/全选刚出现就被清空，
+  // 用户必须「松开后立刻右键」才抢得到选区。已有选区且没按住鼠标键时，拦下移动事件不再上报给 TUI；
+  // 点击、滚轮仍是正常交互，会照常清空选区。
+  const handleTerminalMouseMoveCapture = useCallback((event: React.MouseEvent) => {
+    if (isTerminalPointerDownRef.current) {
+      return;
+    }
+    const term = termRef.current;
+    if (term?.modes.mouseTrackingMode === 'any' && term.getSelection()) {
+      event.stopPropagation();
+    }
+  }, []);
 
   const handleTerminalMouseUpCapture = useCallback((event: React.MouseEvent) => {
     if (event.button === 0) {
@@ -294,6 +321,7 @@ export function useTerminalClipboard(deps: {
     pasteClipboardToTerminal,
     pasteTerminalSelectionToTerminal,
     handleTerminalMouseDownCapture,
+    handleTerminalMouseMoveCapture,
     handleTerminalMouseUpCapture,
   };
 }

@@ -113,6 +113,7 @@ export function TerminalViewport({
   alternateBufferActive,
   terminalDefaultMouseCursorEnabled,
   handleTerminalMouseDownCapture,
+  handleTerminalMouseMoveCapture,
   handleTerminalMouseUpCapture,
   containerRef,
   gutterRef,
@@ -123,6 +124,7 @@ export function TerminalViewport({
   alternateBufferActive: boolean;
   terminalDefaultMouseCursorEnabled: boolean;
   handleTerminalMouseDownCapture: (event: React.MouseEvent) => void;
+  handleTerminalMouseMoveCapture: (event: React.MouseEvent) => void;
   handleTerminalMouseUpCapture: (event: React.MouseEvent) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
   gutterRef: React.RefObject<HTMLDivElement | null>;
@@ -139,6 +141,7 @@ export function TerminalViewport({
       <div
         className={terminalDefaultMouseCursorEnabled ? 'terminal-output-default-mouse-cursor relative flex-1 min-h-0 overflow-hidden' : 'relative flex-1 min-h-0 overflow-hidden'}
         onMouseDownCapture={handleTerminalMouseDownCapture}
+        onMouseMoveCapture={handleTerminalMouseMoveCapture}
         onMouseUpCapture={handleTerminalMouseUpCapture}
       >
         <div

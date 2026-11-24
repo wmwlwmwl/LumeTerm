@@ -12,8 +12,8 @@ type LooseT = (key: I18nKey, vars?: Record<string, unknown>) => string;
 // ── 右键上下文菜单（ui/ContextMenu，items 按 source 组装）。
 // 从 Terminal.tsx 原样搬移，props 与闭包变量同名。
 interface TerminalContextMenuProps {
-  contextMenu: { x: number; y: number; source: 'terminal' | 'input' };
-  setContextMenu: React.Dispatch<React.SetStateAction<{ x: number; y: number; source: 'terminal' | 'input' } | null>>;
+  contextMenu: { x: number; y: number; source: 'terminal' | 'input'; selText?: string };
+  setContextMenu: React.Dispatch<React.SetStateAction<{ x: number; y: number; source: 'terminal' | 'input'; selText?: string } | null>>;
   contextHasSelection: boolean;
   handleMenuAction: (action: string) => void;
   shortcutsRef: React.RefObject<Record<string, string> | null>;

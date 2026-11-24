@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type * as React from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
-import { readClipboardText } from '../../utils/terminalHelpers.ts';
+import { readClipboardText, writeClipboardText } from '../../utils/terminalHelpers.ts';
 import { warnDev } from '../../utils/devLog';
 import type { I18nKey } from '../../i18n.ts';
 
@@ -13,8 +13,8 @@ export function useTerminalMenus(deps: {
   termRef: React.RefObject<XTerm | null>;
   cmdInputRef: React.RefObject<HTMLTextAreaElement | null>;
   setCmdInput: React.Dispatch<React.SetStateAction<string>>;
-  contextMenu: { x: number; y: number; source: 'terminal' | 'input' } | null;
-  setContextMenu: React.Dispatch<React.SetStateAction<{ x: number; y: number; source: 'terminal' | 'input' } | null>>;
+  contextMenu: { x: number; y: number; source: 'terminal' | 'input'; selText?: string } | null;
+  setContextMenu: React.Dispatch<React.SetStateAction<{ x: number; y: number; source: 'terminal' | 'input'; selText?: string } | null>>;
   contextHasSelection: boolean;
   setContextHasSelection: React.Dispatch<React.SetStateAction<boolean>>;
   linkMenu: { x: number; y: number; url: string } | null;
@@ -23,7 +23,9 @@ export function useTerminalMenus(deps: {
   serverIdRef: React.RefObject<string>;
   sessionId: string;
   pasteClipboardToTerminal: () => void;
-  pasteTerminalSelectionToTerminal: () => void | Promise<void>;
+  pasteTerminalSelectionToTerminal: (fallbackText?: string) => void | Promise<void>;
+  /** 最近一次非空选区快照（issue #422）：TUI 反复清空选区时供菜单复制兜底 */
+  lastSelectionRef: React.MutableRefObject<{ text: string; at: number } | null>;
   openTermSearch: (seedText?: string) => void;
   syncCommandInputHeight: () => void;
   scheduleCommandAutocompleteSuggestions: (nextValue: string) => void;
@@ -42,6 +44,7 @@ export function useTerminalMenus(deps: {
     syncCommandInputHeight, scheduleCommandAutocompleteSuggestions, closeCommandAutocomplete,
     commandAutocompleteFocusedRef,
     terminalRightClickPasteOnEmptyRef, terminalRightClickPasteModeRef,
+    lastSelectionRef,
     t,
   } = deps;
 
@@ -53,14 +56,29 @@ export function useTerminalMenus(deps: {
     }
     e.preventDefault();
     setLinkMenu(null);
-    const hasSelection = !!(termRef.current && termRef.current.getSelection());
+    const term = termRef.current;
+    const liveText = term?.getSelection() || '';
+    // TUI 会在右键前后反复清空选区：鼠标上报模式下允许用最近 10 秒的选区快照兜底，
+    // 让「复制/粘贴所选项」在选区已被清空时依然可用（issue #422）。普通 shell 不用快照。
+    const snapshot = lastSelectionRef.current;
+    const snapshotText = term?.modes.mouseTrackingMode !== 'none'
+      && snapshot && performance.now() - snapshot.at < 10000
+      ? snapshot.text
+      : '';
+    const selectedText = liveText || snapshotText;
+    const hasSelection = !!selectedText;
     const rightClickPasteMode = terminalRightClickPasteModeRef.current === 'always' ? 'always' : 'empty';
     if (terminalRightClickPasteOnEmptyRef.current && (rightClickPasteMode === 'always' || !hasSelection)) {
       pasteClipboardToTerminal();
       return;
     }
     setContextHasSelection(hasSelection);
-    setContextMenu({ x: e.clientX, y: e.clientY, source: 'terminal' });
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      source: 'terminal',
+      selText: selectedText,
+    });
   };
 
   const handleInputContextMenu = (e: React.MouseEvent) => {
@@ -140,7 +158,7 @@ export function useTerminalMenus(deps: {
             input.focus();
             return;
           }
-          navigator.clipboard.writeText(selectedText).catch(() => {});
+          writeClipboardText(selectedText).catch(() => {});
           const nextValue = `${value.slice(0, selectionStart)}${value.slice(selectionEnd)}`;
           setCmdInput(nextValue);
           requestAnimationFrame(() => {
@@ -159,7 +177,7 @@ export function useTerminalMenus(deps: {
         }
         case 'copy':
           if (selectedText) {
-            navigator.clipboard.writeText(selectedText).catch(() => {});
+            writeClipboardText(selectedText).catch(() => {});
           }
           input.focus();
           break;
@@ -202,10 +220,16 @@ export function useTerminalMenus(deps: {
     if (!termRef.current) return;
     switch (action) {
       case 'copy': {
-        const selectedText = termRef.current.getSelection();
+        // 实时选区可能已被 TUI 清空，退回打开菜单时的选区快照（issue #422）
+        const selectedText = termRef.current.getSelection() || contextMenu?.selText || '';
         if (selectedText) {
-          navigator.clipboard.writeText(selectedText);
+          writeClipboardText(selectedText).then(() => {
+            setLinkToast(t('已复制'));
+            setTimeout(() => setLinkToast(''), 1500);
+          }).catch((err) => warnDev('Failed to write clipboard:', err));
           termRef.current.clearSelection();
+          // 选区已被消费，快照同步作废，避免再右键时旧内容仍可复制
+          lastSelectionRef.current = null;
         }
         termRef.current.focus();
         break;
@@ -214,10 +238,10 @@ export function useTerminalMenus(deps: {
         pasteClipboardToTerminal();
         break;
       case 'pasteSelection':
-        void pasteTerminalSelectionToTerminal();
+        void pasteTerminalSelectionToTerminal(termRef.current.getSelection() || contextMenu?.selText || undefined);
         break;
       case 'sendToAssistant': {
-        const selectedText = termRef.current.getSelection();
+        const selectedText = termRef.current.getSelection() || contextMenu?.selText || '';
         if (selectedText) {
           window.dispatchEvent(new CustomEvent('ai-terminal-send-to-assistant', {
             detail: {
@@ -227,6 +251,7 @@ export function useTerminalMenus(deps: {
             },
           }));
           termRef.current.clearSelection();
+          lastSelectionRef.current = null;
         }
         termRef.current.focus();
         break;

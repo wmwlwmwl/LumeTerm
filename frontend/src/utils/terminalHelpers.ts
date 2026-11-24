@@ -711,6 +711,21 @@ export async function readClipboardText(): Promise<string> {
   return navigator.clipboard.readText();
 }
 
+/**
+ * 写入剪贴板：优先 Wails 原生剪贴板接口，绕开 WebView2 下 navigator.clipboard.writeText()
+ * 因焦点/权限静默失败导致「点了复制却没内容」；非 Wails 运行时（浏览器 dev）回退 Clipboard API。
+ */
+export async function writeClipboardText(text: string): Promise<void> {
+  try {
+    const { ClipboardSetText } = await import('../../wailsjs/runtime/runtime.js');
+    await ClipboardSetText(text);
+    return;
+  } catch {
+    // 非 Wails 环境，回退
+  }
+  await navigator.clipboard.writeText(text);
+}
+
 /** 终端控制信号字节（SIGINT/EOF/SIGTSTP/清行），按键热路径复用，避免每次 keydown 分配 */
 export const TERMINAL_SIGNAL_BYTES: Record<string, Uint8Array<ArrayBuffer>> = Object.freeze({
   sigint: new Uint8Array([0x03]),     // Ctrl+C (ETX)

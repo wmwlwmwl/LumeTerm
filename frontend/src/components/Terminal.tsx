@@ -56,7 +56,7 @@ export default function Terminal({
   const inputBarGrowthRef = useRef(0);
 
   // ── 菜单 / 弹层 / 查找等跨 hook 共享状态 ──
-  const [contextMenu, setContextMenu]         = useState<{ x: number; y: number; source: 'terminal' | 'input' } | null>(null);
+  const [contextMenu, setContextMenu]         = useState<{ x: number; y: number; source: 'terminal' | 'input'; selText?: string } | null>(null);
   const [linkMenu, setLinkMenu]               = useState<{ x: number; y: number; url: string } | null>(null); // { x, y, url }
   const [linkToast, setLinkToast]             = useState('');
   const [contextHasSelection, setContextHasSelection] = useState(false);
@@ -71,6 +71,9 @@ export default function Terminal({
   // 统一粘贴入口：由 useTerminalSession 注入（多行确认 + 末行保留），
   // 右键菜单、选区粘贴、自定义 Ctrl+V 与原生 paste 事件共用（见 useTerminalClipboard）。
   const pasteTextToTerminalRef               = useRef<((text: string, options?: { insertOnly?: boolean }) => void | Promise<void>) | null>(null);
+  // 最近一次非空选区快照（issue #422）：鼠标上报模式下 TUI 会反复清空选区，
+  // 右键菜单「复制/粘贴所选项」用它兜底，避免刚选中的内容瞬间丢失。
+  const lastSelectionRef                     = useRef<{ text: string; at: number } | null>(null);
   const awaitingPasswordRef                   = useRef(false); // 检测到密码提示后，下一行输入不记入命令历史
   const awaitingCommandFinishRef              = useRef(false); // 按回车提交命令后，等待命令完成（提示符回归）
 
@@ -124,11 +127,12 @@ export default function Terminal({
   const {
     isTerminalPointerDownRef, dispatchSyntheticTerminalMouseUp,
     pasteClipboardToTerminal, pasteTerminalSelectionToTerminal,
-    handleTerminalMouseDownCapture, handleTerminalMouseUpCapture,
+    handleTerminalMouseDownCapture, handleTerminalMouseMoveCapture, handleTerminalMouseUpCapture,
   } = useTerminalClipboard({
     termRef, containerRef, pasteTextToTerminalRef, t,
     terminalRightClickPasteOnEmptyRef, terminalRightClickPasteModeRef,
     terminalLeftClickCopyOnSelectionRef, terminalLeftClickCopyOnSelectionModeRef,
+    lastSelectionRef,
   });
 
   // ── xterm/WebSocket 会话主链路 ──
@@ -144,7 +148,7 @@ export default function Terminal({
     isTerminalPointerDownRef, dispatchSyntheticTerminalMouseUp,
     keywordHighlightEnabledRef, hlDecoderRef, hlStateRef, termSearchInputRef,
     setShowTermSearch, setTermSearchQuery, setTermSearchResult, setContextMenu, setLinkMenu,
-    pasteTerminalSelectionToTerminal,
+    pasteTerminalSelectionToTerminal, lastSelectionRef,
   });
 
   const isConnected  = status === 'connected';
@@ -208,7 +212,7 @@ export default function Terminal({
     linkMenu, setLinkMenu, setLinkToast, serverIdRef, sessionId,
     pasteClipboardToTerminal, pasteTerminalSelectionToTerminal, openTermSearch,
     syncCommandInputHeight, scheduleCommandAutocompleteSuggestions, closeCommandAutocomplete,
-    commandAutocompleteFocusedRef, terminalRightClickPasteOnEmptyRef, terminalRightClickPasteModeRef, t,
+    commandAutocompleteFocusedRef, terminalRightClickPasteOnEmptyRef, terminalRightClickPasteModeRef, lastSelectionRef, t,
   });
 
   const cmdTrimmed = cmdInput.trim();
@@ -254,7 +258,7 @@ export default function Terminal({
       <TerminalViewport
         timestampsVisible={timestampsVisible} commandBlocksVisible={commandBlocksVisible} alternateBufferActive={alternateBufferActive}
         terminalDefaultMouseCursorEnabled={terminalDefaultMouseCursorEnabled} containerRef={containerRef}
-        handleTerminalMouseDownCapture={handleTerminalMouseDownCapture} handleTerminalMouseUpCapture={handleTerminalMouseUpCapture}
+        handleTerminalMouseDownCapture={handleTerminalMouseDownCapture} handleTerminalMouseMoveCapture={handleTerminalMouseMoveCapture} handleTerminalMouseUpCapture={handleTerminalMouseUpCapture}
         gutterRef={gutterRef} linkUnderlineLayerRef={linkUnderlineLayerRef}
       />
 
