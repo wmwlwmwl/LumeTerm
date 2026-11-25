@@ -253,6 +253,7 @@ export function isInteractivePromptText(value: unknown) {
 // 从 xterm 可见缓冲区的"当前命令行"剥离提示符，返回真正执行的命令。
 // 兼容：
 //   - Linux user@host:path$ / # / %
+//   - fish 默认 user@host path> （结尾是 > 而不是 #$%）
 //   - PowerShell "PS C:\path>" 与 Windows CMD "C:\path>"
 //   - Starship/oh-my-posh 等自定义 prompt 的 Unicode 符号（❯ ➜ › » λ ƒ ψ）
 //   - Python/Node 等 REPL 的 >>> / ...
@@ -261,6 +262,16 @@ export function isInteractivePromptText(value: unknown) {
 export const SHELL_PROMPT_PREFIX_PATTERNS = [
   /^[\w.-]+@[\w.-]+:[^\n]*?[#$%]\s*/,    // user@host:path$ cmd
   /^\[[^\]]+\][#$%]\s*/,                 // [user@host dir]$ cmd
+  // fish 默认提示符：`user@host ~> cmd` / `user@host /deep/path> cmd`。
+  // 没有冒号、提示符结尾是 >，前两条都命中不了；不单独列出来的话整行（含提示符）
+  // 会被当成命令写进历史，Run Again 再把提示符当命令发给 shell（issue #423）。
+  //
+  // 必须排在下面的 `[#$%]` 通用形态之前（否则 `~> echo $HOME` 会先被通用形态
+  // 命中最靠后的 `$`，命令被切成 `HOME`），但必须带上前瞻 `(?![^>]*[#$%])`：
+  // 只认「第一个 > 之前没有 #$%」的行，否则 zsh 的 `%`、fish root 的 `#`、
+  // bash 的 `$` 这类提示符 + 带重定向的命令（`ls > out`）会被这条规则先吃掉。
+  // 非贪婪 `>` 保证命令内的重定向（`ls > out`）留在命令侧；`\s*` 让空提示符剥离成空。
+  /^(?![^>]*[#$%])[\w.-]+@[\w.-]+\s+[^\n]*?>\s*/,
   /^[\w.-]+@[\w.-]+\s+[^\n]*?[#$%]\s*/,  // root@host ~]# cmd
   /^[#$%]\s+/,                            // 极简：单独的 $/#/% 起命令
   // Windows：兼容 "PS C:\path>" 与裸 "C:\path>"，盘符/路径后以 > 结尾。
@@ -283,6 +294,17 @@ export function extractCommandFromBufferLine(line: string) {
     }
   }
   return t.trim()
+}
+
+if (import.meta.env.DEV) {
+  console.assert(extractCommandFromBufferLine('root@host:~$ ls') === 'ls', 'bash 提示符应剥离');
+  console.assert(extractCommandFromBufferLine('❯ ls') === 'ls', 'starship 提示符应剥离');
+  console.assert(extractCommandFromBufferLine('user@host ~> ls') === 'ls', 'fish 默认提示符应剥离');
+  console.assert(extractCommandFromBufferLine('user@host /a/b/c> ls') === 'ls', 'fish 深路径提示符应剥离');
+  console.assert(extractCommandFromBufferLine('user@host ~> ls > out.txt') === 'ls > out.txt', '命令内重定向不应被误切');
+  console.assert(extractCommandFromBufferLine('user@host ~> echo $HOME') === 'echo $HOME', '命令内的 $ 不应被误切');
+  console.assert(extractCommandFromBufferLine('user@host ~> ') === '', '空提示符应剥离成空');
+  console.assert(extractCommandFromBufferLine('git@github.com Permission denied') === 'git@github.com Permission denied', '非提示符行不应改动');
 }
 
 /**
@@ -337,7 +359,12 @@ export function isLooseShellPromptLine(text: string) {
   // 2) 行尾是装饰字形，且前面是空白或 = >（排除 `f(λ)` `output»` 这类普通输出）
   if (t.length <= 80 && LOOSE_PROMPT_TAIL_RE.test(t)) return true
   // 3) fish 等 `user@host ~>` 形态（不带冒号，严格版漏判）
+  //    3a 空提示符：保持旧行为（行尾就是 > # $ %）
   if (/^[\w.-]+@[\w.-]+\s+[^\n]{0,40}[>#$%]\s*$/.test(t)) return true
+  //    3b 带命令：`user@host ~> ls` / `user@host /a/b> tail -f`。
+  //       要求 `>` 紧邻路径字符（不认 `pkg@1.2.3 -> pkg@1.2.4` 这种箭头输出），
+  //       否则逐行门控会在命令还没跑完时提前放行下一行。
+  if (t.length <= 200 && /^[\w.-]+@[\w.-]+\s+[^\n]{0,120}[^\s\-=]>\s/.test(t)) return true
   // 4) 带环境前缀的传统提示符：(venv) / (conda) (base) user@host:~$
   if (/^(?:\([^)]{1,32}\)\s*)+[\w.-]+@[\w.-]+:[^\n]*?[#$%]/.test(t)) return true
   return false
@@ -350,6 +377,10 @@ if (import.meta.env.DEV) {
   console.assert(isLooseShellPromptLine('λ '), 'λ 提示符应识别');
   console.assert(isLooseShellPromptLine('~/proj on  main ❯'), '单行 starship 提示符应识别');
   console.assert(isLooseShellPromptLine('user@host ~>'), 'fish 提示符应识别');
+  console.assert(isLooseShellPromptLine('user@host ~> ls'), '带命令的 fish 提示符应识别');
+  console.assert(isLooseShellPromptLine('user@host /a/very/deep/path> tail -f x.log'), 'fish 深路径+命令应识别');
+  console.assert(!isLooseShellPromptLine('pkg@1.2.3 -> pkg@1.2.4'), '箭头升级日志不应识别为提示符');
+  console.assert(!isLooseShellPromptLine('index@2 > total@1'), '带 > 的普通输出不应识别为提示符');
   console.assert(isLooseShellPromptLine('(venv) user@host:~$ ls'), '带虚拟环境前缀的提示符应识别');
   console.assert(!isLooseShellPromptLine('123456'), '普通输出不应识别');
   console.assert(!isLooseShellPromptLine('✓ built in 4.90s'), '构建输出不应识别');
@@ -358,6 +389,50 @@ if (import.meta.env.DEV) {
   console.assert(!isLooseShellPromptLine('output»'), '紧贴文字的 » 不应识别');
   console.assert(!isLooseShellPromptLine('❯ ' + 'x'.repeat(150)), '超长行不应识别');
   console.assert(!isLooseShellPromptLine(''), '空行不应识别');
+}
+
+/** 命令块折叠后写回的摘要行（`⋯ 12 lines`），扫描提示符时要排除。 */
+export function isCollapseSummaryLine(text: string) {
+  return /^⋯\s+\d+\s+lines\s*$/.test(String(text || '').trim())
+}
+
+/**
+ * 行首是 shell 提示符（后面可跟命令）—— 命令块分块 / 时间戳 / 「命令执行完成」
+ * 判定都用它。不能要求「整行以 # 结尾」，否则 `root@host:~# ping` 识别不到。
+ */
+export function isShellPromptLine(text: string) {
+  const t = String(text || '').replace(/\s+$/g, '')
+  if (!t || t.length < 2 || isCollapseSummaryLine(t)) return false
+  // user@host:path# cmd  /  user@host:path$ cmd
+  if (/^[\w.-]+@[\w.-]+:[^\n]*?[#$](?:\s+|$)/.test(t)) return true
+  // [user@host dir]$ cmd
+  if (/^\[[^\]]+\][#$%](?:\s+|$)/.test(t)) return true
+  // root@host ~]# cmd 一类
+  if (/^[\w.-]+@[\w.-]+\s+[^\n]*[#$%](?:\s+|$)/.test(t)) return true
+  // fish 默认提示符 `user@host ~> cmd` / `user@host /a/b> cmd`：`>` 紧邻路径字符，
+  // 不认 `pkg@1.2.3 -> pkg@1.2.4` 这类箭头输出，避免把普通输出当成命令块起点
+  if (/^[\w.-]+@[\w.-]+\s+[^\n]*[^\s\-=]>(?:\s+|$)/.test(t)) return true
+  // Windows 本机终端：PowerShell "PS C:\path> cmd" / CMD "C:\path> cmd"。
+  // 不识别时多行粘贴/命令输入栏的逐行门控只能干等 2.5s 超时（每行一次）。
+  if (/^(?:PS\s+)?[A-Za-z]:[\\/][^\n]*?>(?:\s|$)/.test(t)) return true
+  // 极简：以 #/$ 单独起命令（少见）
+  if (/^[#$]\s+\S/.test(t)) return true
+  return false
+}
+
+if (import.meta.env.DEV) {
+  console.assert(isShellPromptLine('root@host:~# ping'), 'bash root 提示符应识别')
+  console.assert(isShellPromptLine('root@host:~$ ls'), 'bash 普通提示符应识别')
+  console.assert(isShellPromptLine('user@host ~]# ls'), 'root@host ~]# 形态应识别')
+  console.assert(isShellPromptLine('user@host ~>'), 'fish 空提示符应识别')
+  console.assert(isShellPromptLine('user@host ~> ls'), 'fish 带命令提示符应识别')
+  console.assert(isShellPromptLine('user@host /a/b/c> ls'), 'fish 深路径提示符应识别')
+  console.assert(isShellPromptLine('PS C:\\Users\\me> dir'), 'PowerShell 提示符应识别')
+  console.assert(!isShellPromptLine('total 24'), '普通输出不应识别')
+  console.assert(!isShellPromptLine('pkg@1.2.3 -> pkg@1.2.4'), '箭头升级日志不应识别为提示符')
+  console.assert(!isShellPromptLine('index@2 > total@1'), '带 > 的普通输出不应识别为提示符')
+  console.assert(!isShellPromptLine('⋯ 12 lines'), '折叠摘要行不应识别')
+  console.assert(!isShellPromptLine('~'), '单独波浪号不应识别')
 }
 
 export function splitTrailingIncompleteEscapeSequence(input: string) {

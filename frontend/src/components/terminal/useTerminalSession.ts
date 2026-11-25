@@ -27,6 +27,7 @@ import {
   textDecoder,
   textEncoder,
 } from '../../utils/terminalHelpers.ts';
+import { createShellIntegrationHistory } from '../../utils/shellIntegrationHistory.ts';
 import { createTerminalLocalEchoFilter } from './terminalLocalEchoFilter.ts';
 import { createTerminalKeyEventHandler } from './terminalKeyEventHandler.ts';
 
@@ -917,6 +918,35 @@ export function useTerminalSession(deps: {
     let localInputLength = 0; // 用于保护提示符，防止退格越界
     let pendingCmdReliable = true;
 
+    // ── 历史指令落库 ────────────────────────────────────────────────
+    // 回车路径的落库出口（多行粘贴另有自己的记账路径，见下方 pasteTextToTerminal）。
+    // 过滤口径与旧逻辑保持一致。
+    const pushCommandHistory = (command: string) => {
+      if (!command || command.length <= 1 || /^\d+$/.test(command)) return;
+      window.dispatchEvent(new CustomEvent('ssh-command-history', {
+        detail: { sessionId: serverIdRef.current, command, time: new Date().toISOString(), source: 'input' }
+      }));
+    };
+    // ── OSC 133 语义提示符：让 shell 自己上报「执行了什么命令」 ─────────
+    //
+    // fish 4.x 与带 shell integration 的 bash / zsh 会发 OSC 133 A/B/C/D，
+    // 其中 C 上的 cmdline_url 就是 shell 实际执行的命令行。有它就不必再从屏幕
+    // 文本里剥提示符——提示符长什么样都无所谓。这正是 issue #423 的根因修复：
+    // fish 默认提示符 `user@host ~>` 的结尾是 `>`，不在剥离白名单里，历史被存成
+    // 「提示符+命令」，Run Again 再把提示符当命令发出去，报 `Unknown command`。
+    //
+    // 不上报 OSC 133 的 shell（bash 默认、PowerShell、WSL 等）行为不变：
+    // 状态机直接返回 immediate，回车即按屏幕文本落库。
+    // 具体状态迁移与边界（Run Again 不重复记账、shell 中途被替换等）见
+    // utils/shellIntegrationHistory.ts，那里有离线用例覆盖。
+    const shellIntegrationHistory = createShellIntegrationHistory({
+      onCommand: pushCommandHistory,
+    });
+    const shellIntegrationDisposable = term.parser.registerOscHandler(
+      133,
+      (data) => shellIntegrationHistory.handleMark(data),
+    );
+
     term.onData((data) => {
       if ((statusRef.current === 'closed' || statusRef.current === 'error') && (data.includes('\r') || data.includes('\n'))) {
         window.dispatchEvent(new CustomEvent('ssh-reconnect-trigger', { detail: sessionId }));
@@ -1005,10 +1035,15 @@ export function useTerminalSession(deps: {
         if (!awaitingPasswordRef.current) {
           prepareScreenScrollbackRef.current(cmd);
         }
-        if (!awaitingPasswordRef.current && cmd.length > 1 && !/^\d+$/.test(cmd)) {
-          window.dispatchEvent(new CustomEvent('ssh-command-history', {
-            detail: { sessionId: serverIdRef.current, command: cmd, time: new Date().toISOString(), source: 'input' }
-          }));
+        // 落库：支持 OSC 133 的会话先把屏幕文本版本挂起，等 C 上的权威命令行
+        // （几毫秒后）；不支持的会话照旧立刻落库，行为不变。
+        // 空输入（空回车）不入队：它不会有 C，入队会吃掉下一条命令的 C
+        // （fish 对空命令不触发 preexec，见 #423 评审意见）。
+        if (!awaitingPasswordRef.current && cmd) {
+          const historyOutcome = shellIntegrationHistory.submitCommand(cmd);
+          if (historyOutcome === 'immediate' && cmd.length > 1 && !/^\d+$/.test(cmd)) {
+            pushCommandHistory(cmd);
+          }
         }
         // 非密码输入且提交了实际命令：进入"等待命令完成"状态，
         // 待提示符回归（onWriteParsed 检测）时派发 ssh-command-finished 事件，
@@ -1024,6 +1059,9 @@ export function useTerminalSession(deps: {
       } else if (out === '\x03' || out === '\x04') {
         pendingCmdRef.current = '';
         pendingCmdReliable = true;
+        // Ctrl+C/D 取消当前输入：该输入不会执行、也不会有 C，挂起项必须立刻丢弃，
+        // 否则会被下一条命令的 C 错配。
+        shellIntegrationHistory.reset();
         if (!screenScrollbackRef.current.active) screenScrollbackRef.current.pending = false;
         awaitingPasswordRef.current = false; // Ctrl+C/D 取消当前输入，重置密码等待状态，避免下一条普通命令被误跳过
       } else {
@@ -1081,6 +1119,9 @@ export function useTerminalSession(deps: {
       mouseModeDisposables.forEach((d) => d.dispose());
       if (mouseModeTimer !== undefined) clearTimeout(mouseModeTimer);
       resizeDisposable.dispose();
+      try { shellIntegrationDisposable.dispose(); } catch (_) {}
+      // 卸载时取消挂起的 OSC 133 兜底落库，避免向已销毁会话派发历史事件
+      try { shellIntegrationHistory.dispose(); } catch (_) {}
       try { linkProviderDisposable.dispose(); } catch (_) {}
       try { searchResultsDisposable.dispose(); } catch (_) {}
       try { searchAddon.dispose(); } catch (_) {}
