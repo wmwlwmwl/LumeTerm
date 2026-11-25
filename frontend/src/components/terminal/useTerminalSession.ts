@@ -1037,9 +1037,9 @@ export function useTerminalSession(deps: {
         }
         // 落库：支持 OSC 133 的会话先把屏幕文本版本挂起，等 C 上的权威命令行
         // （几毫秒后）；不支持的会话照旧立刻落库，行为不变。
-        // 注意即使屏幕文本没剥离出命令（cmd 为空）也要问一次状态机：
-        // C 上的命令行仍然能把这种情况救回来。
-        if (!awaitingPasswordRef.current) {
+        // 空输入（空回车）不入队：它不会有 C，入队会吃掉下一条命令的 C
+        // （fish 对空命令不触发 preexec，见 #423 评审意见）。
+        if (!awaitingPasswordRef.current && cmd) {
           const historyOutcome = shellIntegrationHistory.submitCommand(cmd);
           if (historyOutcome === 'immediate' && cmd.length > 1 && !/^\d+$/.test(cmd)) {
             pushCommandHistory(cmd);
@@ -1059,6 +1059,9 @@ export function useTerminalSession(deps: {
       } else if (out === '\x03' || out === '\x04') {
         pendingCmdRef.current = '';
         pendingCmdReliable = true;
+        // Ctrl+C/D 取消当前输入：该输入不会执行、也不会有 C，挂起项必须立刻丢弃，
+        // 否则会被下一条命令的 C 错配。
+        shellIntegrationHistory.reset();
         if (!screenScrollbackRef.current.active) screenScrollbackRef.current.pending = false;
         awaitingPasswordRef.current = false; // Ctrl+C/D 取消当前输入，重置密码等待状态，避免下一条普通命令被误跳过
       } else {

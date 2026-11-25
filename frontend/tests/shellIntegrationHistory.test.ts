@@ -33,7 +33,15 @@ function createHarness() {
       timer.run();
     }
   };
-  return { history, out, fireTimeout };
+  // 只触发最早一个未触发的定时器（构造「C 迟到」的时序）
+  const fireNext = () => {
+    const index = timers.findIndex((timer) => timer.live);
+    if (index < 0) return;
+    const [timer] = timers.splice(index, 1);
+    timer.live = false;
+    timer.run();
+  };
+  return { history, out, fireTimeout, fireNext };
 }
 
 test('没有 OSC 133 的 shell：回车立刻落库（旧行为不变）', () => {
@@ -111,20 +119,64 @@ test('C 没有命令行时用屏幕文本兜底', () => {
   assert.deepEqual(out, ['echo hi']);
 });
 
-test('屏幕文本为空时，C 的权威命令行仍要救回来', () => {
+test('空回车不入队：不会吃掉下一条命令的 C', () => {
   const { history, out } = createHarness();
-  history.handleMark('B');
-  assert.equal(history.submitCommand(''), 'deferred');
-  history.handleMark('C;cmdline_url=ls%20-al');
-  assert.deepEqual(out, ['ls -al']);
+  history.handleMark('A');
+  assert.equal(history.submitCommand(''), 'immediate');
+  assert.equal(history.submitCommand('ls'), 'deferred');
+  history.handleMark('C;cmdline_url=ls');
+  assert.deepEqual(out, ['ls']);
 });
 
-test('空兜底 + C 也没有命令行：不产生空条目', () => {
-  const { history, out } = createHarness();
-  history.handleMark('B');
-  history.submitCommand('');
-  history.handleMark('C');
+test('确认 shell 会上报命令行后：超时只丢位置，不再用屏幕文本补记', () => {
+  const { history, out, fireTimeout } = createHarness();
+  history.handleMark('A');
+  history.submitCommand('ls');
+  history.handleMark('C;cmdline_url=ls');
+  assert.deepEqual(out, ['ls']);
+  // 续行 Enter / 未执行的输入没有 C，超时后不能被当成一条命令落库
+  history.submitCommand('echo "half');
+  fireTimeout();
+  assert.deepEqual(out, ['ls']);
+});
+
+test('迟到的 C：位置被保留，迟到者吃掉自己的位置，不会串到下一条命令', () => {
+  const { history, out, fireNext } = createHarness();
+  history.handleMark('A');
+  history.submitCommand('ls');
+  history.handleMark('C;cmdline_url=ls'); // 先让状态机确认「该 shell 会上报命令行」
+  assert.deepEqual(out, ['ls']);
+  // 新提示符出现后连打两条（type-ahead）
+  history.handleMark('A');
+  history.submitCommand('pwd');
+  history.submitCommand('whoami');
+  fireNext(); // pwd 超时 → 过期占位，但位置保留
+  assert.deepEqual(out, ['ls']); // 超时不能提前落库（否则会重复）
+  history.handleMark('C;cmdline_url=pwd'); // pwd 的 C 迟到
+  history.handleMark('C;cmdline_url=whoami');
+  assert.deepEqual(out, ['ls', 'pwd', 'whoami']); // 不串位、不丢命令
+});
+
+test('超时已按屏幕文本落库时，迟到的 C 不会重复记录', () => {
+  const { history, out, fireNext } = createHarness();
+  history.handleMark('A');
+  history.submitCommand('echo hi');
+  fireNext(); // 壳从未上报命令行 → 超时按屏幕文本落库
+  assert.deepEqual(out, ['echo hi']);
+  history.handleMark('C;cmdline_url=echo%20hi'); // C 迟到
+  assert.deepEqual(out, ['echo hi']);
+});
+
+test('Ctrl+C 取消：挂起项立即丢弃，不会错配到下一条命令', () => {
+  const { history, out, fireTimeout } = createHarness();
+  history.handleMark('A');
+  history.submitCommand('echo "half');
+  history.reset();
+  fireTimeout();
   assert.deepEqual(out, []);
+  history.submitCommand('ls');
+  history.handleMark('C;cmdline_url=ls');
+  assert.deepEqual(out, ['ls']);
 });
 
 test('Run Again / 快捷指令触发的 C（队列为空）必须忽略，避免重复记账', () => {
