@@ -11,6 +11,9 @@
     "styles:check": "node scripts/check-styles.mjs",
     "styles:baseline": "node scripts/check-styles.mjs --baseline",
     "overlay:check": "node scripts/check-overlay-lock.mjs",
+    "test": "npm run test:types && npm run test:unit",
+    "test:types": "tsc -p tsconfig.tests.json --noEmit",
+    "test:unit": "node scripts/run-unit-tests.mjs",
     "lint": "oxlint src",
     "lint:fix": "oxlint --fix src"
   },
